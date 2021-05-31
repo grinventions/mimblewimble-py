@@ -17,15 +17,9 @@ class Slate:
         self.armorder_slatepack = armored_slatepack
 
 
-class Transaction:
-    def __init__(self, amount, excess, recipient_address, recipient_signature, sender_address, sender_signature, slate_id):
-        self.amount = amount # 8 bytes
-        self.excess = excess # 33 bytes
-        self.recipient_address = recipient_address # 32 bytes
-        self.recipient_signature = recipient_signature # 64 bytes
-        self.sender_address = sender_address # 32 bytes
-        self.sender_signature = sender_signature # 64 bytes
-        self.slate_id = slate_id
+def TransactionBuilder(inputs, outputs, kernel, offset: BlindingFactor):
+        body = TransactionBody(transactionInputs, transactionOutputs, kernels)
+        return Transaction(BlindingFactor(transactionOffset), body)
 
 
 class Wallet:
@@ -33,3 +27,4 @@ class Wallet:
         self.next_tx_id = next_tx_id
         self.refresh_block_height = refresh_block_height
         self.restore_leaf_index = restore_leaf_index
+
