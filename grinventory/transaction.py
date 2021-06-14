@@ -55,6 +55,7 @@ class TransactionBody:
         # TODO
         pass
 
+    @classmethod
     def deserialize(self):
         # TODO
         pass

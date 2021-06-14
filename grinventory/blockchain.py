@@ -1,3 +1,7 @@
+from grinventory.transaction import TransactionInput
+from grinventory.transaction import TransactionOutput
+
+
 class ProofOfWork:
     def __init__(self):
         # TODO
@@ -251,3 +255,110 @@ class FullBlock:
 
     def markAsValidated(self):
         self.validated = True
+
+
+class CompactBlock:
+    def __init__(self, header, nonce, fullOutputs, fullKernels, shortIds):
+        self.header = header
+        self.nonce = nonce
+        self.outputs = fullOutputs
+        self.kernels = fullKernels
+        self.short_ids = shoftIds
+
+    # getters
+
+    def getHeader(self):
+        return self.header
+
+    def getNonce(self):
+        return self.nonce
+
+    def getOutputs(self):
+        return self.outputs
+
+    def getKernels(self):
+        return self.kernels
+
+    def getShortIds(self):
+        return self.short_ids
+
+    def getPreviousHash(self):
+        return self.header.getPreviousHash()
+
+    def getHeight(self):
+        return self.header.getHeight()
+
+    def getTotalDifficulty(self):
+        return self.header.getTotalDifficulty()
+
+    # serialization / deserialization
+
+    def serialize():
+        # TODO check if there is a need to set byteorder='big'
+        bytes_nonce = self.nonce.to_bytes(64)
+
+        bytes_num_outputs = len(self.getOutputs()).to_bytes(64)
+        bytes_num_kernels = len(self.getKernels()).to_bytes(64)
+        bytes_num_short_ids = len(self.getShortIds()).to_bytes(64)
+
+        outputs = self.getOutputs()
+        bytes_outputs = outputs[0].serialize()
+        for _output in outputs[1:]:
+            bytes_outputs += _output.serialize()
+
+        kernels = self.getKernels()
+        bytes_kernels = kernels[0].serialize()
+        for _kernel in kernels[1:]:
+            bytes_kernels += _kernel.serialize()
+
+        short_ids = self.getShortIds()
+        bytes_short_ids = short_ids[0].serialize()
+        for _short_id in short_ids[1:]:
+            bytes_short_ids += _short_id.serialize()
+
+        return bytes_nonce + bytes_num_otputs + bytes_num_kernels + bytes_num_short_ids + bytes_outputs + bytes_kernels + bytes_short_ids
+
+    @classmethod
+    def deserialize(byteString: bytes):
+        nonce = int(byteString[0:64])
+
+        numOutputs = int(byteString[65:128])
+        numKernels = int(byteString[129:192])
+        numShortIds = int(byteString[193:256])
+
+        # TODO byteString should be shifted accordingly
+        # TODO check how much it should be shifted at each iteration
+        outputs = []
+        for i in range(numOutputs):
+            outputs.prepend(TransactionOutput.deserialize(byteString))
+
+        kernels = []
+        for i in range(numKernels):
+            kernels.prepend(TransactionKernel.deserialize(byteString))
+
+        shortIds = []
+        for i in range(numShortIds):
+            shortIds.prepend(ShortId.deserialize(byteString))
+
+        return CompactBlock(nonce, outputs, kernels, shortIds)
+
+    def toJSON():
+        # transaction outputs
+        outputs = []
+        for _output in self.getOutputs():
+            output_json = _output.toJSON()
+            output_json['block_height'] = self.getHeight()
+            outputs.append(output_json)
+
+        return {
+            'header': self.header.toJSON(),
+            'inputs': [_input.toJSON() for _input in self.getInputs()],
+            'outputs': outputs,
+            'kernels': [kernel.toJSON() for kernel in self.getKernels()]
+        }
+
+    # hashing
+
+    def getHash():
+        return self.header.getHash()
+
