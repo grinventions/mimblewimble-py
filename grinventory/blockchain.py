@@ -194,12 +194,10 @@ class FullBlock:
         return self.body.getKernels()
 
     def getInputCommitments(self):
-        # TODO
-        pass
+        return [_input.getCommitment() for _input in self.getInputs()]
 
     def getOutputCommitments(self):
-        # TODO
-        pass
+        return [_output.getCommitment() for _output in self.getOutputs()]
 
     def getTotalFees(self):
         return self.body.calcFee()
@@ -220,20 +218,33 @@ class FullBlock:
         return self.header.getTotalKernelOffset()
 
     def serialize(self):
-        # TODO
-        pass
+        # TODO check if it is just concatenation
+        return self.header.serialize() + self.body.serialize()
 
-    def deserialize(self):
-        # TODO
-        pass
+    @classmethod
+    def deserialize(self, byteBuffer):
+        # TODO do not pass entire bytBuffer but adequate chunks
+        header = BlockHeader.deserialize(byteBuffer)
+        body = BlockBody.deserialize(byteBuffer)
+        return FullBlock(header, body)
 
     def toJSON(self):
-        # TODO
-        pass
+        # transaction outputs
+        outputs = []
+        for _output in self.getOutputs():
+            output_json = _output.toJSON()
+            output_json['block_height'] = self.getHeight()
+            outputs.append(output_json)
+
+        return {
+            'header': self.header.toJSON(),
+            'inputs': [_input.toJSON() for _input in self.getInputs()],
+            'outputs': outputs,
+            'kernels': [kernel.toJSON() for kernel in self.getKernels()]
+        }
 
     def getHash(self):
-        # TODO
-        pass
+        return self.header.getHash()
 
     def wasValidated(self):
         return self.validated
