@@ -1,6 +1,16 @@
 from grinventory.transaction import TransactionInput
 from grinventory.transaction import TransactionOutput
 
+class Reader:
+    def __init__(self, byteString: bytes):
+        self.content = byteString
+        self.pnt = 0
+
+    def read(self, nb):
+        val = self.content[pnt:pnt+nb]
+        self.pnt += nb
+        return val
+
 
 class ProofOfWork:
     def __init__(self):
@@ -150,21 +160,125 @@ class BlockHeader:
 
     # serialization / deserialization
 
+    # 16+64*6+32*5=608 bytes
     def serialize(self):
-        # TODO
-        pass
+        serializer = self.version.to_bytes(16)
+        serializer += self.height.to_bytes(64)
+        serializer += self.timestamp.to_bytes(64)
+        serializer += self.previousBlockHash.to_bytes(32)
+        serializer += self.previousRoot.to_bytes(32)
+        serializer += self.rangeProofRoot.to_bytes(32)
+        serializer += self.kernelRoot.to_bytes(32)
+        totalKernelOffset = bytes(serializer)
+        serializer = self.outputMMRSize.to_bytes(64)
+        serializer += self.kernelMMRSize.to_bytes(64)
+        serializer += self.totalDifficulty.to_bytes(64)
+        serializer += self.scalingDifficulty.to_bytes(32)
+        serializer += self.nonce.to_bytes(64)
+        proofOfWork = bytes(serializer)
+        return totalKernelOffset + proofOfWork
 
-    def deserialize(self):
-        # TODO
-        pass
+    @classmethod
+    def deserialize(self, byteString: bytes):
+        B = reader(byteString)
+
+        version = int(B(16))
+        height = int(B(64))
+        timestamp = int(B(64))
+        previousBlockHash = int(B(32))
+        previousRoot = int(B(32))
+        outputRoot = int(B(32))
+        kernelRoot = int(B(32))
+
+        totalKernelOffset = BlindingFactor.deserialize(byteString[0:272])
+
+        outputMMRSize = int(B(64))
+        kernelMMRSize = int(B(64))
+        totalDifficulty = int(B(64))
+        scalingDifficulty = int(B(64))
+        nonce = int(B(64))
+
+        proofOfWork = ProofOfWork.deserialize(byteString[272:320])
+
+        return BlockHeader(version,
+                           height,
+                           timestamp,
+                           previousBlockHash,
+                           previousRoot,
+                           rangeProofRoot,
+                           kernelRoot,
+                           totalKernelOffset,
+                           outputMMRSize,
+                           kernelMMRSize,
+                           totalDifficulty,
+                           scalingDifficulty,
+                           nonce,
+                           proofOfWork)
+
 
     def toJSON(self):
-        # TODO
-        pass
+        cuckooSolution = b''
+        for proofNonce in self.getProofOfWork().getProofNonces():
+            cuckooSolution += proofNonce
+
+        return {
+            'height': self.getHeight(),
+            'hash': self.getHash().hex(),
+            'version': self.getVersion(),
+            'timestamp_raw': self.getTimestamp(),
+            'timestamp_local': self.getTimestamp(), # TODO convert to local
+            'timestamp': self.getTimeSTamp(), # TODO convert to UTC
+            'previous': self.getPreviousHash().hex(),
+            'prev_root': self.getPreviousRoot().hex(),
+            'kernel_root': self.getKernelRoot().hex(),
+            'output_root': self.getOutputRoot().hex(),
+            'range_proof_root': self.getRangeProof().hex(),
+            'output_mmr_size': self.getOutputMMRSize(),
+            'kernel_mmr_size': self.getKernelMMRSize(),
+            'total_kernel_offset': self.getTotalKernelOffset().serialize().hex(),
+            'secondary_scaling': self.getScalingDifficulty(),
+            'total_difficulty': self.getTotalDifficulty(),
+            'nonce': self.getNonce(),
+            'edge_bits': self.getProofOfWork().getEdgeBits(),
+            'cuckoo_solution': cuckooSolution
+        }
+
+    @classmethod
+    def fromJSON(jsonString: str):
+        O = json.loads(jsonString)
+        return BlockHeader(O['version'],
+                           O['height'],
+                           O['timestamp'],
+                           O['previousBlockHash'],
+                           O['previousRoot'],
+                           O['rangeProofRoot'],
+                           O['kernelRoot'],
+                           O['totalKernelOffset'],
+                           O['outputMMRSize'],
+                           O['kernelMMRSize'],
+                           O['totalDifficulty'],
+                           O['scalingDifficulty'],
+                           O['nonce'],
+                           ProofOfWork.deserialize(O['proofOfWork']))
 
     def getPreProofOfWork(self):
-        # TODO
-        pass
+        serializer = b''
+        serializer += self.version.to_bytes(16)
+        serializer += self.height.to_bytes(64)
+        serializer += self.timestamp.to_bytes(64)
+        serializer += self.previousBlockHash.to_bytes(32)
+        serializer += self.previousRoot.to_bytes(32)
+        serializer += self.outputRoot.to_bytes(32)
+        serializer += self.rangeProofRoot.to_bytes(32)
+        serializer += self.kernelRoot.to_bytes(32)
+        totalKernelOffset = bytes(serializer)
+        serializer = self.outputMMRSize.to_bytes(64)
+        serializer += self.kernelMMRSize.to_bytes(64)
+        serializer += self.totalDifficulty.to_bytes(64)
+        serializer += self.scalingDifficulty.to_bytes(32)
+        serializer += self.nonce.to_bytes(64)
+        proofOfWork = bytes(serializer)
+        return totalKernelOffset + proofOfWork
 
     # hashing
 
