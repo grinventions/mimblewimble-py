@@ -1,5 +1,8 @@
+from grinventory.consensus import isPrimary, isSecondary
+
 from grinventory.transaction import TransactionInput
 from grinventory.transaction import TransactionOutput
+
 
 class Reader:
     def __init__(self, byteString: bytes):
@@ -13,29 +16,26 @@ class Reader:
 
 
 class ProofOfWork:
-    def __init__(self):
-        # TODO
-        pass
+    def __init__(self, edgeBits, proofNonces):
+        self.edgeBits = edgeBits # 8 bytes
+        self.proofNonces = proofNonces
+        # TODO for hash apply the Blake2b
+        self._hash = Nonce
 
     def getEdgeBits(self):
-        # TODO
-        pass
+        return self.edgeBits
 
     def getProofNonces(self):
-        # TODO
-        pass
+        return self.proofNonces
 
     def isPrimary(self):
-        # TODO
-        pass
+        return isPrimary(self.edgeBits)
 
     def isSecondary(self):
-        # TODO
-        pass
+        return isSecondary(self.edgeBits)
 
     def getHash(self):
-        # TODO
-        pass
+        return self._hash
 
 
 class BlockBody:
