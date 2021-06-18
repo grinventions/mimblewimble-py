@@ -1,4 +1,4 @@
-from grinventory.consensus import isPrimary, isSecondary
+from grinventory.consensus import Consensus
 
 from grinventory.transaction import TransactionInput
 from grinventory.transaction import TransactionOutput
@@ -29,10 +29,10 @@ class ProofOfWork:
         return self.proofNonces
 
     def isPrimary(self):
-        return isPrimary(self.edgeBits)
+        return Consensus.isPrimary(self.edgeBits)
 
     def isSecondary(self):
-        return isSecondary(self.edgeBits)
+        return Consensus.isSecondary(self.edgeBits)
 
     def getHash(self):
         return self._hash
