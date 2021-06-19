@@ -1,10 +1,10 @@
 import hashlib
 from io import BytesIO
 
-from grinventory.consensus import Consensus
+from mimblewimble.consensus import Consensus
 
-from grinventory.transaction import TransactionInput
-from grinventory.transaction import TransactionOutput
+from mimblewimble.transaction import TransactionInput
+from mimblewimble.transaction import TransactionOutput
 
 
 class ProofOfWork:
