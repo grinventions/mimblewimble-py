@@ -1,20 +1,10 @@
 import hashlib
+from io import BytesIO
 
 from grinventory.consensus import Consensus
 
 from grinventory.transaction import TransactionInput
 from grinventory.transaction import TransactionOutput
-
-
-class Reader:
-    def __init__(self, byteString: bytes):
-        self.content = byteString
-        self.pnt = 0
-
-    def read(self, nb):
-        val = self.content[pnt:pnt+nb]
-        self.pnt += nb
-        return val
 
 
 class ProofOfWork:
@@ -181,25 +171,26 @@ class BlockHeader:
 
     @classmethod
     def deserialize(self, byteString: bytes):
-        B = reader(byteString)
+        B = BytesIO(byteString)
+        Btotal = BytesIO(byteString)
 
-        version = int(B(16))
-        height = int(B(64))
-        timestamp = int(B(64))
-        previousBlockHash = int(B(32))
-        previousRoot = int(B(32))
-        outputRoot = int(B(32))
-        kernelRoot = int(B(32))
+        version = int(B.read(2))
+        height = int(B.read(8))
+        timestamp = int(B.read(8))
+        previousBlockHash = int(B.read(4))
+        previousRoot = int(B.read(4))
+        outputRoot = int(B.read(4))
+        kernelRoot = int(B.read(4))
 
-        totalKernelOffset = BlindingFactor.deserialize(byteString[0:272])
+        totalKernelOffset = BlindingFactor.deserialize(Btotal.read(34))
 
-        outputMMRSize = int(B(64))
-        kernelMMRSize = int(B(64))
-        totalDifficulty = int(B(64))
-        scalingDifficulty = int(B(64))
-        nonce = int(B(64))
+        outputMMRSize = int(B.read(8))
+        kernelMMRSize = int(B.read(8))
+        totalDifficulty = int(B.read(8))
+        scalingDifficulty = int(B.read(8))
+        nonce = int(B.read(8))
 
-        proofOfWork = ProofOfWork.deserialize(byteString[272:320])
+        proofOfWork = ProofOfWork.deserialize(Btotal.read(40))
 
         return BlockHeader(version,
                            height,
@@ -263,22 +254,25 @@ class BlockHeader:
                            ProofOfWork.deserialize(O['proofOfWork']))
 
     def getPreProofOfWork(self):
-        serializer = b''
-        serializer += self.version.to_bytes(16)
-        serializer += self.height.to_bytes(64)
-        serializer += self.timestamp.to_bytes(64)
-        serializer += self.previousBlockHash.to_bytes(32)
-        serializer += self.previousRoot.to_bytes(32)
-        serializer += self.outputRoot.to_bytes(32)
-        serializer += self.rangeProofRoot.to_bytes(32)
-        serializer += self.kernelRoot.to_bytes(32)
-        totalKernelOffset = bytes(serializer)
-        serializer = self.outputMMRSize.to_bytes(64)
-        serializer += self.kernelMMRSize.to_bytes(64)
-        serializer += self.totalDifficulty.to_bytes(64)
-        serializer += self.scalingDifficulty.to_bytes(32)
-        serializer += self.nonce.to_bytes(64)
-        proofOfWork = bytes(serializer)
+        serializer = BytesIO()
+        serializer.write(self.version.to_bytes(16))
+        serializer.write(self.height.to_bytes(64))
+        serializer.write(self.timestamp.to_bytes(64))
+        serializer.write(self.previousBlockHash.to_bytes(32))
+        serializer.write(self.previousRoot.to_bytes(32))
+        serializer.write(self.outputRoot.to_bytes(32))
+        serializer.write(self.rangeProofRoot.to_bytes(32))
+        serializer.write(self.kernelRoot.to_bytes(32))
+        totalKernelOffset = serializer.readall()
+
+        serializer = BytesIO()
+        serializer.write(self.outputMMRSize.to_bytes(64))
+        serializer.write(self.kernelMMRSize.to_bytes(64))
+        serializer.write(self.totalDifficulty.to_bytes(64))
+        serializer.write(self.scalingDifficulty.to_bytes(32))
+        serializer.write(self.nonce.to_bytes(64))
+        proofOfWork = serializer.readall()
+
         return totalKernelOffset + proofOfWork
 
     # hashing
