@@ -23,7 +23,6 @@ This project is NOT financed from the grin fund neither grin community fund. I d
 
 1. I am not certain how much time I will be able to dedicate to it
 2. I want this project to earn trust from the community, not have it guaranteed upfront
-3. At the moment of writing this README file, the governance process is under debate, I do not want to be involved in it
 
 Anyone who wishes to support this project is welcome to donate to the following grin address
 
