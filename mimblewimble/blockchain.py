@@ -1,3 +1,5 @@
+import hashlib
+
 from grinventory.consensus import Consensus
 
 from grinventory.transaction import TransactionInput
@@ -19,8 +21,7 @@ class ProofOfWork:
     def __init__(self, edgeBits, proofNonces):
         self.edgeBits = edgeBits # 8 bytes
         self.proofNonces = proofNonces
-        # TODO for hash apply the Blake2b
-        self._hash = Nonce
+        self._hash = hashlib.blake2b(Nonce)
 
     def getEdgeBits(self):
         return self.edgeBits
@@ -34,8 +35,8 @@ class ProofOfWork:
     def isSecondary(self):
         return Consensus.isSecondary(self.edgeBits)
 
-    def getHash(self):
-        return self._hash
+    def __hash__(self):
+        return hashlib.blake2b(self.serialize())
 
 
 class BlockBody:
@@ -223,7 +224,7 @@ class BlockHeader:
 
         return {
             'height': self.getHeight(),
-            'hash': self.getHash().hex(),
+            'hash': self.__hash__().hex(),
             'version': self.getVersion(),
             'timestamp_raw': self.getTimestamp(),
             'timestamp_local': self.getTimestamp(), # TODO convert to local
@@ -282,8 +283,8 @@ class BlockHeader:
 
     # hashing
 
-    def getHash(self):
-        return self.proofOfWork.getHash()
+    def __hash__(self):
+        return hash(self.proofOfWork)
 
     def shortHash(self):
         # TODO
@@ -361,8 +362,8 @@ class FullBlock:
             'kernels': [kernel.toJSON() for kernel in self.getKernels()]
         }
 
-    def getHash(self):
-        return self.header.getHash()
+    def __hash__(self):
+        return hash(self.header)
 
     def wasValidated(self):
         return self.validated
@@ -472,7 +473,6 @@ class CompactBlock:
         }
 
     # hashing
-
-    def getHash():
-        return self.header.getHash()
+    def __hash__():
+        return hash(self.header)
 
