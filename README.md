@@ -13,6 +13,10 @@ Grinventory is meant to be a Python-based toolset for the [grin cryptocurrency](
 * [Research](https://forum.grin.mw/c/research/11) new protocols, quickly drafting ideas and testing them
 * Have [grin](https://grin.mw/) codebase that anyone can easily understand and translate to other languages
 
+## Useful docs
+
+1. Regarding serialization/deserialization [p2p protocol document](https://github.com/mimblewimble/docs/wiki/P2P-Protocol#compactblockbody)
+
 ## Support
 
 This project is NOT financed from the grin fund neither grin community fund. I deliverately did not request funding because of the following reasons:
