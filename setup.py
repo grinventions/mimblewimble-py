@@ -1,9 +1,9 @@
 import setuptools
 
 setuptools.setup(
-    name='arrakis',
+    name='mimblewimble',
     version='0.0.1',
-    packages=['grinventory',],
+    packages=['mimblewimble',],
     license='MIT',
     description = 'A toolset for processing Grin Mimblewimble data structures',
     long_description=open('README.md').read(),
