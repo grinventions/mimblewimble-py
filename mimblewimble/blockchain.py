@@ -11,7 +11,6 @@ class ProofOfWork:
     def __init__(self, edgeBits, proofNonces):
         self.edgeBits = edgeBits # 8 bytes
         self.proofNonces = proofNonces
-        self._hash = hashlib.blake2b(Nonce)
 
     def getEdgeBits(self):
         return self.edgeBits
@@ -25,8 +24,48 @@ class ProofOfWork:
     def isSecondary(self):
         return Consensus.isSecondary(self.edgeBits)
 
+    def serialize(self):
+        return self.getEdgeBits() + self.serializeCycle()
+
+    def serializeCycle(self):
+        bytes_len = ((self.getEdgeBits()*Consensus.proofsize)+7)/8
+        serialized = b'0'*bytes_len
+        uint64_t1 = b'0'*64 + 1
+        uint8_t1 = b'0'*8 + 1
+        for n in range(len(self.getProofNonces())):
+            for bit in range(self.getEdgeBits()):
+                nonce = self.proofNonces[n]
+                if (nonce & (uint64_t1 << bit)) != 0:
+                    positionTemp = (n*self.edgeBits)+bit
+                    p = positionTemp/8
+                    bits[p:p+8] = uint8_t1 << (positionTemp % 8)
+        return bits
+
+    def deserialize(self, byteString):
+        B = BytesIO(byteString)
+        edgeBits = B.read(1)
+        bytes_len = ((edgeBits*Consensus.proofsize)+7)/8
+        bits = B.read(bytes_len)
+        proofNonces = self.deserializeProofNonces(bits, edgeBits)
+        return ProofOfWork(edgeBits, proofNonces)
+
+    def deserializeProofNonces(bits, edgeBits):
+        if edgeBits == 0 or edgeBits > 63:
+            raise ValueError('Invalid number of edge bits {0}'.format(str(edgeBits)))
+        uint8_t1 = b'0'*8 + 1
+        proofNonces = []
+        for n in range(Consensus.proofsize):
+            proofNonce = 0
+            for bit in range(edgeBits):
+                positionTemp = (n*edgeBits)+bit
+                p = positionTemp/8
+                if bits[p:p+8] & (uint8_t1 << (positionTemp % 8)) != 0:
+                    proofNonce = uint8_t1 << bit
+            proofNonces.append(proofNonce)
+        return proofNonces
+
     def __hash__(self):
-        return hashlib.blake2b(self.serialize())
+        return hashlib.blake2b(self.serializeCycle())
 
 
 class BlockBody:
