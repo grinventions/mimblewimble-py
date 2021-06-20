@@ -5,6 +5,7 @@ from mimblewimble.consensus import Consensus
 
 from mimblewimble.transaction import TransactionInput
 from mimblewimble.transaction import TransactionOutput
+from mimblewimble.transaction import TransactionBody
 
 
 class ProofOfWork:
@@ -66,29 +67,6 @@ class ProofOfWork:
 
     def __hash__(self):
         return hashlib.blake2b(self.serializeCycle())
-
-
-class BlockBody:
-    def __init__(self):
-        # TODO
-        pass
-
-    def getInputs(self):
-        # TODO
-        pass
-
-    def getOutputs(self):
-        # TODO
-        pass
-
-    def getKernels(self):
-        # TODO
-        pass
-
-    def calcFee(self):
-        # TODO
-        pass
-
 
 class BlockHeader:
     def __init__(self
@@ -377,7 +355,7 @@ class FullBlock:
     def deserialize(self, byteBuffer):
         # TODO do not pass entire bytBuffer but adequate chunks
         header = BlockHeader.deserialize(byteBuffer)
-        body = BlockBody.deserialize(byteBuffer)
+        body = TransactionBody.deserialize(byteBuffer)
         return FullBlock(header, body)
 
     def toJSON(self):
