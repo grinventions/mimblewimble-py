@@ -1,4 +1,6 @@
-import operator
+from io import BytesIO
+
+from mimblewimble.consensus import Consensus
 
 
 class BlindingFactor:
@@ -39,26 +41,104 @@ class TransactionBody:
         self.outputs = outputs
         self.kernels = kernels
 
+        self.inputs.sort()
+        self.outputs.sort()
+        self.kenrels.sort()
+
+    def getInputs(self):
+        return self.inputs
+
+    def getInput(self, idx):
+        assert idx < len(self.inputs)
+        return self.inputs[idx]
+
+    def getOutputs(self):
+        return self.outputs
+
+    def getOutput(self, idx):
+        assert idx < len(self.outputs)
+        return self.outputs[idx]
+
+    def getKernels(self):
+        return self.outputs
+
+    def getKernel(self, idx):
+        assert idx < len(self.kernels)
+        return self.kernels[idx]
+
     def calcFee(self):
-        # TODO
-        pass
+        smm = 0
+        for kernel in self.getKernels():
+            smm += kernel.getFee()
+        return smm
+
+    # TODO find default value of env or find how to handle env
+    def calcWeight(self, block_height, env=None):
+        num_inputs = len(self.getInputs())
+        num_outptus = len(self.getOutputs())
+        num_kernels = len(self.getKernels())
+
+        if Consensus.getHeaderVersion(env, block_height) < 5:
+            return Consensus.calculateWeightV4(num_inputs, num_outputs, num_kernels)
+        else:
+            return Consensus.calculateWeightV5(num_inputs, num_outputs, num_kernels)
 
     def getFeeShift(self):
-        # TODO
-        pass
+        fee_shift = 0
+        for kernel in self.getKenrels():
+            if kernel.getFeeShift() > fee_shift:
+                fee_shift = kernel.getFeeShift()
+        return fee_shift
 
-    def getWeight(self):
-        # TODO
-        pass
 
     def serialize(self):
-        # TODO
-        pass
+        serializer = BytesIO()
+        serializer.write(len(self.getInputs()).to_bytes(8))
+        serializer.write(len(self.getOutputs()).to_bytes(8))
+        serializer.write(len(self.getKernels()).to_bytes(8))
+
+        # serialize inputs
+        for input_ in self.getInputs():
+            input_.serialize(serializer)
+
+        # serialize outputs
+        for output_ in self.getOutputs():
+            outptu_.serialize(serializer)
+
+        # serialize kernels
+        for kernel_ in self.getKernels():
+            kernel_.serialize(serializer)
+
+        return serializer.readall()
+
 
     @classmethod
-    def deserialize(self):
-        # TODO
-        pass
+    def deserialize(self, byteString):
+        B = BytesIO(byteString)
+        numInputs = B.read(8)
+        numOutputs = B.read(8)
+        numKernels = B.read(8)
+
+        # read inputs (variable size)
+        inputs = []
+        for i in range(numInputs):
+            inputs.append(TransactionInput.deserialize(B))
+
+        # read outputs (variable size)
+        outputs = []
+        for i in range(numOutputs):
+            outputs.append(TransactionOutput.deserialize(B))
+
+        # read kernels (variable size)
+        kernels = []
+        for i in range(numKernels):
+            kernels.append(TransactionKernel.deserialize(B))
+
+        inputs.sort()
+        outouts.sort()
+        kernels.sort()
+
+        return TransactionBody(inputs, outputs, kernels)
 
     def toJSON(self):
         return {
@@ -81,16 +161,16 @@ class TransactionBody:
             transaction_output = TransactionOutput()
             transaction_output.fromJSON(_output)
             self.outputs.append(transaction_output)
-         self.outputs.sort()
+        self.outputs.sort()
 
         kernels = []
         for _kernel in transactionBodyJSON.get('kernels', []):
             transaction_kernel = TransactionKernel()
             transaction_kernel.fromJSON(_kernel)
             self.kernels.append(transaction_kernel)
-         self.kernels.sort()
+        self.kernels.sort()
 
-         return TransactionBody(inputs, outputs, kernels)
+        return TransactionBody(inputs, outputs, kernels)
 
 class Transaction:
     def __init__(self, offset, body: TransactionBody):
