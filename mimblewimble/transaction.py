@@ -1,7 +1,13 @@
 from io import BytesIO
+from enum import Enum
 
 from mimblewimble.consensus import Consensus
 from mimblewimble.secret_key import SecretKey
+
+
+class EOutputFeatures(Enum):
+    DEFAULT = 0
+    COINBASE_OUTPUT = 1
 
 
 class BlindingFactor:
