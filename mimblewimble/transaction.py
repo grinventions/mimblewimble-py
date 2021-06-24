@@ -1,7 +1,10 @@
+import hashlib
+
 from io import BytesIO
 from enum import Enum
 
 from mimblewimble.consensus import Consensus
+from mimblewimble.commitment import Commitment
 from mimblewimble.secret_key import SecretKey
 
 
@@ -42,12 +45,62 @@ class BlindingFactor:
 
 
 class TransactionInput:
-    def __init__(self):
-        # TODO
-        pass
+    def __init__(self, features: EOutputFeatures, commitment: Commitment):
+        self.features = features
+        self.commitment = commitment
+
+    # operators
 
     def __lt__(self, other):
-         return self.hash() < other.hash()
+        return self.getCommitment() < other.getCommitment()
+
+    def __eq__(self, other):
+        return self.getFeatures() == other.getFeatures() and self.getCommitment() == other.getCommitment()
+
+    # getters
+
+    def getFeatures(self):
+        return self.features
+
+    def getCommitment(self):
+        return self.commitment
+
+    # serialization / deserialization
+
+    def serialize(self, serializer: BytesI0, protocolVersion: EProtocolVersion):
+        if protocolVersion == EProtocolVersion.V3:
+            serializer.write(self.features.to_bytes(8))
+        self.commitment.serialize(serializer)
+
+    @classmethod
+    def deserialize(self, byteBuffer: BytesIO, protocolVersion: EProtocolVersion):
+        if protocolVersion == EProtocolVersion.V3:
+            commitment = Commitment.deserialize(byteBuffer)
+            features = EOutputFeatures(Global.getCoinView().getOutputType(commitment))
+            return TransactionInput(features, commitment)
+        else:
+            features = EOutputFeatures(byteBuffer.read(1))
+            commitment = Commitment.deserialize(byteBuffer)
+            return TransactionInput(features, commitment)
+
+    def toJSON(self):
+        return {
+            'features': str(self.getFeatures),
+            'commit': self.getCommitment().toJSON()
+        }
+
+    @classmethod
+    def fromJSON(self, transactionInputJSON):
+        features = EOutputFeatures.fromString(transactionInputJSON['features'])
+        commitment = Commitment(transactionInputJSON['commit'])
+        return TransactionInput(features, commitment)
+
+    # traits
+
+    def __hash__(self):
+        serializer = BytesIO()
+        self.serialize(serializer)
+        return hashlib.blake2b(serialize.readall())
 
 
 class TransactionOutput:
@@ -137,11 +190,10 @@ class TransactionBody:
 
 
     @classmethod
-    def deserialize(self, byteString):
-        B = BytesIO(byteString)
-        numInputs = B.read(8)
-        numOutputs = B.read(8)
-        numKernels = B.read(8)
+    def deserialize(self, byteBuffer: BytesIO):
+        numInputs = byteBuffer.read(8)
+        numOutputs = byteBuffer.read(8)
+        numKernels = byteBuffer.read(8)
 
         # read inputs (variable size)
         inputs = []
