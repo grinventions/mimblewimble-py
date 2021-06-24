@@ -1,20 +1,38 @@
 from io import BytesIO
 
 from mimblewimble.consensus import Consensus
+from mimblewimble.secret_key import SecretKey
 
 
 class BlindingFactor:
     def __init__(self, blindingFactorBytes):
         self.blindingFactorBytes = blidningFactorBytes # 32 bytes
 
+    def getBytes(self):
+        return self.blindingFactorBytes
+
+    def hex(self):
+        return self.blindingFactorBytes.hex()
+
+    def isNull(self):
+        return all(v == b'\x00' for v in self.blindingFactorBytes)
+
     def serialize(self):
         return int(self.blindingFactorBytes)
 
-    def deserialize(self, blindingFactorInt):
-        self.blindingFactorBytes = blindingFactorInt.to_bytes(32, byteorder='big')
+    @classmethod
+    def deserialize(self, blindingFactorInt: int):
+        return BlindingFactor(blindingFactorInt.to_bytes(32, byteorder='big'))
 
-    def toJSON(self):
-        return self.serialize()
+    @classmethod
+    def fromHex(self, hex: str):
+        return BlindingFactor(bytes.fromHex(hex))
+
+    def format(self):
+        return 'BlindingFacotr\{' + self.hex() + '\}'
+
+    def toSecretKey(self):
+        return SecretKey(self.blindingFactorBytes)
 
 
 class TransactionInput:
