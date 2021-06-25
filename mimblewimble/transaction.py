@@ -6,11 +6,14 @@ from enum import Enum
 from mimblewimble.consensus import Consensus
 from mimblewimble.commitment import Commitment
 from mimblewimble.secret_key import SecretKey
+from mimblewibmle.rangeproof import RangeProof
 
 
 class EOutputFeatures(Enum):
     DEFAULT = 0
     COINBASE_OUTPUT = 1
+
+
 
 
 class BlindingFactor:
@@ -104,12 +107,70 @@ class TransactionInput:
 
 
 class TransactionOutput:
-    def __init__(self):
-        # TODO
-        pass
+    def __init__(self, features: EOutputFeatures, commitment: Commitment, rangeProof: RangeProof):
+        self.features = features
+        self.commitment = commitment
+        self.rangeProof = rangeProof
+
+    # operators
 
     def __lt__(self, other):
-        return self.hash() < other.hash()
+        return self.getCommitment() < other.getCommitment()
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+    # getters
+
+    def getFeatures(self):
+        return self.features
+
+    def getCommitment(self):
+        return self.commitment
+
+    def getRangeProof(self):
+        return self.rangeProof
+
+    def isCoinbase(self):
+        return (self.features & EOutputFeatures.COINBASE_OUTPUT) == EOutputFeatures.COINBASE_OUTPUT
+
+    # serialization/deserialization
+
+    def serialize(self, serializer):
+        serializer.write(self.features.to_bytes(8))
+        self.commitment.serialize(serializer)
+        self.rangeProof.serialize(serializer)
+
+    @classmethod
+    def deserialize(self, byteBuffer):
+        features = EOutputFeatures(byteBuffer.read(1))
+        commitment = Commitment.deserialize(byteBuffer)
+        rangeProof = RangeProof.deserialize(byteBuffer)
+        return TransactionInput(features, commitment, rangeProof)
+
+    def toJSON(self):
+        return {
+            'features': str(self.getFeatures),
+            'commit': self.getCommitment().toJSON(),
+            'proof': self.getRangeProof().toJSON()
+        }
+
+    @classmethod
+    def fromJSON(self, transactionOutputJSON):
+        features = EOutputFeatures.fromString(transactionOutputJSON['features'])
+        commitment = Commitment(transactionOutputJSON['commit'])
+        rangeProof = RangeProof(transactionOutputJSON['proof'])
+        return TransactionOutput(features, commitment, rangeProof)
+
+    # traits
+
+    def __hash__(self):
+        serializer = BytesIO()
+        self.serialize(serializer)
+        return hashlib.blake2b(serialize.readall())
+
+    def format(self):
+        return self.commitment.format()
 
 
 class TransactionBody:
