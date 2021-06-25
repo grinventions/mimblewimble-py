@@ -7,6 +7,8 @@ from mimblewimble.consensus import Consensus
 from mimblewimble.commitment import Commitment
 from mimblewimble.secret_key import SecretKey
 from mimblewibmle.rangeproof import RangeProof
+from mimblewibmle.fee import Fee
+from mimblewibmle.signature import Signature
 
 
 class EOutputFeatures(Enum):
@@ -14,6 +16,15 @@ class EOutputFeatures(Enum):
     COINBASE_OUTPUT = 1
 
 
+class EKernelFeatures(Enum):
+    DEFAULT_KERNEL = 0
+    NO_RECENT_DUPLICATE = 3
+
+
+# TODO
+class KernelFeatures:
+    def __init__(self):
+        pass
 
 
 class BlindingFactor:
@@ -308,6 +319,139 @@ class TransactionBody:
         self.kernels.sort()
 
         return TransactionBody(inputs, outputs, kernels)
+
+
+class TransactionKernel:
+    def __init__(self, features: EKernelFeatures, fee: Fee, lockHeight: int, excessCommitment: Commitment, excessSignature: Signature):
+        self.features = features
+        self.fee = fee
+        self.lockHeight = lockHeight
+        self.excessCommitment = excessCommitment
+        self.excessSignature = excessSignature
+
+    # operators
+
+    def __lt__(self, other):
+        return self.getCommitment() < other.getCommitment()
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+    def __ne__(self, other):
+        return hash(self) == hash(other)
+
+    # getters
+
+    def getFeatures(self):
+        return self.features
+
+    def getFee(self):
+        return self.fee
+
+    def getFeeShift(self):
+        return self.fee.getShift()
+
+    def getLockHeight(self):
+        return self.lockHeight
+
+    def getCommitment(self):
+        return self.getExcessCommitment()
+
+    def getExcessCommitment(self):
+        return self.excessCommitment
+
+    def getExcessSignature(self):
+        return self.excessSignature
+
+    def isCoinbase(self):
+        return (self.features & EOutputFeatures.COINBASE_OUTPUT) == EOutputFeatures.COINBASE_OUTPUT
+
+    # serialization/deserialization
+
+    # TODO handle the protocol version detection instead of argument
+    def serialize(self, serializer, protocolVersion: EProtocolVersion):
+        if protocolVersion >= EProtocolVersion.V2:
+            serializer.write(self.features.to_bytes(8))
+            if getFeatures() == EKernelFeatures.DEFAULT_KERNEL:
+                self.fee.serialize(serializer)
+            elif getFeatures() == EKernelFeatures.HEIGHT_LOCKED:
+                self.fee.serialize(serializer)
+                serializer.write(self.getLockHeight().to_bytes(8))
+            elif getFeatures() == EKernelFeatures.NO_RECENT_DUPLICATE:
+                self.fee.serialize(serializer)
+                serializer.write(self.getLockHeight().to_bytes(2))
+            self.excessCommitment.serialize(serializer)
+            self.excessSignature.serialize(serializer)
+        else:
+            serializer.write(self.features.to_bytes(8))
+            self.fee.serialize(serializer)
+            serializer.write(self.getLockHeight().to_bytes(8))
+            self.excessCommitment.serialize(serializer)
+            self.excessSignature.serialize(serializer)
+
+
+    # TODO handle the protocol version detection instead of argument
+    def deserialize(self, byteBuffer: BytesIO, protocolVersion: EProtocolVersion):
+        features = EKernelFeatures(serializer.read(1))
+        fee = None
+        lockHeight = 0
+        if EProtocolVersion >= EProtocolVersion.V2:
+            if features != EKernelKeatures.COINBASE_KERNEL:
+                fee = Fee.deserialize(byteBuffer)
+
+            if features == EKernelFeatures.HEIGHT_LOCKED:
+                lockHeight = byteBuffer.read(8)
+            elif features == EKernelFeatures.NO_RECENT_DUPLICATE:
+                lockHeight = byteBuffer.read(2)
+        else:
+            fee = Fee.deserialize(byteBuffer)
+            lockHeight = byteBuffer.read(8)
+
+        # TODO make sure reads 33 bytes
+        excessCommitment = Commitment.deserialize(byteBuffer)
+
+        # TODO make sure reads 64 bytes
+        excessSignature = Signature.deserialize(byteBuffer)
+
+        if features == EKernelFeatures.NO_RECENT_DUPLICATE:
+            if lockHeight == 0 or lockHeight > Consensus.WEEK_HEIGHT:
+                raise ValueError('Invalid NRD relative height({0}) for kernel: {1}'.format(str(lockHeight), str(excessCommitment)))
+
+        return TransactionKernel(features, fee, lockHeight, excessCommitment, excessSignature)
+
+    def toJSON(self):
+        features = {}
+        if self.getFeatures() != EKernelFeatures.COINBASE_KERNEL:
+            features['fee'] = self.fee.toJSON()
+        if self.getFeatures() == EKernelFeatures.HEIGHT_LOCKED:
+            features['lock_height'] = self.getLockHeight()
+        return {
+            'features': features,
+            'excess': self.getExcessCommitment().toJSON(),
+            'excess_sig': self.getExcessSignature().hex() # TODO find way to make it compact
+        }
+
+    @classmethod
+    def fromJSON(self, transactionKernelJSON):
+        features = KernelFeatures.fromString(transactionKernelJSON['features']) # TODO something fishy here... it should be a string, what is the exact json key?
+        fee = Fee.fromJSON(transactionKernelJSON['features']['fee'])
+        lockHeight = transactionKernelJSON['features']['lock_height']
+        excessCommitment = Commitment.fromJSON(transactionKernelJSON['excess'])
+        excessSignature = Signature.fromJSON(transactionKernelJSON['excess_sig']) # TODO find way to parse the compact signature
+        if features == EKernelFeatures.NO_RECENT_DUPLICATE:
+            if lockHeight == 0 or lockHeight > Consensus.WEEK_HEIGHT:
+                raise ValueError('Invalid NRD relative height({0}) for kernel: {1}'.format(str(lockHeight), str(excessCommitment)))
+
+        return TransactionKernel(features, fee, lockHeight, excessCommitment, excessSignature)
+
+    # traits
+
+    def __hash__(self):
+        serializer = BytesIO()
+        self.serialize(serializer)
+        return hashlib.blake2b(serialize.readall())
+
+
 
 class Transaction:
     def __init__(self, offset, body: TransactionBody):
