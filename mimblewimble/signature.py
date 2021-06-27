@@ -1,4 +1,6 @@
-# TODO
+import BytesIO
+
+
 class Signature:
     def __init__(self, signatureBytes):
         self.signatureBytes = signatureBytes
@@ -19,7 +21,7 @@ class Signature:
         serializer.write(self.getSignatureBytes())
 
     @classmethod
-    def deserialize(self, byteBuffer):
+    def deserialize(self, byteBuffer: BytesIO):
         return Signature(byteBuffer.read(8))
 
     def hex(self):
