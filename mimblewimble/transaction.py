@@ -16,6 +16,24 @@ class EOutputFeatures(Enum):
     COINBASE_OUTPUT = 1
 
 
+class OutputFeatures:
+    @classmethod
+    def toString(self, features: EOutputFeatures):
+        if features == EOutputFeatures.DEFAULT:
+            return 'Plain'
+        if features == EOutputFeatures.COINBASE_OUTPUT:
+            return 'Coinbase'
+        return ''
+
+    @classmethod
+    def fromString(self, string: str):
+        if string == 'Plain':
+            return EOutputFeatures.DEFAULT
+        if string == 'Coinbase':
+            return EOutputFeatures.COINBASE
+        raise ValueError('Failed to deserialize output features: {0}'.format(string))
+
+
 class EKernelFeatures(Enum):
     DEFAULT_KERNEL = 0
     COINBASE_KERNEL = 1
