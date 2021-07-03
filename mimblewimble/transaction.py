@@ -18,13 +18,35 @@ class EOutputFeatures(Enum):
 
 class EKernelFeatures(Enum):
     DEFAULT_KERNEL = 0
+    COINBASE_KERNEL = 1
+    HEIGHT_LOCKED = 2
     NO_RECENT_DUPLICATE = 3
 
 
-# TODO
 class KernelFeatures:
-    def __init__(self):
-        pass
+    @classmethod
+    def toString(self, features: EKernelFeatures):
+        if features == EKernelFeatures.DEFAULT_KERNEL:
+            return 'Plain'
+        if features == EKernelFeatures.COINBASE_KERNEL:
+            return 'Coinbase'
+        if features == EKernelFeatures.HEIGHT_LOCKED:
+            return 'HeightLocked'
+        if features == EKernelFeatures.NO_RECENT_DUPLICATE:
+            return 'NoRecentDuplicate'
+        return ''
+
+    @classmethod
+    def fromString(self, string: str):
+        if string == 'Plain':
+            return EKernalFeatures.DEFAULT_KERNEL
+        if string == 'Coinbase':
+            return EKernalFeatures.COINBASE_KERNEL
+        if string == 'HeightLocked':
+            return EKernalFeatures.HEIGHT_LOCKED
+        if string == 'NoRecentDuplicate':
+            return EKernalFeatures.NO_RECENT_DUPLICATE
+        raise ValueError('Failed to deserialize kernel features: {0}'.format(string))
 
 
 class BlindingFactor:
