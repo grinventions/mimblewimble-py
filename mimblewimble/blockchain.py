@@ -2,6 +2,7 @@ import hashlib
 from io import BytesIO
 
 from mimblewimble.consensus import Consensus
+from mimblewimble.short_id import ShortId
 
 from mimblewimble.transaction import TransactionInput
 from mimblewimble.transaction import TransactionOutput
