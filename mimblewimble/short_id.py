@@ -1,3 +1,5 @@
+from io import BytesIO
+
 
 class ShortId:
     def __init__(self, _id):
