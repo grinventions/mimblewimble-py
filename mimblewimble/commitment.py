@@ -38,7 +38,7 @@ class Commitment:
 
     @classmethod
     def fromHex(self, _hex: str):
-        return Commitment(bytes.fromxex(_hex))
+        return Commitment(bytes.fromhex(_hex))
 
     def format(self):
         return 'Commitment{' + self.hex() + '}'
