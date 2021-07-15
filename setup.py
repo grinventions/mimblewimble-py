@@ -10,7 +10,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     author = 'Marek Narozniak',
     author_email = 'marek.yggdrasil@gmail.com',
-    install_requires=['hashlib'],
+    install_requires=['hashlib', 'siphash-cffi'],
     url = 'https://github.com/marekyggdrasil/grinventory-py',
     classifiers=[
         "Programming Language :: Python :: 3",
