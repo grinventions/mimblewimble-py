@@ -70,7 +70,7 @@ class ProofOfWork:
         return hashlib.blake2b(self.serializeCycle())
 
 class BlockHeader:
-    def __init__(self
+    def __init__(self,
                  version,
                  height,
                  timestamp,
@@ -95,7 +95,7 @@ class BlockHeader:
         self.rangeProofRoot = rangeProofRoot
         self.kernelRoot = kernelRoot
         self.totalKernelOffset = totalKernelOffset
-        self.outputMMRSize = ourputMMRSize
+        self.outputMMRSize = outputMMRSize
         self.kernelMMRSize = kernelMMRSize
         self.totalDifficulty = totalDifficulty
         self.scalingDifficulty = scalingDifficulty
@@ -166,6 +166,14 @@ class BlockHeader:
 
     def getKernelMMRSize(self):
         return self.kernelMMRSize
+
+    def getNumOutputs(self):
+        # TODO implement the getLeafIndex
+        pass
+
+    def getNumKernels(self):
+        # TODO implement the getLeafIndex
+        pass
 
     # serialization / deserialization
 

@@ -1,4 +1,4 @@
-import BytesIO
+from io import BytesIO
 
 
 class Signature:
@@ -28,4 +28,4 @@ class Signature:
         return self.getSignatureBytes().hex()
 
     def format(self):
-        return 'RawSig\{' + self.hex() + '\}'
+        return 'RawSig{' + self.hex() + '}'

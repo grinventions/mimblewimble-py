@@ -6,9 +6,16 @@ from enum import Enum
 from mimblewimble.consensus import Consensus
 from mimblewimble.commitment import Commitment
 from mimblewimble.secret_key import SecretKey
-from mimblewibmle.rangeproof import RangeProof
-from mimblewibmle.fee import Fee
-from mimblewibmle.signature import Signature
+from mimblewimble.rangeproof import RangeProof
+from mimblewimble.fee import Fee
+from mimblewimble.signature import Signature
+
+
+class EProtocolVersion(Enum):
+    V1 = 1
+    V2 = 2
+    V3 = 3
+    V1000 = 1000
 
 
 class EOutputFeatures(Enum):
@@ -92,7 +99,7 @@ class BlindingFactor:
         return BlindingFactor(bytes.fromHex(hex))
 
     def format(self):
-        return 'BlindingFacotr\{' + self.hex() + '\}'
+        return 'BlindingFacotr{' + self.hex() + '}'
 
     def toSecretKey(self):
         return SecretKey(self.blindingFactorBytes)
@@ -121,7 +128,7 @@ class TransactionInput:
 
     # serialization / deserialization
 
-    def serialize(self, serializer: BytesI0, protocolVersion: EProtocolVersion):
+    def serialize(self, serializer, protocolVersion: EProtocolVersion):
         if protocolVersion == EProtocolVersion.V3:
             serializer.write(self.features.to_bytes(8))
         self.commitment.serialize(serializer)

@@ -1,5 +1,4 @@
-
-import BytesIO
+from io import BytesIO
 
 
 class SecretKey:

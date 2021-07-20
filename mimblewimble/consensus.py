@@ -15,7 +15,7 @@ class Consensus:
     nano_grin = 1
 
     # The block subsidy amount, one grin per second on average
-    reward - 60*grin_base
+    reward = 60*grin_base
 
     # Weight of an input when counted against the max block weight capacity
     input_weight = 1
@@ -73,7 +73,7 @@ class Consensus:
     coinbase_maturity = (24*60*60)/block_time_sec
 
     @classmethod
-    def getMaxCoinbaseHeight(blockHeight, automated_testing=False)
+    def getMaxCoinbaseHeight(blockHeight, automated_testing=False):
         if automated_testing:
             return math.max(blockHeight, 25)-20
         return math.max(blockHeight, coinbase_maturity)-coinbase_maturity
@@ -158,7 +158,9 @@ class Consensus:
         return 2 << (edge_bits-base_edge_bits)*xpr_edge_bits
 
     # Initial mining secondary scale
-    initial_graph_weight = Consensus.graphWeight(0, second_pow_edge_bits)
+    @classmethod
+    def initialGraphWeight(self):
+        return graphWeight(0, second_pow_edge_bits)
 
     # Move value linearly toward a goal
     @classmethod

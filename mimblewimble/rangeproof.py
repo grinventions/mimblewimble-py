@@ -1,4 +1,4 @@
-import BytesIO
+from io import BytesIO
 
 
 class RangeProof:
@@ -26,7 +26,7 @@ class RangeProof:
     def deserialize(self, byteBuffer: BytesIO):
         proofSize = byteBuffer.readall()
         if len(proofSize) > MAX_PROOF_SIZE:
-            raise ValueError('Proof of size {0} exceeds the maximum'.format(str(len()proofSize)))
+            raise ValueError('Proof of size {0} exceeds the maximum'.format(str(len(proofSize))))
         return RangeProof(proofSize)
 
     def hex(self):
