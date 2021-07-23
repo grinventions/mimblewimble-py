@@ -11,7 +11,7 @@ setuptools.setup(
     author = 'Marek Narozniak',
     author_email = 'marek.yggdrasil@gmail.com',
     install_requires=['siphash-cffi'],
-    url = 'https://github.com/marekyggdrasil/grinventory-py',
+    url = 'https://github.com/grinventions/mimblewimble-py',
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 2",
