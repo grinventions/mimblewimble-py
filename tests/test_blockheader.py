@@ -41,6 +41,5 @@ class BlockHeaderTest(unittest.TestCase):
             nonce,
             proofOfWork)
 
-        # TODO implement the getLeafIndex
-        # assert block_header.GetNumOutputs() == 3
-        # assert block_header.GetNumKernels() == 4
+        assert block_header.getNumOutputs() == 3
+        assert block_header.getNumKernels() == 4

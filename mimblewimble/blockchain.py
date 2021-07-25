@@ -1,12 +1,14 @@
 import hashlib
 from io import BytesIO
 
-from mimblewimble.consensus import Consensus
-from mimblewimble.short_id import ShortId
+from mimblewimble.mmr.index import MMRIndex
 
-from mimblewimble.transaction import TransactionInput
-from mimblewimble.transaction import TransactionOutput
-from mimblewimble.transaction import TransactionBody
+from mimblewimble.consensus import Consensus
+from mimblewimble.models.short_id import ShortId
+
+from mimblewimble.models.transaction import TransactionInput
+from mimblewimble.models.transaction import TransactionOutput
+from mimblewimble.models.transaction import TransactionBody
 
 
 class ProofOfWork:
@@ -168,12 +170,10 @@ class BlockHeader:
         return self.kernelMMRSize
 
     def getNumOutputs(self):
-        # TODO implement the getLeafIndex
-        pass
+        return MMRIndex.at(self.outputMMRSize).getLeafIndex()
 
     def getNumKernels(self):
-        # TODO implement the getLeafIndex
-        pass
+        return MMRIndex.at(self.kernelMMRSize).getLeafIndex()
 
     # serialization / deserialization
 

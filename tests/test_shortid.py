@@ -1,6 +1,6 @@
 import unittest
 
-from mimblewimble.short_id import ShortId
+from mimblewimble.models.short_id import ShortId
 
 
 class ShortIdTest(unittest.TestCase):

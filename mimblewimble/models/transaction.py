@@ -4,11 +4,11 @@ from io import BytesIO
 from enum import Enum
 
 from mimblewimble.consensus import Consensus
-from mimblewimble.commitment import Commitment
-from mimblewimble.secret_key import SecretKey
-from mimblewimble.rangeproof import RangeProof
-from mimblewimble.fee import Fee
-from mimblewimble.signature import Signature
+from mimblewimble.crypto.commitment import Commitment
+from mimblewimble.crypto.secret_key import SecretKey
+from mimblewimble.crypto.signature import Signature
+from mimblewimble.crypto.rangeproof import RangeProof
+from mimblewimble.models.fee import Fee
 
 
 class EProtocolVersion(Enum):
