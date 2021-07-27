@@ -239,7 +239,7 @@ class TransactionBody:
 
         self.inputs.sort()
         self.outputs.sort()
-        self.kenrels.sort()
+        self.kernels.sort()
 
     def getInputs(self):
         return self.inputs

@@ -32,14 +32,14 @@ class ProofOfWork:
         return self.getEdgeBits() + self.serializeCycle()
 
     def serializeCycle(self):
-        bytes_len = ((self.getEdgeBits()*Consensus.proofsize)+7)/8
+        bytes_len = int(((self.getEdgeBits()*Consensus.proofsize)+7)/8)
         serialized = b'0'*bytes_len
-        uint64_t1 = b'0'*64 + 1
-        uint8_t1 = b'0'*8 + 1
+        uint64_t1 = b'0'*63 + b'1'
+        uint8_t1 = b'0'*7 + b'1'
         for n in range(len(self.getProofNonces())):
             for bit in range(self.getEdgeBits()):
                 nonce = self.proofNonces[n]
-                if (nonce & (uint64_t1 << bit)) != 0:
+                if int(nonce & (uint64_t1 << bit)) != 0:
                     positionTemp = (n*self.edgeBits)+bit
                     p = positionTemp/8
                     bits[p:p+8] = uint8_t1 << (positionTemp % 8)
