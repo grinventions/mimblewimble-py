@@ -33,17 +33,18 @@ class ProofOfWork:
 
     def serializeCycle(self):
         bytes_len = int(((self.getEdgeBits()*Consensus.proofsize)+7)/8)
-        serialized = b'0'*bytes_len
-        uint64_t1 = b'0'*63 + b'1'
-        uint8_t1 = b'0'*7 + b'1'
+        serialized = 0
+        uint64_t1 = 1
+        uint8_t1 = 1
+        serialized_bytes = bytearray(b'0'*bytes_len)
         for n in range(len(self.getProofNonces())):
             for bit in range(self.getEdgeBits()):
                 nonce = self.proofNonces[n]
                 if int(nonce & (uint64_t1 << bit)) != 0:
                     positionTemp = (n*self.edgeBits)+bit
-                    p = positionTemp/8
-                    bits[p:p+8] = uint8_t1 << (positionTemp % 8)
-        return bits
+                    p = int(positionTemp/8)
+                    serialized_bytes[p] = (uint8_t1 << (positionTemp % 8))
+        return serialized_bytes
 
     def deserialize(self, byteString):
         B = BytesIO(byteString)
@@ -68,8 +69,9 @@ class ProofOfWork:
             proofNonces.append(proofNonce)
         return proofNonces
 
-    def __hash__(self):
-        return hashlib.blake2b(self.serializeCycle())
+    def getHash(self):
+        return hashlib.blake2b(self.serializeCycle()).digest()
+
 
 class BlockHeader:
     def __init__(self,
@@ -303,8 +305,8 @@ class BlockHeader:
 
     # hashing
 
-    def __hash__(self):
-        return hash(self.proofOfWork)
+    def getHash(self):
+        return self.proofOfWork.getHash()
 
     def shortHash(self):
         # TODO
@@ -312,7 +314,7 @@ class BlockHeader:
 
 
 class FullBlock:
-    def __init__(self, header, body, validated=False):
+    def __init__(self, header: BlockHeader, body: TransactionBody, validated=False):
         self.header = header
         self.body = body
         self.validated = validated
@@ -382,8 +384,8 @@ class FullBlock:
             'kernels': [kernel.toJSON() for kernel in self.getKernels()]
         }
 
-    def __hash__(self):
-        return hash(self.header)
+    def getHash(self):
+        return self.header.getHash()
 
     def wasValidated(self):
         return self.validated
