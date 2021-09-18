@@ -195,7 +195,7 @@ class TransactionOutput:
     # serialization/deserialization
 
     def serialize(self, serializer):
-        serializer.write(self.features.to_bytes(8))
+        serializer.write(self.features.value.to_bytes(8, 'big'))
         self.commitment.serialize(serializer)
         self.rangeProof.serialize(serializer)
 
@@ -289,9 +289,9 @@ class TransactionBody:
 
     def serialize(self):
         serializer = BytesIO()
-        serializer.write(len(self.getInputs()).to_bytes(8))
-        serializer.write(len(self.getOutputs()).to_bytes(8))
-        serializer.write(len(self.getKernels()).to_bytes(8))
+        serializer.write(len(self.getInputs()).to_bytes(8, 'big'))
+        serializer.write(len(self.getOutputs()).to_bytes(8, 'big'))
+        serializer.write(len(self.getKernels()).to_bytes(8, 'big'))
 
         # serialize inputs
         for input_ in self.getInputs():
@@ -299,7 +299,7 @@ class TransactionBody:
 
         # serialize outputs
         for output_ in self.getOutputs():
-            outptu_.serialize(serializer)
+            output_.serialize(serializer)
 
         # serialize kernels
         for kernel_ in self.getKernels():

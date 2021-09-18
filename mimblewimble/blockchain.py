@@ -34,16 +34,50 @@ class ProofOfWork:
     def serializeCycle(self):
         bytes_len = int(((self.getEdgeBits()*Consensus.proofsize)+7)/8)
         serialized = 0
-        uint64_t1 = 1
+        uint64_t1 = (1).to_bytes(8, 'big')
         uint8_t1 = 1
-        serialized_bytes = bytearray(b'0'*bytes_len)
+        serialized_bytes = bytearray(bytes_len)
+        print('begin')
+        print(serialized_bytes.hex())
+        print('edge bits')
+        print(self.getEdgeBits())
+        print('proof nonces len')
+        print(len(self.getProofNonces()))
+        print()
+        cnt = 0
         for n in range(len(self.getProofNonces())):
-            for bit in range(self.getEdgeBits()):
+            # print(n)
+            for bit in range(int(self.getEdgeBits())):
+                # print(' ', bit)
                 nonce = self.proofNonces[n]
-                if int(nonce & (uint64_t1 << bit)) != 0:
+                # print(' n ', nonce)
+                if cnt < 4:
+                    #print('cnt')
+                    #print(cnt)
+                    #print('n')
+                    #print(n)
+                    #print('bit')
+                    #print(bit)
+                    #print('mult')
+                    #print(n*self.edgeBits)
+                    #print('nonce')
+                    #print(nonce)
+                    #print('shift')
+                    #print((1 << bit).to_bytes(8, 'big').hex())
+                    #print(nonce & (1 << bit))
+                    pass
+                if nonce & (1 << bit) != 0:
                     positionTemp = (n*self.edgeBits)+bit
                     p = int(positionTemp/8)
-                    serialized_bytes[p] = (uint8_t1 << (positionTemp % 8))
+                    serialized_bytes[p] |= (1 << (positionTemp % 8))
+                    if cnt < 4:
+                        #print('positionTemp')
+                        #print(positionTemp)
+                        #print(serialized_bytes.hex())
+                        #print()
+                        cnt += 1
+        #print('final')
+        #print(serialized_bytes.hex())
         return serialized_bytes
 
     def deserialize(self, byteString):
@@ -70,7 +104,10 @@ class ProofOfWork:
         return proofNonces
 
     def getHash(self):
-        return hashlib.blake2b(self.serializeCycle()).digest()
+        cycle = self.serializeCycle()
+        print('hashing')
+        print(cycle.hex())
+        return hashlib.blake2b(cycle, digest_size=32).digest()
 
 
 class BlockHeader:
@@ -181,19 +218,19 @@ class BlockHeader:
 
     # 16+64*6+32*5=608 bytes
     def serialize(self):
-        serializer = self.version.to_bytes(16)
-        serializer += self.height.to_bytes(64)
-        serializer += self.timestamp.to_bytes(64)
-        serializer += self.previousBlockHash.to_bytes(32)
-        serializer += self.previousRoot.to_bytes(32)
-        serializer += self.rangeProofRoot.to_bytes(32)
-        serializer += self.kernelRoot.to_bytes(32)
+        serializer = self.version.to_bytes(16, 'big')
+        serializer += self.height.to_bytes(64, 'big')
+        serializer += self.timestamp.to_bytes(64, 'big')
+        serializer += self.previousBlockHash
+        serializer += self.previousRoot
+        serializer += self.rangeProofRoot
+        serializer += self.kernelRoot
         totalKernelOffset = bytes(serializer)
-        serializer = self.outputMMRSize.to_bytes(64)
-        serializer += self.kernelMMRSize.to_bytes(64)
-        serializer += self.totalDifficulty.to_bytes(64)
-        serializer += self.scalingDifficulty.to_bytes(32)
-        serializer += self.nonce.to_bytes(64)
+        serializer = self.outputMMRSize.to_bytes(64, 'big')
+        serializer += self.kernelMMRSize.to_bytes(64, 'big')
+        serializer += self.totalDifficulty.to_bytes(64, 'big')
+        serializer += self.scalingDifficulty.to_bytes(32, 'big')
+        serializer += self.nonce.to_bytes(64, 'big')
         proofOfWork = bytes(serializer)
         return totalKernelOffset + proofOfWork
 
