@@ -305,7 +305,7 @@ class TransactionBody:
         for kernel_ in self.getKernels():
             kernel_.serialize(serializer)
 
-        return serializer.readall()
+        return serializer.read()
 
 
     @classmethod

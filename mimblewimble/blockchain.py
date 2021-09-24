@@ -1,4 +1,5 @@
 import hashlib
+import json # TODO remove after debugging
 from io import BytesIO
 
 from mimblewimble.mmr.index import MMRIndex
@@ -37,13 +38,13 @@ class ProofOfWork:
         uint64_t1 = (1).to_bytes(8, 'big')
         uint8_t1 = 1
         serialized_bytes = bytearray(bytes_len)
-        print('begin')
-        print(serialized_bytes.hex())
-        print('edge bits')
-        print(self.getEdgeBits())
-        print('proof nonces len')
-        print(len(self.getProofNonces()))
-        print()
+        #print('begin')
+        #print(serialized_bytes.hex())
+        #print('edge bits')
+        #print(self.getEdgeBits())
+        #print('proof nonces len')
+        #print(len(self.getProofNonces()))
+        #print()
         cnt = 0
         for n in range(len(self.getProofNonces())):
             # print(n)
@@ -105,8 +106,8 @@ class ProofOfWork:
 
     def getHash(self):
         cycle = self.serializeCycle()
-        print('hashing')
-        print(cycle.hex())
+        #print('hashing')
+        #print(cycle.hex())
         return hashlib.blake2b(cycle, digest_size=32).digest()
 
 
@@ -163,6 +164,9 @@ class BlockHeader:
     def getTotalDifficulty(self):
         return self.totalDifficulty
 
+    def getScalingDifficulty(self):
+        return self.scalingDifficulty
+
     def getTotalScalingDifficulty(self):
         return self.scalingDifficulty
 
@@ -218,19 +222,19 @@ class BlockHeader:
 
     # 16+64*6+32*5=608 bytes
     def serialize(self):
-        serializer = self.version.to_bytes(16, 'big')
-        serializer += self.height.to_bytes(64, 'big')
-        serializer += self.timestamp.to_bytes(64, 'big')
+        serializer = self.version.to_bytes(2, 'big')
+        serializer += self.height.to_bytes(8, 'big')
+        serializer += self.timestamp.to_bytes(8, 'big')
         serializer += self.previousBlockHash
         serializer += self.previousRoot
         serializer += self.rangeProofRoot
         serializer += self.kernelRoot
         totalKernelOffset = bytes(serializer)
-        serializer = self.outputMMRSize.to_bytes(64, 'big')
-        serializer += self.kernelMMRSize.to_bytes(64, 'big')
-        serializer += self.totalDifficulty.to_bytes(64, 'big')
-        serializer += self.scalingDifficulty.to_bytes(32, 'big')
-        serializer += self.nonce.to_bytes(64, 'big')
+        serializer = self.outputMMRSize.to_bytes(8, 'big')
+        serializer += self.kernelMMRSize.to_bytes(8, 'big')
+        serializer += self.totalDifficulty.to_bytes(8, 'big')
+        serializer += self.scalingDifficulty.to_bytes(4, 'big')
+        serializer += self.nonce.to_bytes(8, 'big')
         proofOfWork = bytes(serializer)
         return totalKernelOffset + proofOfWork
 
@@ -276,28 +280,28 @@ class BlockHeader:
     def toJSON(self):
         cuckooSolution = b''
         for proofNonce in self.getProofOfWork().getProofNonces():
-            cuckooSolution += proofNonce
+            cuckooSolution += proofNonce.to_bytes(8, 'big')
 
         return {
             'height': self.getHeight(),
-            'hash': self.__hash__().hex(),
+            'hash': self.getHash().hex(),
             'version': self.getVersion(),
             'timestamp_raw': self.getTimestamp(),
             'timestamp_local': self.getTimestamp(), # TODO convert to local
-            'timestamp': self.getTimeSTamp(), # TODO convert to UTC
+            'timestamp': self.getTimestamp(), # TODO convert to UTC
             'previous': self.getPreviousHash().hex(),
             'prev_root': self.getPreviousRoot().hex(),
             'kernel_root': self.getKernelRoot().hex(),
             'output_root': self.getOutputRoot().hex(),
-            'range_proof_root': self.getRangeProof().hex(),
+            'range_proof_root': self.getRangeProofRoot().hex(),
             'output_mmr_size': self.getOutputMMRSize(),
             'kernel_mmr_size': self.getKernelMMRSize(),
-            'total_kernel_offset': self.getTotalKernelOffset().serialize().hex(),
+            'total_kernel_offset': self.getTotalKernelOffset().hex(),
             'secondary_scaling': self.getScalingDifficulty(),
             'total_difficulty': self.getTotalDifficulty(),
             'nonce': self.getNonce(),
             'edge_bits': self.getProofOfWork().getEdgeBits(),
-            'cuckoo_solution': cuckooSolution
+            'cuckoo_solution': cuckooSolution.hex()
         }
 
     @classmethod
@@ -397,7 +401,15 @@ class FullBlock:
 
     def serialize(self):
         # TODO check if it is just concatenation
-        return self.header.serialize() + self.body.serialize()
+        header = self.header.serialize()
+        body = self.body.serialize()
+        print('full block header serialized')
+        print(header.hex())
+        print('full block body serialized')
+        print(body.hex())
+        print(json.dumps(self.toJSON(), indent=4))
+        #print(self.toJSON())
+        return header + body
 
     @classmethod
     def deserialize(self, byteBuffer):

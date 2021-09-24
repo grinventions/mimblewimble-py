@@ -40,6 +40,9 @@ class Commitment:
     def fromHex(self, _hex: str):
         return Commitment(bytes.fromhex(_hex))
 
+    def toJSON(self):
+        return self.hex()
+
     def format(self):
         return 'Commitment{' + self.hex() + '}'
 

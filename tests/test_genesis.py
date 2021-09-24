@@ -15,4 +15,9 @@ class GenesisTest(unittest.TestCase):
         print('floonet test')
         genesis = floonet
         assert genesis.getHash().hex() == 'edc758c1370d43e1d733f70f58cf187c3be8242830429b1676b89fd91ccf2dab'
-        #assert hashlib.blake2b(genesis.serialize(), digest_size=32).digest() == bytes.fromhex('91c638fc019a54e6652bd6bb3d9c5e0c17e889cef34a5c28528e7eb61a884dc4')
+        computed = hashlib.blake2b(genesis.serialize(), digest_size=32).digest()
+        reference = bytes.fromhex('91c638fc019a54e6652bd6bb3d9c5e0c17e889cef34a5c28528e7eb61a884dc4')
+        print('final test')
+        print(computed.hex())
+        print('91c638fc019a54e6652bd6bb3d9c5e0c17e889cef34a5c28528e7eb61a884dc4')
+        assert computed == bytes.fromhex('91c638fc019a54e6652bd6bb3d9c5e0c17e889cef34a5c28528e7eb61a884dc4')
