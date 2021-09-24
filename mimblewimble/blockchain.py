@@ -407,7 +407,7 @@ class FullBlock:
         print(header.hex())
         print('full block body serialized')
         print(body.hex())
-        print(json.dumps(self.toJSON(), indent=4))
+        #print(json.dumps(self.toJSON(), indent=4))
         #print(self.toJSON())
         return header + body
 
