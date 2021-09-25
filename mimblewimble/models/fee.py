@@ -25,10 +25,10 @@ class Fee:
     # serialization / deserialization
 
     def serialize(self, serializer):
-        serializer.write((0).to_bytes(2))
-        serializer.write(self.getShift())
-        serializer.write(self.getFee().to_bytes(8) >> (32).to_bytes(8))
-        serializer.write(self.getFee().to_bytes(32) & 0xffffffff)
+        serializer.write((0).to_bytes(2, 'big'))
+        serializer.write(self.getShift().to_bytes(1, 'big'))
+        serializer.write((self.getFee() >> 32).to_bytes(8, 'big'))
+        serializer.write((self.getFee() & 0xffffffff).to_bytes(32, 'big'))
 
     @classmethod
     def deserialize(self, byteBuffer: BytesIO):

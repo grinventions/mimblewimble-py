@@ -13,12 +13,12 @@ floonet = FullBlock(
         1, # version
         0, # height
         1546030084, # timestamp
-        32*b'0x00', # previous hash
+        bytearray(32), # previous hash
         bytes.fromhex('00000000000000000017ff4903ef366c8f62e3151ba74e41b8332a126542f538'), # previous root
         bytes.fromhex('73b5e0a05ea9e1e4e33b8f1c723bc5c10d17f07042c2af7644f4dbb61f4bc556'), # output root
         bytes.fromhex('667a3ba22f237a875f67c9933037c8564097fa57a3e75be507916de28fc0da26'), # range proof root
         bytes.fromhex('cfdddfe2d938d0026f8b1304442655bbdddde175ff45ddf44cb03bcb0071a72d'), # kernel root
-        32*b'0x00', # total kernel offset
+        bytearray(32), # total kernel offset
         1, # output MMR size
         1, # kernel MMR size
         100000, # total difficulty
@@ -92,17 +92,17 @@ mainnet = FullBlock(
         1, # version
         0, # height
         1547568086, # timestamp
-        32*b'0x00', # previous hash
+        bytearray(32), # previous hash
         bytes.fromhex('0000000000000000002a8bc32f43277fe9c063b9c99ea252b483941dcd06e217'), # previous root
         bytes.fromhex('fa7566d275006c6c467876758f2bc87e4cebd2020ae9cf9f294c6217828d6872'), # output root
         bytes.fromhex('1b7fff259aee3edfb5867c4775e4e1717826b843cda6685e5140442ece7bfc2e'), # range proof root
         bytes.fromhex('e8bb096a73cbe6e099968965f5342fc1702ee2802802902286dcf0f279e326bf'), # kernel root
-        32*b'0x00', # total kernel offset
+        bytearray(32), # total kernel offset
         1, # output MMR size
         1, # kernel MMR size
         2**34, # total difficulty
         1856, # scaling difficulty
-        2341, # nonce
+        41, # nonce
         ProofOfWork(
             29, # edge bits
             [

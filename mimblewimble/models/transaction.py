@@ -146,7 +146,7 @@ class TransactionInput:
 
     def toJSON(self):
         return {
-            'features': str(self.getFeatures),
+            'features': self.getFeatures().value,
             'commit': self.getCommitment().toJSON()
         }
 
@@ -161,7 +161,7 @@ class TransactionInput:
     def __hash__(self):
         serializer = BytesIO()
         self.serialize(serializer)
-        return hashlib.blake2b(serialize.readall())
+        return hashlib.blake2b(serialize.getvalue())
 
 
 class TransactionOutput:
@@ -208,7 +208,7 @@ class TransactionOutput:
 
     def toJSON(self):
         return {
-            'features': str(self.getFeatures),
+            'features': self.getFeatures().value,
             'commit': self.getCommitment().toJSON(),
             'proof': self.getRangeProof().toJSON()
         }
@@ -256,7 +256,7 @@ class TransactionBody:
         return self.outputs[idx]
 
     def getKernels(self):
-        return self.outputs
+        return self.kernels
 
     def getKernel(self, idx):
         assert idx < len(self.kernels)
@@ -287,8 +287,7 @@ class TransactionBody:
         return fee_shift
 
 
-    def serialize(self):
-        serializer = BytesIO()
+    def serialize(self, serializer):
         serializer.write(len(self.getInputs()).to_bytes(8, 'big'))
         serializer.write(len(self.getOutputs()).to_bytes(8, 'big'))
         serializer.write(len(self.getKernels()).to_bytes(8, 'big'))
@@ -297,15 +296,21 @@ class TransactionBody:
         for input_ in self.getInputs():
             input_.serialize(serializer)
 
+        #print('inputs')
+        #print(serializer.read())
+
         # serialize outputs
         for output_ in self.getOutputs():
             output_.serialize(serializer)
+
+        #print('inputs + outputs')
+        #print(serializer.read())
 
         # serialize kernels
         for kernel_ in self.getKernels():
             kernel_.serialize(serializer)
 
-        return serializer.read()
+        # xbreturn serializer.getvalue()
 
 
     @classmethod
@@ -338,7 +343,7 @@ class TransactionBody:
     def toJSON(self):
         return {
             'inputs': [_input.toJSON() for _input in self.inputs],
-            'outputs': [_outputs.toJSON() for _output in self.outputs],
+            'outputs': [_output.toJSON() for _output in self.outputs],
             'kernels': [_kernel.toJSON() for _kernel in self.kernels]
         }
 
@@ -416,25 +421,23 @@ class TransactionKernel:
     # serialization/deserialization
 
     # TODO handle the protocol version detection instead of argument
-    def serialize(self, serializer, protocolVersion: EProtocolVersion):
-        if protocolVersion >= EProtocolVersion.V2:
-            serializer.write(self.features.to_bytes(8))
-            if getFeatures() == EKernelFeatures.DEFAULT_KERNEL:
+    def serialize(self, serializer, protocolVersion: EProtocolVersion = EProtocolVersion.V1):
+        if protocolVersion.value >= EProtocolVersion.V2.value:
+            serializer.write(self.features.value.to_bytes(8, 'big'))
+            if self.getFeatures() == EKernelFeatures.DEFAULT_KERNEL:
                 self.fee.serialize(serializer)
-            elif getFeatures() == EKernelFeatures.HEIGHT_LOCKED:
+            elif self.getFeatures() == EKernelFeatures.HEIGHT_LOCKED:
                 self.fee.serialize(serializer)
-                serializer.write(self.getLockHeight().to_bytes(8))
-            elif getFeatures() == EKernelFeatures.NO_RECENT_DUPLICATE:
+                serializer.write(self.getLockHeight().to_bytes(8, 'big'))
+            elif self.getFeatures() == EKernelFeatures.NO_RECENT_DUPLICATE:
                 self.fee.serialize(serializer)
-                serializer.write(self.getLockHeight().to_bytes(2))
-            self.excessCommitment.serialize(serializer)
-            self.excessSignature.serialize(serializer)
+                serializer.write(self.getLockHeight().to_bytes(2, 'big'))
         else:
-            serializer.write(self.features.to_bytes(8))
+            serializer.write(self.features.value.to_bytes(8, 'big'))
             self.fee.serialize(serializer)
-            serializer.write(self.getLockHeight().to_bytes(8))
-            self.excessCommitment.serialize(serializer)
-            self.excessSignature.serialize(serializer)
+            serializer.write(self.getLockHeight().to_bytes(8, 'big'))
+        self.getExcessCommitment().serialize(serializer)
+        self.getExcessSignature().serialize(serializer)
 
 
     # TODO handle the protocol version detection instead of argument

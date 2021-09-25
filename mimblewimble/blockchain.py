@@ -29,8 +29,9 @@ class ProofOfWork:
     def isSecondary(self):
         return Consensus.isSecondary(self.edgeBits)
 
-    def serialize(self):
-        return self.getEdgeBits() + self.serializeCycle()
+    def serialize(self, serializer):
+        serializer.write(self.getEdgeBits().to_bytes(1, 'big'))
+        serializer.write(self.serializeCycle())
 
     def serializeCycle(self):
         bytes_len = int(((self.getEdgeBits()*Consensus.proofsize)+7)/8)
@@ -220,23 +221,26 @@ class BlockHeader:
 
     # serialization / deserialization
 
-    # 16+64*6+32*5=608 bytes
-    def serialize(self):
-        serializer = self.version.to_bytes(2, 'big')
-        serializer += self.height.to_bytes(8, 'big')
-        serializer += self.timestamp.to_bytes(8, 'big')
-        serializer += self.previousBlockHash
-        serializer += self.previousRoot
-        serializer += self.rangeProofRoot
-        serializer += self.kernelRoot
-        totalKernelOffset = bytes(serializer)
-        serializer = self.outputMMRSize.to_bytes(8, 'big')
-        serializer += self.kernelMMRSize.to_bytes(8, 'big')
-        serializer += self.totalDifficulty.to_bytes(8, 'big')
-        serializer += self.scalingDifficulty.to_bytes(4, 'big')
-        serializer += self.nonce.to_bytes(8, 'big')
-        proofOfWork = bytes(serializer)
-        return totalKernelOffset + proofOfWork
+    def serialize(self, serializer):
+        serializer.write(self.version.to_bytes(2, 'big'))
+        serializer.write(self.height.to_bytes(8, 'big'))
+        serializer.write(self.timestamp.to_bytes(8, 'big'))
+        serializer.write(self.previousBlockHash)
+        serializer.write(self.previousRoot)
+        serializer.write(self.outputRoot)
+        serializer.write(self.rangeProofRoot)
+        serializer.write(self.kernelRoot)
+        for kernel_offset in self.totalKernelOffset:
+            serializer.write(kernel_offset.to_bytes(1, 'big'))
+        serializer.write(self.outputMMRSize.to_bytes(8, 'big'))
+        serializer.write(self.kernelMMRSize.to_bytes(8, 'big'))
+        serializer.write(self.totalDifficulty.to_bytes(8, 'big'))
+        serializer.write(self.scalingDifficulty.to_bytes(4, 'big'))
+        serializer.write(self.nonce.to_bytes(8, 'big'))
+        self.proofOfWork.serialize(serializer)
+        #print('header hash hex')
+        #print(hashlib.blake2b(serializer.getvalue(), digest_size=32).digest().hex())
+
 
     @classmethod
     def deserialize(self, byteString: bytes):
@@ -322,27 +326,10 @@ class BlockHeader:
                            O['nonce'],
                            ProofOfWork.deserialize(O['proofOfWork']))
 
-    def getPreProofOfWork(self):
+    def getPreProofOfWork(self, serializer):
         serializer = BytesIO()
-        serializer.write(self.version.to_bytes(16))
-        serializer.write(self.height.to_bytes(64))
-        serializer.write(self.timestamp.to_bytes(64))
-        serializer.write(self.previousBlockHash.to_bytes(32))
-        serializer.write(self.previousRoot.to_bytes(32))
-        serializer.write(self.outputRoot.to_bytes(32))
-        serializer.write(self.rangeProofRoot.to_bytes(32))
-        serializer.write(self.kernelRoot.to_bytes(32))
-        totalKernelOffset = serializer.readall()
-
-        serializer = BytesIO()
-        serializer.write(self.outputMMRSize.to_bytes(64))
-        serializer.write(self.kernelMMRSize.to_bytes(64))
-        serializer.write(self.totalDifficulty.to_bytes(64))
-        serializer.write(self.scalingDifficulty.to_bytes(32))
-        serializer.write(self.nonce.to_bytes(64))
-        proofOfWork = serializer.readall()
-
-        return totalKernelOffset + proofOfWork
+        self.serialize(serializer)
+        return serializer.getvalue()
 
     # hashing
 
@@ -400,16 +387,20 @@ class FullBlock:
         return self.header.getTotalKernelOffset()
 
     def serialize(self):
+        serializer = BytesIO()
         # TODO check if it is just concatenation
-        header = self.header.serialize()
-        body = self.body.serialize()
-        print('full block header serialized')
-        print(header.hex())
-        print('full block body serialized')
-        print(body.hex())
+        self.header.serialize(serializer)
+        print('block header start')
+        print(serializer.getvalue().hex())
+        self.body.serialize(serializer)
+        #print('full block header serialized')
+        #print(header.hex())
+        #print('full block body serialized')
+        #print(body.hex())
         #print(json.dumps(self.toJSON(), indent=4))
         #print(self.toJSON())
-        return header + body
+        #return header + body
+        return serializer.getvalue()
 
     @classmethod
     def deserialize(self, byteBuffer):

@@ -34,7 +34,7 @@ class Commitment:
         return Commitment(byteBuffer.read(33))
 
     def hex(self):
-        return self.commitmentBytes.hex()
+        return self.getBytes().hex()
 
     @classmethod
     def fromHex(self, _hex: str):
