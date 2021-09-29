@@ -130,7 +130,7 @@ class TransactionInput:
 
     def serialize(self, serializer, protocolVersion: EProtocolVersion):
         if protocolVersion == EProtocolVersion.V3:
-            serializer.write(self.features.to_bytes(8))
+            serializer.write(self.features.to_bytes(1))
         self.commitment.serialize(serializer)
 
     @classmethod
@@ -195,7 +195,7 @@ class TransactionOutput:
     # serialization/deserialization
 
     def serialize(self, serializer):
-        serializer.write(self.features.value.to_bytes(8, 'big'))
+        serializer.write(self.features.value.to_bytes(1, 'big'))
         self.commitment.serialize(serializer)
         self.rangeProof.serialize(serializer)
 
@@ -423,7 +423,7 @@ class TransactionKernel:
     # TODO handle the protocol version detection instead of argument
     def serialize(self, serializer, protocolVersion: EProtocolVersion = EProtocolVersion.V1):
         if protocolVersion.value >= EProtocolVersion.V2.value:
-            serializer.write(self.features.value.to_bytes(8, 'big'))
+            serializer.write(self.features.value.to_bytes(1, 'big'))
             if self.getFeatures() == EKernelFeatures.DEFAULT_KERNEL:
                 self.fee.serialize(serializer)
             elif self.getFeatures() == EKernelFeatures.HEIGHT_LOCKED:
@@ -433,7 +433,7 @@ class TransactionKernel:
                 self.fee.serialize(serializer)
                 serializer.write(self.getLockHeight().to_bytes(2, 'big'))
         else:
-            serializer.write(self.features.value.to_bytes(8, 'big'))
+            serializer.write(self.features.value.to_bytes(1, 'big'))
             self.fee.serialize(serializer)
             serializer.write(self.getLockHeight().to_bytes(8, 'big'))
         self.getExcessCommitment().serialize(serializer)

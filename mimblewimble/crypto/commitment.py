@@ -27,6 +27,7 @@ class Commitment:
     # serialization / deserialization
 
     def serialize(self, serializer):
+        assert len(self.getBytes()) == 33
         serializer.write(self.getBytes())
 
     @classmethod

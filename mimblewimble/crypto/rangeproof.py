@@ -20,8 +20,9 @@ class RangeProof:
     # serialization / deserialization
 
     def serialize(self, serializer):
+        serializer.write((len(self.getProofBytes())).to_bytes(8, 'big'))
         for proof_bytes in self.getProofBytes():
-            serializer.write(proof_bytes.to_bytes(8, 'big'))
+            serializer.write(proof_bytes.to_bytes(1, 'big'))
 
     @classmethod
     def deserialize(self, byteBuffer: BytesIO):

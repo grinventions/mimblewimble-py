@@ -18,6 +18,7 @@ class Signature:
     # serialization / deserialization
 
     def serialize(self, serializer):
+        assert len(self.getSignatureBytes()) == 64
         for signature_byte in self.getSignatureBytes():
             serializer.write(signature_byte.to_bytes(1, 'big'))
 

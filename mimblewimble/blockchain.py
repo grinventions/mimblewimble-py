@@ -390,8 +390,8 @@ class FullBlock:
         serializer = BytesIO()
         # TODO check if it is just concatenation
         self.header.serialize(serializer)
-        print('block header start')
-        print(serializer.getvalue().hex())
+        #print('block header start')
+        #print(serializer.getvalue().hex())
         self.body.serialize(serializer)
         #print('full block header serialized')
         #print(header.hex())
