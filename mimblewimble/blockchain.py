@@ -35,51 +35,14 @@ class ProofOfWork:
 
     def serializeCycle(self):
         bytes_len = int(((self.getEdgeBits()*Consensus.proofsize)+7)/8)
-        serialized = 0
-        uint64_t1 = (1).to_bytes(8, 'big')
-        uint8_t1 = 1
         serialized_bytes = bytearray(bytes_len)
-        #print('begin')
-        #print(serialized_bytes.hex())
-        #print('edge bits')
-        #print(self.getEdgeBits())
-        #print('proof nonces len')
-        #print(len(self.getProofNonces()))
-        #print()
-        cnt = 0
         for n in range(len(self.getProofNonces())):
-            # print(n)
             for bit in range(int(self.getEdgeBits())):
-                # print(' ', bit)
                 nonce = self.proofNonces[n]
-                # print(' n ', nonce)
-                if cnt < 4:
-                    #print('cnt')
-                    #print(cnt)
-                    #print('n')
-                    #print(n)
-                    #print('bit')
-                    #print(bit)
-                    #print('mult')
-                    #print(n*self.edgeBits)
-                    #print('nonce')
-                    #print(nonce)
-                    #print('shift')
-                    #print((1 << bit).to_bytes(8, 'big').hex())
-                    #print(nonce & (1 << bit))
-                    pass
                 if nonce & (1 << bit) != 0:
                     positionTemp = (n*self.edgeBits)+bit
                     p = int(positionTemp/8)
                     serialized_bytes[p] |= (1 << (positionTemp % 8))
-                    if cnt < 4:
-                        #print('positionTemp')
-                        #print(positionTemp)
-                        #print(serialized_bytes.hex())
-                        #print()
-                        cnt += 1
-        #print('final')
-        #print(serialized_bytes.hex())
         return serialized_bytes
 
     def deserialize(self, byteString):
@@ -107,8 +70,6 @@ class ProofOfWork:
 
     def getHash(self):
         cycle = self.serializeCycle()
-        #print('hashing')
-        #print(cycle.hex())
         return hashlib.blake2b(cycle, digest_size=32).digest()
 
 
@@ -238,9 +199,6 @@ class BlockHeader:
         serializer.write(self.scalingDifficulty.to_bytes(4, 'big'))
         serializer.write(self.nonce.to_bytes(8, 'big'))
         self.proofOfWork.serialize(serializer)
-        #print('header hash hex')
-        #print(hashlib.blake2b(serializer.getvalue(), digest_size=32).digest().hex())
-
 
     @classmethod
     def deserialize(self, byteString: bytes):
@@ -388,18 +346,8 @@ class FullBlock:
 
     def serialize(self):
         serializer = BytesIO()
-        # TODO check if it is just concatenation
         self.header.serialize(serializer)
-        #print('block header start')
-        #print(serializer.getvalue().hex())
         self.body.serialize(serializer)
-        #print('full block header serialized')
-        #print(header.hex())
-        #print('full block body serialized')
-        #print(body.hex())
-        #print(json.dumps(self.toJSON(), indent=4))
-        #print(self.toJSON())
-        #return header + body
         return serializer.getvalue()
 
     @classmethod
