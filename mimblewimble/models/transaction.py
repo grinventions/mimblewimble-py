@@ -296,19 +296,22 @@ class TransactionBody:
         for input_ in self.getInputs():
             input_.serialize(serializer)
 
-        #print('inputs')
-        #print(serializer.read())
+        print('inputs')
+        print(serializer.getvalue().hex())
 
         # serialize outputs
         for output_ in self.getOutputs():
             output_.serialize(serializer)
 
-        #print('inputs + outputs')
-        #print(serializer.read())
+        print('inputs + outputs')
+        print(serializer.getvalue().hex())
 
         # serialize kernels
         for kernel_ in self.getKernels():
             kernel_.serialize(serializer)
+
+        print('inputs + outputs + kernels')
+        print(serializer.getvalue().hex())
 
         # xbreturn serializer.getvalue()
 
@@ -434,7 +437,12 @@ class TransactionKernel:
                 serializer.write(self.getLockHeight().to_bytes(2, 'big'))
         else:
             serializer.write(self.features.value.to_bytes(1, 'big'))
+            #print('fee')
+            #print(serializer.getvalue().hex())
             self.fee.serialize(serializer)
+            #print('after')
+            #print(serializer.getvalue().hex())
+            #print('done')
             serializer.write(self.getLockHeight().to_bytes(8, 'big'))
         self.getExcessCommitment().serialize(serializer)
         self.getExcessSignature().serialize(serializer)
