@@ -27,6 +27,7 @@ class Commitment:
     # serialization / deserialization
 
     def serialize(self, serializer):
+        assert len(self.getBytes()) == 33
         serializer.write(self.getBytes())
 
     @classmethod
@@ -34,11 +35,14 @@ class Commitment:
         return Commitment(byteBuffer.read(33))
 
     def hex(self):
-        return self.commitmentBytes.hex()
+        return self.getBytes().hex()
 
     @classmethod
     def fromHex(self, _hex: str):
         return Commitment(bytes.fromhex(_hex))
+
+    def toJSON(self):
+        return self.hex()
 
     def format(self):
         return 'Commitment{' + self.hex() + '}'

@@ -20,7 +20,9 @@ class RangeProof:
     # serialization / deserialization
 
     def serialize(self, serializer):
-        serializer.write(self.getProofBytes())
+        serializer.write((len(self.getProofBytes())).to_bytes(8, 'big'))
+        for proof_bytes in self.getProofBytes():
+            serializer.write(proof_bytes.to_bytes(1, 'big'))
 
     @classmethod
     def deserialize(self, byteBuffer: BytesIO):
@@ -30,7 +32,12 @@ class RangeProof:
         return RangeProof(proofSize)
 
     def hex(self):
-        return self.getProofBytes().hex()
+        serializer = BytesIO()
+        self.serialize(serializer)
+        return serializer.read().hex()
+
+    def toJSON(self):
+        return self.hex()
 
     @classmethod
     def fromhex(self, _hex: str):

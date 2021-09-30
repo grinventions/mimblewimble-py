@@ -18,14 +18,18 @@ class Signature:
     # serialization / deserialization
 
     def serialize(self, serializer):
-        serializer.write(self.getSignatureBytes())
+        assert len(self.getSignatureBytes()) == 64
+        for signature_byte in self.getSignatureBytes():
+            serializer.write(signature_byte.to_bytes(1, 'big'))
 
     @classmethod
     def deserialize(self, byteBuffer: BytesIO):
         return Signature(byteBuffer.read(8))
 
     def hex(self):
-        return self.getSignatureBytes().hex()
+        serializer = BytesIO()
+        self.serialize(serializer)
+        return serializer.read().hex()
 
     def format(self):
         return 'RawSig{' + self.hex() + '}'
