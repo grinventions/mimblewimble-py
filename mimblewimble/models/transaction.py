@@ -76,7 +76,7 @@ class KernelFeatures:
 
 class BlindingFactor:
     def __init__(self, blindingFactorBytes):
-        self.blindingFactorBytes = blidningFactorBytes # 32 bytes
+        self.blindingFactorBytes = blindingFactorBytes # 32 bytes
 
     def getBytes(self):
         return self.blindingFactorBytes
@@ -91,8 +91,8 @@ class BlindingFactor:
         return int(self.blindingFactorBytes)
 
     @classmethod
-    def deserialize(self, blindingFactorInt: int):
-        return BlindingFactor(blindingFactorInt.to_bytes(32, byteorder='big'))
+    def deserialize(self, blindingFactorBytes):
+        return BlindingFactor(blindingFactorBytes)
 
     @classmethod
     def fromHex(self, hex: str):

@@ -4,11 +4,11 @@ import hashlib
 import unittest
 
 from mimblewimble.genesis import floonet, mainnet
+from mimblewimble.blockchain import FullBlock
 
 
 class GenesisTest(unittest.TestCase):
-    def test_genesis(self):
-        print('genesis test')
+    def test_mainnet(self):
         genesis = mainnet
         # check proof of work hash
         assert genesis.getHash().hex() == '40adad0aec27797b48840aa9e00472015c21baea118ce7a2ff1a82c0f8f5bf82'
@@ -21,8 +21,14 @@ class GenesisTest(unittest.TestCase):
         computed = hashlib.blake2b(genesis.serialize(), digest_size=32).digest()
         assert computed == bytes.fromhex('6be6f34b657b785e558e85cc3b8bdb5bcbe8c10e7e58524c8027da7727e189ef')
 
+    def test_mainnet_deserialize(self):
+        genesis = mainnet
+        serializer = BytesIO()
+        genesis.header.serialize(serializer)
+        deserialized = FullBlock.deserialize(serializer)
+
+
     def test_floonet(self):
-        print('floonet test')
         genesis = floonet
         # check proof of work hash
         assert genesis.getHash().hex() == 'edc758c1370d43e1d733f70f58cf187c3be8242830429b1676b89fd91ccf2dab'

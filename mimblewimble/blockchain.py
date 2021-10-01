@@ -10,6 +10,7 @@ from mimblewimble.models.short_id import ShortId
 from mimblewimble.models.transaction import TransactionInput
 from mimblewimble.models.transaction import TransactionOutput
 from mimblewimble.models.transaction import TransactionBody
+from mimblewimble.models.transaction import BlindingFactor
 
 
 class ProofOfWork:
@@ -45,10 +46,10 @@ class ProofOfWork:
                     serialized_bytes[p] |= (1 << (positionTemp % 8))
         return serialized_bytes
 
-    def deserialize(self, byteString):
-        B = BytesIO(byteString)
-        edgeBits = B.read(1)
-        bytes_len = ((edgeBits*Consensus.proofsize)+7)/8
+    @classmethod
+    def deserialize(self, B):
+        edgeBits = int.from_bytes(B.read(1), 'big')
+        bytes_len = int(((edgeBits*Consensus.proofsize)+7)/8)
         bits = B.read(bytes_len)
         proofNonces = self.deserializeProofNonces(bits, edgeBits)
         return ProofOfWork(edgeBits, proofNonces)
@@ -201,27 +202,24 @@ class BlockHeader:
         self.proofOfWork.serialize(serializer)
 
     @classmethod
-    def deserialize(self, byteString: bytes):
-        B = BytesIO(byteString)
-        Btotal = BytesIO(byteString)
+    def deserialize(self, B: bytes):
+        version = int.from_bytes(B.read(2), 'big')
+        height = int.from_bytes(B.read(8), 'big')
+        timestamp = int.from_bytes(B.read(8), 'big')
+        previousBlockHash = B.read(32)
+        previousRoot = B.read(32)
+        outputRoot = B.read(32)
+        kernelRoot = B.read(32)
 
-        version = int(B.read(2))
-        height = int(B.read(8))
-        timestamp = int(B.read(8))
-        previousBlockHash = int(B.read(4))
-        previousRoot = int(B.read(4))
-        outputRoot = int(B.read(4))
-        kernelRoot = int(B.read(4))
+        totalKernelOffset = BlindingFactor.deserialize(B.read(32))
 
-        totalKernelOffset = BlindingFactor.deserialize(Btotal.read(34))
+        outputMMRSize = int.from_bytes(B.read(8), 'big')
+        kernelMMRSize = int.from_bytes(B.read(8), 'big')
+        totalDifficulty = int.from_bytes(B.read(8), 'big')
+        scalingDifficulty = int.from_bytes(B.read(4), 'big')
+        nonce = int.from_bytes(B.read(8), 'big')
 
-        outputMMRSize = int(B.read(8))
-        kernelMMRSize = int(B.read(8))
-        totalDifficulty = int(B.read(8))
-        scalingDifficulty = int(B.read(8))
-        nonce = int(B.read(8))
-
-        proofOfWork = ProofOfWork.deserialize(Btotal.read(40))
+        proofOfWork = ProofOfWork.deserialize(B)
 
         return BlockHeader(version,
                            height,
@@ -351,10 +349,10 @@ class FullBlock:
         return serializer.getvalue()
 
     @classmethod
-    def deserialize(self, byteBuffer):
+    def deserialize(self, serializer):
         # TODO do not pass entire bytBuffer but adequate chunks
-        header = BlockHeader.deserialize(byteBuffer)
-        body = TransactionBody.deserialize(byteBuffer)
+        header = BlockHeader.deserialize(serializer)
+        body = TransactionBody.deserialize(serializer)
         return FullBlock(header, body)
 
     def toJSON(self):
