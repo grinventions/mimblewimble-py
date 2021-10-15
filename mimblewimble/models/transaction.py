@@ -4,18 +4,12 @@ from io import BytesIO
 from enum import Enum
 
 from mimblewimble.consensus import Consensus
+from mimblewimble.serializer import Serializer, EProtocolVersion
 from mimblewimble.crypto.commitment import Commitment
 from mimblewimble.crypto.secret_key import SecretKey
 from mimblewimble.crypto.signature import Signature
 from mimblewimble.crypto.rangeproof import RangeProof
 from mimblewimble.models.fee import Fee
-
-
-class EProtocolVersion(Enum):
-    V1 = 1
-    V2 = 2
-    V3 = 3
-    V1000 = 1000
 
 
 class EOutputFeatures(Enum):
@@ -128,14 +122,14 @@ class TransactionInput:
 
     # serialization / deserialization
 
-    def serialize(self, serializer, protocolVersion: EProtocolVersion):
-        if protocolVersion == EProtocolVersion.V3:
+    def serialize(self, serializer):
+        if serializer.getProtocol().value == EProtocolVersion.V3.value:
             serializer.write(self.features.to_bytes(1))
         self.commitment.serialize(serializer)
 
     @classmethod
-    def deserialize(self, byteBuffer: BytesIO, protocolVersion: EProtocolVersion):
-        if protocolVersion == EProtocolVersion.V3:
+    def deserialize(self, byteBuffer: BytesIO):
+        if serializer.getProtocol().value == EProtocolVersion.V3.value:
             commitment = Commitment.deserialize(byteBuffer)
             features = EOutputFeatures(Global.getCoinView().getOutputType(commitment))
             return TransactionInput(features, commitment)
@@ -201,10 +195,10 @@ class TransactionOutput:
 
     @classmethod
     def deserialize(self, byteBuffer):
-        features = EOutputFeatures(byteBuffer.read(1))
+        features = EOutputFeatures(int.from_bytes(byteBuffer.read(1), 'big'))
         commitment = Commitment.deserialize(byteBuffer)
         rangeProof = RangeProof.deserialize(byteBuffer)
-        return TransactionInput(features, commitment, rangeProof)
+        return TransactionOutput(features, commitment, rangeProof)
 
     def toJSON(self):
         return {
@@ -305,25 +299,25 @@ class TransactionBody:
             kernel_.serialize(serializer)
 
     @classmethod
-    def deserialize(self, byteBuffer: BytesIO):
-        numInputs = byteBuffer.read(8)
-        numOutputs = byteBuffer.read(8)
-        numKernels = byteBuffer.read(8)
+    def deserialize(self, serializer: Serializer):
+        numInputs = int.from_bytes(serializer.read(8), 'big')
+        numOutputs = int.from_bytes(serializer.read(8), 'big')
+        numKernels = int.from_bytes(serializer.read(8), 'big')
 
         # read inputs (variable size)
         inputs = []
         for i in range(numInputs):
-            inputs.append(TransactionInput.deserialize(B))
+            inputs.append(TransactionInput.deserialize(serializer))
 
         # read outputs (variable size)
         outputs = []
         for i in range(numOutputs):
-            outputs.append(TransactionOutput.deserialize(B))
+            outputs.append(TransactionOutput.deserialize(serializer))
 
         # read kernels (variable size)
         kernels = []
         for i in range(numKernels):
-            kernels.append(TransactionKernel.deserialize(B))
+            kernels.append(TransactionKernel.deserialize(serializer))
 
         inputs.sort()
         outouts.sort()
@@ -410,10 +404,8 @@ class TransactionKernel:
         return (self.features & EOutputFeatures.COINBASE_OUTPUT) == EOutputFeatures.COINBASE_OUTPUT
 
     # serialization/deserialization
-
-    # TODO handle the protocol version detection instead of argument
-    def serialize(self, serializer, protocolVersion: EProtocolVersion = EProtocolVersion.V1):
-        if protocolVersion.value >= EProtocolVersion.V2.value:
+    def serialize(self, serializer: Serializer):
+        if serializer.getProtocol().value >= EProtocolVersion.V2.value:
             serializer.write(self.features.value.to_bytes(1, 'big'))
             if self.getFeatures() == EKernelFeatures.DEFAULT_KERNEL:
                 self.fee.serialize(serializer)
@@ -430,20 +422,19 @@ class TransactionKernel:
         self.getExcessCommitment().serialize(serializer)
         self.getExcessSignature().serialize(serializer)
 
-
-    # TODO handle the protocol version detection instead of argument
-    def deserialize(self, byteBuffer: BytesIO, protocolVersion: EProtocolVersion):
-        features = EKernelFeatures(serializer.read(1))
+    @classmethod
+    def deserialize(self, serializer: Serializer):
+        features = EKernelFeatures(int.from_bytes(serializer.read(1), 'big'))
         fee = None
         lockHeight = 0
-        if EProtocolVersion >= EProtocolVersion.V2:
-            if features != EKernelKeatures.COINBASE_KERNEL:
-                fee = Fee.deserialize(byteBuffer)
+        if serializer.getProtocol().value >= EProtocolVersion.V2.value:
+            if features != EKernelKeatures.COINBASE_KERNEL.value:
+                fee = Fee.deserialize(serializer)
 
-            if features == EKernelFeatures.HEIGHT_LOCKED:
-                lockHeight = byteBuffer.read(8)
-            elif features == EKernelFeatures.NO_RECENT_DUPLICATE:
-                lockHeight = byteBuffer.read(2)
+            if features.value == EKernelFeatures.HEIGHT_LOCKED.value:
+                lockHeight = serializer.read(8)
+            elif features.value == EKernelFeatures.NO_RECENT_DUPLICATE.value:
+                lockHeight = serializer.read(2)
         else:
             fee = Fee.deserialize(byteBuffer)
             lockHeight = byteBuffer.read(8)
@@ -454,17 +445,17 @@ class TransactionKernel:
         # TODO make sure reads 64 bytes
         excessSignature = Signature.deserialize(byteBuffer)
 
-        if features == EKernelFeatures.NO_RECENT_DUPLICATE:
-            if lockHeight == 0 or lockHeight > Consensus.WEEK_HEIGHT:
+        if features.value == EKernelFeatures.NO_RECENT_DUPLICATE.value:
+            if lockHeight == 0 or lockHeight > Consensus.WEEK_HEIGHT.value:
                 raise ValueError('Invalid NRD relative height({0}) for kernel: {1}'.format(str(lockHeight), str(excessCommitment)))
 
         return TransactionKernel(features, fee, lockHeight, excessCommitment, excessSignature)
 
     def toJSON(self):
         features = {}
-        if self.getFeatures() != EKernelFeatures.COINBASE_KERNEL:
+        if self.getFeatures() != EKernelFeatures.COINBASE_KERNEL.value:
             features['fee'] = self.fee.toJSON()
-        if self.getFeatures() == EKernelFeatures.HEIGHT_LOCKED:
+        if self.getFeatures() == EKernelFeatures.HEIGHT_LOCKED.value:
             features['lock_height'] = self.getLockHeight()
         return {
             'features': features,

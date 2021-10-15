@@ -1,9 +1,8 @@
 from io import BytesIO
 
+MAX_PROOF_SIZE = 675;
 
 class RangeProof:
-    MAX_PROOF_SIZE = 675;
-
     def __init__(self, proofBytes: bytes):
         self.proofBytes = proofBytes
 
@@ -26,15 +25,15 @@ class RangeProof:
 
     @classmethod
     def deserialize(self, byteBuffer: BytesIO):
-        proofSize = byteBuffer.readall()
-        if len(proofSize) > MAX_PROOF_SIZE:
+        proofSize = int.from_bytes(byteBuffer.read(8), 'big')
+        if proofSize > MAX_PROOF_SIZE:
             raise ValueError('Proof of size {0} exceeds the maximum'.format(str(len(proofSize))))
         return RangeProof(proofSize)
 
     def hex(self):
         serializer = BytesIO()
         self.serialize(serializer)
-        return serializer.read().hex()
+        return serializer.getvalue().hex()
 
     def toJSON(self):
         return self.hex()
