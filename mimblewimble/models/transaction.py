@@ -82,7 +82,7 @@ class BlindingFactor:
         return all(v == b'\x00' for v in self.blindingFactorBytes)
 
     def serialize(self):
-        return int(self.blindingFactorBytes)
+        return self.blindingFactorBytes
 
     @classmethod
     def deserialize(self, blindingFactorBytes):
@@ -188,16 +188,16 @@ class TransactionOutput:
 
     # serialization/deserialization
 
-    def serialize(self, serializer):
+    def serialize(self, serializer: Serializer):
         serializer.write(self.features.value.to_bytes(1, 'big'))
         self.commitment.serialize(serializer)
         self.rangeProof.serialize(serializer)
 
     @classmethod
-    def deserialize(self, byteBuffer):
-        features = EOutputFeatures(int.from_bytes(byteBuffer.read(1), 'big'))
-        commitment = Commitment.deserialize(byteBuffer)
-        rangeProof = RangeProof.deserialize(byteBuffer)
+    def deserialize(self, serializer: Serializer):
+        features = EOutputFeatures(int.from_bytes(serializer.read(1), 'big'))
+        commitment = Commitment.deserialize(serializer)
+        rangeProof = RangeProof.deserialize(serializer)
         return TransactionOutput(features, commitment, rangeProof)
 
     def toJSON(self):
@@ -320,7 +320,7 @@ class TransactionBody:
             kernels.append(TransactionKernel.deserialize(serializer))
 
         inputs.sort()
-        outouts.sort()
+        outputs.sort()
         kernels.sort()
 
         return TransactionBody(inputs, outputs, kernels)
@@ -432,18 +432,15 @@ class TransactionKernel:
                 fee = Fee.deserialize(serializer)
 
             if features.value == EKernelFeatures.HEIGHT_LOCKED.value:
-                lockHeight = serializer.read(8)
+                lockHeight = int.from_bytes(serializer.read(8), 'big')
             elif features.value == EKernelFeatures.NO_RECENT_DUPLICATE.value:
-                lockHeight = serializer.read(2)
+                lockHeight = int.from_bytes(serializer.read(2), 'big')
         else:
-            fee = Fee.deserialize(byteBuffer)
-            lockHeight = byteBuffer.read(8)
+            fee = Fee.deserialize(serializer)
+            lockHeight = int.from_bytes(serializer.read(8), 'big')
 
-        # TODO make sure reads 33 bytes
-        excessCommitment = Commitment.deserialize(byteBuffer)
-
-        # TODO make sure reads 64 bytes
-        excessSignature = Signature.deserialize(byteBuffer)
+        excessCommitment = Commitment.deserialize(serializer)
+        excessSignature = Signature.deserialize(serializer)
 
         if features.value == EKernelFeatures.NO_RECENT_DUPLICATE.value:
             if lockHeight == 0 or lockHeight > Consensus.WEEK_HEIGHT.value:

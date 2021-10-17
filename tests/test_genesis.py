@@ -28,19 +28,6 @@ class GenesisTest(unittest.TestCase):
         computed = hashlib.blake2b(genesis.serialize(), digest_size=32).digest()
         assert computed == bytes.fromhex('6be6f34b657b785e558e85cc3b8bdb5bcbe8c10e7e58524c8027da7727e189ef')
 
-    @pytest.mark.skip()
-    def test_mainnet_deserialize(self):
-        genesis = mainnet
-        deserializer = Serializer()
-        deserializer.write(genesis.serialize())
-        print('\ntesting deserialization of the main net block')
-        print('header')
-        deserialized = FullBlock.deserialize(deserializer)
-        value1 = hashlib.blake2b(genesis.header.serialize(Serializer()), digest_size=32).digest()
-        value2 = hashlib.blake2b(deserialized.header.serialize(Serializer()), digest_size=32).digest()
-        assert value1 == value2
-
-    #@pytest.mark.skip()
     def test_floonet(self):
         genesis = floonet
         # check proof of work hash
@@ -53,3 +40,23 @@ class GenesisTest(unittest.TestCase):
         # check whole serialized block hash
         computed = hashlib.blake2b(genesis.serialize(), digest_size=32).digest()
         assert computed == bytes.fromhex('91c638fc019a54e6652bd6bb3d9c5e0c17e889cef34a5c28528e7eb61a884dc4')
+
+    def test_mainnet_deserialize(self):
+        genesis = mainnet
+        serialized = genesis.serialize()
+        deserializer = Serializer()
+        deserializer.write(serialized)
+        deserialized = FullBlock.deserialize(deserializer)
+        hash_serialized = hashlib.blake2b(serialized, digest_size=32).digest()
+        hash_deserialized = hashlib.blake2b(deserialized.serialize(), digest_size=32).digest()
+        assert hash_serialized == hash_deserialized
+
+    def test_floonet_deserialize(self):
+        genesis = floonet
+        serialized = genesis.serialize()
+        deserializer = Serializer()
+        deserializer.write(serialized)
+        deserialized = FullBlock.deserialize(deserializer)
+        hash_serialized = hashlib.blake2b(serialized, digest_size=32).digest()
+        hash_deserialized = hashlib.blake2b(deserialized.serialize(), digest_size=32).digest()
+        assert hash_serialized == hash_deserialized

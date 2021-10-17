@@ -1,4 +1,4 @@
-from io import BytesIO
+from mimblewimble.serializer import Serializer
 
 MAX_PROOF_SIZE = 675;
 
@@ -18,17 +18,17 @@ class RangeProof:
 
     # serialization / deserialization
 
-    def serialize(self, serializer):
+    def serialize(self, serializer: Serializer):
         serializer.write((len(self.getProofBytes())).to_bytes(8, 'big'))
         for proof_bytes in self.getProofBytes():
             serializer.write(proof_bytes.to_bytes(1, 'big'))
 
     @classmethod
-    def deserialize(self, byteBuffer: BytesIO):
-        proofSize = int.from_bytes(byteBuffer.read(8), 'big')
+    def deserialize(self, serializer: Serializer):
+        proofSize = int.from_bytes(serializer.read(8), 'big')
         if proofSize > MAX_PROOF_SIZE:
             raise ValueError('Proof of size {0} exceeds the maximum'.format(str(len(proofSize))))
-        return RangeProof(proofSize)
+        return RangeProof(serializer.read(proofSize))
 
     def hex(self):
         serializer = BytesIO()

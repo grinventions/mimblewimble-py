@@ -1,4 +1,4 @@
-from io import BytesIO
+from mimblewimble.serializer import Serializer
 
 
 class Signature:
@@ -17,14 +17,14 @@ class Signature:
 
     # serialization / deserialization
 
-    def serialize(self, serializer):
+    def serialize(self, serializer: Serializer):
         assert len(self.getSignatureBytes()) == 64
         for signature_byte in self.getSignatureBytes():
             serializer.write(signature_byte.to_bytes(1, 'big'))
 
     @classmethod
-    def deserialize(self, byteBuffer: BytesIO):
-        return Signature(byteBuffer.read(8))
+    def deserialize(self, serializer: Serializer):
+        return Signature(serializer.read(64))
 
     def hex(self):
         serializer = BytesIO()

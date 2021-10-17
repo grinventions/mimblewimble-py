@@ -3,7 +3,7 @@ from mimblewimble.crypto.rangeproof import RangeProof
 from mimblewimble.crypto.signature import Signature
 
 from mimblewimble.models.fee import Fee
-from mimblewimble.models.transaction import EOutputFeatures, EKernelFeatures
+from mimblewimble.models.transaction import EOutputFeatures, EKernelFeatures, BlindingFactor
 from mimblewimble.models.transaction import TransactionBody, TransactionOutput, TransactionKernel
 from mimblewimble.blockchain import FullBlock, BlockHeader, ProofOfWork
 
@@ -18,7 +18,7 @@ floonet = FullBlock(
         bytes.fromhex('73b5e0a05ea9e1e4e33b8f1c723bc5c10d17f07042c2af7644f4dbb61f4bc556'), # output root
         bytes.fromhex('667a3ba22f237a875f67c9933037c8564097fa57a3e75be507916de28fc0da26'), # range proof root
         bytes.fromhex('cfdddfe2d938d0026f8b1304442655bbdddde175ff45ddf44cb03bcb0071a72d'), # kernel root
-        bytearray(32), # total kernel offset
+        BlindingFactor.deserialize(bytearray(32)), # total kernel offset
         1, # output MMR size
         1, # kernel MMR size
         100000, # total difficulty
@@ -97,7 +97,7 @@ mainnet = FullBlock(
         bytes.fromhex('fa7566d275006c6c467876758f2bc87e4cebd2020ae9cf9f294c6217828d6872'), # output root
         bytes.fromhex('1b7fff259aee3edfb5867c4775e4e1717826b843cda6685e5140442ece7bfc2e'), # range proof root
         bytes.fromhex('e8bb096a73cbe6e099968965f5342fc1702ee2802802902286dcf0f279e326bf'), # kernel root
-        bytearray(32), # total kernel offset
+        BlindingFactor.deserialize(bytearray(32)), # total kernel offset
         1, # output MMR size
         1, # kernel MMR size
         2**34, # total difficulty

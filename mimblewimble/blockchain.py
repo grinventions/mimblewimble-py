@@ -32,7 +32,6 @@ class ProofOfWork:
         return Consensus.isSecondary(self.edgeBits)
 
     def serialize(self, serializer):
-        print('serialize POW edge bits:', self.getEdgeBits())
         serializer.write(self.getEdgeBits().to_bytes(1, 'big'))
         serializer.write(self.serializeCycle())
 
@@ -51,7 +50,6 @@ class ProofOfWork:
     @classmethod
     def deserialize(self, B):
         edgeBits = int.from_bytes(B.read(1), 'big')
-        print('deserialize POW edge bits:', edgeBits)
         bytes_len = int(((edgeBits*Consensus.proofsize)+7)/8)
         bits = B.read(bytes_len)
         proofNonces = self.deserializeProofNonces(bits, edgeBits)
@@ -68,7 +66,7 @@ class ProofOfWork:
                 positionTemp = (n*edgeBits)+bit
                 p = int(positionTemp/8)
                 if int(bits[p]) & (1 << (positionTemp % 8)):
-                    proofNonce = 1 << bit
+                    proofNonce |= 1 << bit
             proofNonces.append(proofNonce)
         return proofNonces
 
@@ -195,8 +193,7 @@ class BlockHeader:
         serializer.write(self.outputRoot)
         serializer.write(self.rangeProofRoot)
         serializer.write(self.kernelRoot)
-        for kernel_offset in self.totalKernelOffset:
-            serializer.write(kernel_offset.to_bytes(1, 'big'))
+        serializer.write(self.totalKernelOffset.serialize()) # blinding factor
         serializer.write(self.outputMMRSize.to_bytes(8, 'big'))
         serializer.write(self.kernelMMRSize.to_bytes(8, 'big'))
         serializer.write(self.totalDifficulty.to_bytes(8, 'big'))

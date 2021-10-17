@@ -1,4 +1,4 @@
-from io import BytesIO
+from mimblewimble.serializer import Serializer
 
 
 class Commitment:
@@ -26,13 +26,13 @@ class Commitment:
 
     # serialization / deserialization
 
-    def serialize(self, serializer):
+    def serialize(self, serializer: Serializer):
         assert len(self.getBytes()) == 33
         serializer.write(self.getBytes())
 
     @classmethod
-    def deserialize(self, byteBuffer: BytesIO):
-        return Commitment(byteBuffer.read(33))
+    def deserialize(self, serializer: Serializer):
+        return Commitment(serializer.read(33))
 
     def hex(self):
         return self.getBytes().hex()

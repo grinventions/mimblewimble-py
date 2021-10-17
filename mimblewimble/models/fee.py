@@ -1,4 +1,4 @@
-from io import BytesIO
+from mimblewimble.serializer import Serializer
 
 
 class Fee:
@@ -24,18 +24,18 @@ class Fee:
 
     # serialization / deserialization
 
-    def serialize(self, serializer):
+    def serialize(self, serializer: Serializer):
         serializer.write((0).to_bytes(2, 'big'))
         serializer.write(self.getShift().to_bytes(1, 'big'))
         serializer.write((self.getFee() >> 32).to_bytes(1, 'big'))
         serializer.write((self.getFee() & 0xffffffff).to_bytes(4, 'big'))
 
     @classmethod
-    def deserialize(self, byteBuffer: BytesIO):
-        byteBuffer.read(2)
-        shift = byteBuffer.read(8) & 0x0f
-        fee = byteBuffer.read(8) << (32).to_bytes(8, 'big')
-        fee += byteBuffer.read(32)
+    def deserialize(self, serializer: Serializer):
+        serializer.read(2)
+        shift = int.from_bytes(serializer.read(1), 'big') & 0x0f
+        fee = int.from_bytes(serializer.read(1), 'big') << 32
+        fee += int.from_bytes(serializer.read(4), 'big')
         return Fee(shift, fee)
 
     def toJSON(self):
