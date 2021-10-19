@@ -3,6 +3,7 @@ import json # TODO remove after debugging
 from io import BytesIO
 
 from mimblewimble.mmr.index import MMRIndex
+from mimblewimble.serializer import Serializer
 
 from mimblewimble.consensus import Consensus
 from mimblewimble.models.short_id import ShortId
@@ -10,11 +11,12 @@ from mimblewimble.models.short_id import ShortId
 from mimblewimble.models.transaction import TransactionInput
 from mimblewimble.models.transaction import TransactionOutput
 from mimblewimble.models.transaction import TransactionBody
+from mimblewimble.models.transaction import BlindingFactor
 
 
 class ProofOfWork:
     def __init__(self, edgeBits, proofNonces):
-        self.edgeBits = edgeBits # 8 bytes
+        self.edgeBits = edgeBits # 1 byte
         self.proofNonces = proofNonces
 
     def getEdgeBits(self):
@@ -45,10 +47,10 @@ class ProofOfWork:
                     serialized_bytes[p] |= (1 << (positionTemp % 8))
         return serialized_bytes
 
-    def deserialize(self, byteString):
-        B = BytesIO(byteString)
-        edgeBits = B.read(1)
-        bytes_len = ((edgeBits*Consensus.proofsize)+7)/8
+    @classmethod
+    def deserialize(self, B):
+        edgeBits = int.from_bytes(B.read(1), 'big')
+        bytes_len = int(((edgeBits*Consensus.proofsize)+7)/8)
         bits = B.read(bytes_len)
         proofNonces = self.deserializeProofNonces(bits, edgeBits)
         return ProofOfWork(edgeBits, proofNonces)
@@ -56,15 +58,15 @@ class ProofOfWork:
     def deserializeProofNonces(bits, edgeBits):
         if edgeBits == 0 or edgeBits > 63:
             raise ValueError('Invalid number of edge bits {0}'.format(str(edgeBits)))
-        uint8_t1 = b'0'*8 + 1
+        uint8_t1 = b'\x00\x00\x00\x00\x00\x00\x00\x01'
         proofNonces = []
         for n in range(Consensus.proofsize):
             proofNonce = 0
             for bit in range(edgeBits):
                 positionTemp = (n*edgeBits)+bit
-                p = positionTemp/8
-                if bits[p:p+8] & (uint8_t1 << (positionTemp % 8)) != 0:
-                    proofNonce = uint8_t1 << bit
+                p = int(positionTemp/8)
+                if int(bits[p]) & (1 << (positionTemp % 8)):
+                    proofNonce |= 1 << bit
             proofNonces.append(proofNonce)
         return proofNonces
 
@@ -182,7 +184,7 @@ class BlockHeader:
 
     # serialization / deserialization
 
-    def serialize(self, serializer):
+    def serialize(self, serializer: Serializer):
         serializer.write(self.version.to_bytes(2, 'big'))
         serializer.write(self.height.to_bytes(8, 'big'))
         serializer.write(self.timestamp.to_bytes(8, 'big'))
@@ -191,8 +193,7 @@ class BlockHeader:
         serializer.write(self.outputRoot)
         serializer.write(self.rangeProofRoot)
         serializer.write(self.kernelRoot)
-        for kernel_offset in self.totalKernelOffset:
-            serializer.write(kernel_offset.to_bytes(1, 'big'))
+        serializer.write(self.totalKernelOffset.serialize()) # blinding factor
         serializer.write(self.outputMMRSize.to_bytes(8, 'big'))
         serializer.write(self.kernelMMRSize.to_bytes(8, 'big'))
         serializer.write(self.totalDifficulty.to_bytes(8, 'big'))
@@ -201,33 +202,32 @@ class BlockHeader:
         self.proofOfWork.serialize(serializer)
 
     @classmethod
-    def deserialize(self, byteString: bytes):
-        B = BytesIO(byteString)
-        Btotal = BytesIO(byteString)
+    def deserialize(self, B: Serializer):
+        version = int.from_bytes(B.read(2), 'big')
+        height = int.from_bytes(B.read(8), 'big')
+        timestamp = int.from_bytes(B.read(8), 'big')
+        previousBlockHash = B.read(32)
+        previousRoot = B.read(32)
+        outputRoot = B.read(32)
+        rangeProofRoot = B.read(32)
+        kernelRoot = B.read(32)
 
-        version = int(B.read(2))
-        height = int(B.read(8))
-        timestamp = int(B.read(8))
-        previousBlockHash = int(B.read(4))
-        previousRoot = int(B.read(4))
-        outputRoot = int(B.read(4))
-        kernelRoot = int(B.read(4))
+        totalKernelOffset = BlindingFactor.deserialize(B.read(32))
 
-        totalKernelOffset = BlindingFactor.deserialize(Btotal.read(34))
+        outputMMRSize = int.from_bytes(B.read(8), 'big')
+        kernelMMRSize = int.from_bytes(B.read(8), 'big')
+        totalDifficulty = int.from_bytes(B.read(8), 'big')
+        scalingDifficulty = int.from_bytes(B.read(4), 'big')
+        nonce = int.from_bytes(B.read(8), 'big')
 
-        outputMMRSize = int(B.read(8))
-        kernelMMRSize = int(B.read(8))
-        totalDifficulty = int(B.read(8))
-        scalingDifficulty = int(B.read(8))
-        nonce = int(B.read(8))
-
-        proofOfWork = ProofOfWork.deserialize(Btotal.read(40))
+        proofOfWork = ProofOfWork.deserialize(B)
 
         return BlockHeader(version,
                            height,
                            timestamp,
                            previousBlockHash,
                            previousRoot,
+                           outputRoot,
                            rangeProofRoot,
                            kernelRoot,
                            totalKernelOffset,
@@ -345,16 +345,15 @@ class FullBlock:
         return self.header.getTotalKernelOffset()
 
     def serialize(self):
-        serializer = BytesIO()
+        serializer = Serializer()
         self.header.serialize(serializer)
         self.body.serialize(serializer)
         return serializer.getvalue()
 
     @classmethod
-    def deserialize(self, byteBuffer):
-        # TODO do not pass entire bytBuffer but adequate chunks
-        header = BlockHeader.deserialize(byteBuffer)
-        body = TransactionBody.deserialize(byteBuffer)
+    def deserialize(self, serializer: Serializer):
+        header = BlockHeader.deserialize(serializer)
+        body = TransactionBody.deserialize(serializer)
         return FullBlock(header, body)
 
     def toJSON(self):
