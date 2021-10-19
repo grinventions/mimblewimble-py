@@ -12,16 +12,12 @@ from mimblewimble.blockchain import FullBlock
 
 class GenesisTest(unittest.TestCase):
     def test_mainnet(self):
-        print('\ntesting serialization of the main net block')
         genesis = mainnet
         # check proof of work hash
         assert genesis.getHash().hex() == '40adad0aec27797b48840aa9e00472015c21baea118ce7a2ff1a82c0f8f5bf82'
         # check serialized block header hash
         serializer = Serializer()
         genesis.header.serialize(serializer)
-        print('header')
-        print(serializer.getvalue().hex())
-        print('end header')
         computed = hashlib.blake2b(serializer.getvalue(), digest_size=32).digest()
         computed == bytes.fromhex('6046b08903fa520e693b86e700d6a430b353e767027dd9ed1ccbb7017d0bb4dc') # value extracted from grin++
         # check whole serialized block hash
