@@ -93,7 +93,7 @@ class BlindingFactor:
         return BlindingFactor(bytes.fromHex(hex))
 
     def format(self):
-        return 'BlindingFacotr{' + self.hex() + '}'
+        return 'BlindingFactor{' + self.hex() + '}'
 
     def toSecretKey(self):
         return SecretKey(self.blindingFactorBytes)
