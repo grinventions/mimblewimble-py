@@ -19,5 +19,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     include_package_data=True,
-    package_data = {}
+    package_data = {
+        '': ['static/__init__.py', 'static/wordlist.json'],
+    }
 )

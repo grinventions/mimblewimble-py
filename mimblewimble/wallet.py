@@ -1,30 +1,25 @@
+import os
 
-class Output:
-    def __init__(self, oid, commitment, status, txid, encrypted):
-        self.oid = oid
-        self.commitment = commitment
-        self.status = status
-        self.txid = txid
-        self.encrypted = encrypted
-
-
-class Slate:
-    def __init__(self, slate_id, stage, iv, slate, armored_slatepack):
-        self.slate_id = slate_id
-        self.stage = stage
-        self.iv = iv # 16 bytes
-        self.slate = slate
-        self.armorder_slatepack = armored_slatepack
-
-
-def TransactionBuilder(inputs, outputs, kernel, offset: BlindingFactor):
-        body = TransactionBody(transactionInputs, transactionOutputs, kernels)
-        return Transaction(BlindingFactor(transactionOffset), body)
+from Crypto.Cipher import AES
 
 
 class Wallet:
-    def __init__(self, next_tx_id, refresh_block_height, restore_leaf_index):
-        self.next_tx_id = next_tx_id
-        self.refresh_block_height = refresh_block_height
-        self.restore_leaf_index = restore_leaf_index
+    def __init__(self, encrypted_seed):
+        self.encrypted_seed = encrypted_seed
+        self.wallet_seed = None
+
+
+    @classmethod
+    def initialize(self, num_words=24, passphrase=''):
+        # entropy bytes
+        entropy_bytes = (4 * num_words) / 3
+        # wallet seed
+        wallet_seed = os.urandom(4)
+        # encrypted seed
+        IV = bytes.fromhex(passphrase)
+        encrypted_seed = AES.new(wallet_seed, AES.MODE_CBC, IV=IV)
+        # wallet seed phrase
+        # TODO
+        # initialize the wallet
+        return Wallet(encrypted_seed)
 
