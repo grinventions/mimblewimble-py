@@ -1,3 +1,5 @@
+import json
+
 try:
     import importlib.resources as pkg_resources
 except ImportError:
@@ -8,17 +10,17 @@ from mimblewimble import static
 
 
 class Mnemonic:
-    def __init__(self, entropy: int):
+    def __init__(self):
         # load the wordlist
-        filename = pkg_resources.open_binary(static, 'wordlist.json')
-        with open(filename, "r") as f:
-            self.words = json.load(f)
+        f = pkg_resources.open_binary(static, 'wordlist.json')
+        self.words = json.load(f)
 
-        def mnemonicFromEntropy(entropy: int):
-            # TODO
-            pass
+    def mnemonicFromEntropy(self, entropy: int, entropy_len: int):
+        if entropy_len % 4 != 0:
+            raise ValueError('Entropy was of incorrect length.')
+        pass
 
 
-        def def entropyFromMnemonic(wallet_words: str):
-            # TODO
-            pass
+    def entropyFromMnemonic(self, wallet_words: str):
+        # TODO
+        pass
