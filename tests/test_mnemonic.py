@@ -12,8 +12,10 @@ class MnemonicTests(unittest.TestCase):
         self.assertTrue(
             'Entropy was of incorrect length.' == str(context.exception))
 
-    def test_mnemonic_from_entropy(self):
+    def test_mnemonic(self):
         M = Mnemonic()
-        phrase = M.mnemonicFromEntropy(bytes([0x0 for i in range(32)]))
-        assert phrase == 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon'
+        entropy = bytes([0x0 for i in range(32)])
+        phrase = M.mnemonicFromEntropy(entropy)
+        assert phrase == 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon again'
+        assert M.entropyFromMnemonic(phrase) == entropy
 
