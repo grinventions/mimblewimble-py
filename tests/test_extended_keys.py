@@ -1,5 +1,7 @@
 import unittest
 
+from mimblewimble.crypto.keychain import ChildNumber
+
 
 def utilTestPath(seed, path, expected_sk, expected_pk):
     # TODO
@@ -18,31 +20,44 @@ def test_vector_1():
 
     # m/0h
     utilTestPath(
-        seed, [],
+        seed, [ChildNumber.from_hardened_idx(0)],
         'xprv9uHRZZhk6KAJC1avXpDAp4MDc3sQKNxDiPvvkX8Br5ngLNv1TxvUxt4cV1rGL5hj6KCesnDYUhd7oWgT11eZG7XnxHrnYeSvkzY7d2bhkJ7',
         'xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw')
 
     # m/0h/1
     utilTestPath(
-        seed, [],
+        seed, [
+            ChildNumber.from_hardened_idx(0),
+            ChildNumber.from_normal_idx(1)],
         'xprv9wTYmMFdV23N2TdNG573QoEsfRrWKQgWeibmLntzniatZvR9BmLnvSxqu53Kw1UmYPxLgboyZQaXwTCg8MSY3H2EU4pWcQDnRnrVA1xe8fs',
         'xpub6ASuArnXKPbfEwhqN6e3mwBcDTgzisQN1wXN9BJcM47sSikHjJf3UFHKkNAWbWMiGj7Wf5uMash7SyYq527Hqck2AxYysAA7xmALppuCkwQ')
 
     # m/0h/1/2h
     utilTestPath(
-        seed, [],
+        seed, [
+            ChildNumber.from_hardened_idx(0),
+            ChildNumber.from_normal_idx(1),
+            ChildNumber.from_hardened_idx(2)],
         'xprv9z4pot5VBttmtdRTWfWQmoH1taj2axGVzFqSb8C9xaxKymcFzXBDptWmT7FwuEzG3ryjH4ktypQSAewRiNMjANTtpgP4mLTj34bhnZX7UiM',
         'xpub6D4BDPcP2GT577Vvch3R8wDkScZWzQzMMUm3PWbmWvVJrZwQY4VUNgqFJPMM3No2dFDFGTsxxpG5uJh7n7epu4trkrX7x7DogT5Uv6fcLW5')
 
     # m/0h/1/2h/2
     utilTestPath(
-        seed, [],
+        seed, [
+            ChildNumber.from_hardened_idx(0),
+            ChildNumber.from_normal_idx(1),
+            ChildNumber.from_normal_idx(2)],
         'xprvA2JDeKCSNNZky6uBCviVfJSKyQ1mDYahRjijr5idH2WwLsEd4Hsb2Tyh8RfQMuPh7f7RtyzTtdrbdqqsunu5Mm3wDvUAKRHSC34sJ7in334',
         'xpub6FHa3pjLCk84BayeJxFW2SP4XRrFd1JYnxeLeU8EqN3vDfZmbqBqaGJAyiLjTAwm6ZLRQUMv1ZACTj37sR62cfN7fe5JnJ7dh8zL4fiyLHV')
 
     # m/0h/1/2h/2/1000000000
     utilTestPath(
-        seed, [],
+        seed, [
+            ChildNumber.from_hardened_idx(0),
+            ChildNumber.from_normal_idx(1),
+            ChildNumber.from_hardened_idx(2),
+            ChildNumber.from_normal_idx(2),
+            ChildNumber.from_normal_idx(1000000000)],
         'xprvA41z7zogVVwxVSgdKUHDy1SKmdb533PjDz7J6N6mV6uS3ze1ai8FHa8kmHScGpWmj4WggLyQjgPie1rFSruoUihUZREPSL39UNdE3BBDu76',
         'xpub6H1LXWLaKsWFhvm6RVpEL9P4KfRZSW7abD2ttkWP3SSQvnyA8FSVqNTEcYFgJS2UaFcxupHiYkro49S8yGasTvXEYBVPamhGW6cFJodrTHy')
 
@@ -58,31 +73,45 @@ def test_vector_2():
 
     # m/0
     utilTestPath(
-        seed, [],
+        seed, [ChildNumber.from_normal_idx(0)],
         'xprv9vHkqa6EV4sPZHYqZznhT2NPtPCjKuDKGY38FBWLvgaDx45zo9WQRUT3dKYnjwih2yJD9mkrocEZXo1ex8G81dwSM1fwqWpWkeS3v86pgKt',
         'xpub69H7F5d8KSRgmmdJg2KhpAK8SR3DjMwAdkxj3ZuxV27CprR9LgpeyGmXUbC6wb7ERfvrnKZjXoUmmDznezpbZb7ap6r1D3tgFxHmwMkQTPH')
 
     # m/0/2147483647h
     utilTestPath(
-        seed, [],
+        seed, [
+            ChildNumber.from_normal_idx(0),
+            ChildNumber.from_hardened_idx(2147483647)],
         'xprv9wSp6B7kry3Vj9m1zSnLvN3xH8RdsPP1Mh7fAaR7aRLcQMKTR2vidYEeEg2mUCTAwCd6vnxVrcjfy2kRgVsFawNzmjuHc2YmYRmagcEPdU9',
         'xpub6ASAVgeehLbnwdqV6UKMHVzgqAG8Gr6riv3Fxxpj8ksbH9ebxaEyBLZ85ySDhKiLDBrQSARLq1uNRts8RuJiHjaDMBU4Zn9h8LZNnBC5y4a')
 
     # m/0/2147483647h/1
     utilTestPath(
-        seed, [],
+        seed, [
+            ChildNumber.from_normal_idx(0),
+            ChildNumber.from_hardened_idx(2147483647),
+            ChildNumber.from_normal_idx(1)],
         'xprv9zFnWC6h2cLgpmSA46vutJzBcfJ8yaJGg8cX1e5StJh45BBciYTRXSd25UEPVuesF9yog62tGAQtHjXajPPdbRCHuWS6T8XA2ECKADdw4Ef',
         'xpub6DF8uhdarytz3FWdA8TvFSvvAh8dP3283MY7p2V4SeE2wyWmG5mg5EwVvmdMVCQcoNJxGoWaU9DCWh89LojfZ537wTfunKau47EL2dhHKon')
 
     # m/0/2147483647h/1/2147483646h
     utilTestPath(
-        seed, [],
+        seed, [
+            ChildNumber.from_normal_idx(0),
+            ChildNumber.from_hardened_idx(2147483647),
+            ChildNumber.from_normal_idx(1),
+            ChildNumber.from_hardened_idx(2147483646)],
         'xprvA1RpRA33e1JQ7ifknakTFpgNXPmW2YvmhqLQYMmrj4xJXXWYpDPS3xz7iAxn8L39njGVyuoseXzU6rcxFLJ8HFsTjSyQbLYnMpCqE2VbFWc',
         'xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL')
 
     # m/0/2147483647h/1/2147483646h/2
     utilTestPath(
-        seed, [],
+        seed, [
+            ChildNumber.from_normal_idx(0),
+            ChildNumber.from_hardened_idx(2147483647),
+            ChildNumber.from_normal_idx(1),
+            ChildNumber.from_hardened_idx(2147483646),
+            ChildNumber.from_normal_idx(2)],
         'xprvA2nrNbFZABcdryreWet9Ea4LvTJcGsqrMzxHx98MMrotbir7yrKCEXw7nadnHM8Dq38EGfSh6dqA9QWTyefMLEcBYJUuekgW4BYPJcr9E7j',
         'xpub6FnCn6nSzZAw5Tw7cgR9bi15UV96gLZhjDstkXXxvCLsUXBGXPdSnLFbdpq8p9HmGsApME5hQTZ3emM2rnY5agb9rXpVGyy3bdW6EEgAtqt')
 
@@ -99,6 +128,6 @@ def test_vector_3():
 
     # m/0h
     utilTestPath(
-        seed, [],
+        seed, [ChildNumber.from_hardened_idx(0)],
         'xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L',
         'xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y')
