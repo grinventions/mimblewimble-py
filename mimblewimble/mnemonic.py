@@ -43,7 +43,7 @@ class Mnemonic:
                 loc += 1
 
         mask = ((1 << checksumBits) - 1)
-        lhs = int.from_bytes(hashlib.sha256(entropy).digest(), 'big')
+        lhs = hashlib.sha256(entropy).digest()[0]
         checksum = (lhs >> (8 - checksumBits)) & mask
 
         for i in reversed(range(1, checksumBits+1)):
@@ -101,7 +101,7 @@ class Mnemonic:
 
         entropy = bytes(entropy)
 
-        lhs = int.from_bytes(hashlib.sha256(entropy).digest(), 'big')
+        lhs = hashlib.sha256(entropy).digest()[0]
         actualChecksum = (lhs >> (8 - checksumBits)) & mask
 
         if actualChecksum != expectedChecksum:
