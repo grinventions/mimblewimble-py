@@ -1,6 +1,8 @@
 import hashlib
 import json
 
+from hashlib import pbkdf2_hmac
+
 from math import ceil
 
 try:
@@ -106,5 +108,14 @@ class Mnemonic:
             raise ValueError('Invalid checksum.')
 
         return entropy
+
+
+    def toSeed(self, entropy, passphrase=''):
+        salt = bytes('mnemonic' + passphrase, 'utf-8')
+        dk = pbkdf2_hmac('sha512', entropy, salt, 2048)
+        return dk.hex()
+
+
+
 
 
