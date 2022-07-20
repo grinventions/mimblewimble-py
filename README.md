@@ -19,6 +19,10 @@ We are building the first Python-based implementation of the Mimblewimble protoc
 
 1. Regarding serialization/deserialization [p2p protocol document](https://github.com/mimblewimble/docs/wiki/P2P-Protocol#compactblockbody)
 
+## Tools
+
+1. [Python's BIP32](https://pypi.org/project/bip32/)
+
 ## Support
 
 This project is NOT financed from the grin fund neither grin community fund. I deliverately did not request funding because of the following reasons:
