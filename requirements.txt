@@ -1,2 +1,4 @@
 siphash-cffi
 bip32
+bip_utils
+pynacl
