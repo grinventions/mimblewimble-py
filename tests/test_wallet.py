@@ -44,14 +44,21 @@ accounts = [
 
 # this simply tests if runs, does not check any correctness
 def test_decrypt():
+    M = Mnemonic()
+    master_seed_ref = M.entropyFromMnemonic(recovery_phrase)
+
     encrypted_seed = bytes.fromhex(seed['encrypted_seed'])
     nonce = bytes.fromhex(seed['nonce'])
     salt = bytes.fromhex(seed['salt'])
+
     w = Wallet(encrypted_seed=encrypted_seed, nonce=nonce, salt=salt)
     w.unshieldWallet(password, nonce=nonce, salt=salt)
-    # phrase = w.getSeedPhrase()
-    #print(phrase)
+
+    assert w.master_seed == master_seed_ref
+    assert recovery_phrase == w.getSeedPhrase()
+
     w.encryptWallet(password, nonce=nonce, salt=salt)
+
     assert w.encrypted_seed == encrypted_seed
 
 
@@ -68,9 +75,10 @@ def test_from_seed_phrase():
 @pytest.mark.skip(reason='wip')
 def test_grin_plusplus():
     seed_words = 'dehydrate opened lilac elapse subtly prying swept ruby liar veteran wife afloat strained camp tugs pager dual tomorrow aimless boxes saucepan invoke utensils vapidly lilac'
+    just_seed_words = ' '.join(seed_words.split(' ')[0:-1])
     print(len(seed_words.split(' ')))
     M = Mnemonic()
-    master_seed = M.entropyFromMnemonic(seed_words)
+    master_seed = M.entropyFromMnemonic(just_seed_words)
 
     # print('by', bindings.crypto_sign_SECRETKEYBYTES)
     seed = bytes.fromhex('f9a0e73d3cd533368f75ff63cbd97b2100beffbc339cdfa5c203c1a022d9cf11')
