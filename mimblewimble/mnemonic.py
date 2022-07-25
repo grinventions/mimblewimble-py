@@ -76,7 +76,7 @@ class Mnemonic:
             try:
                 j = self.words.index(word)
             except ValueError:
-                raise ValueError('Word not found.')
+                raise ValueError('Word not found: ' + word)
 
             wordIndices[i] = j;
 
