@@ -72,11 +72,9 @@ class Wallet:
         if self.master_seed is None:
             raise Exception('The wallet is shielded')
 
-        hashed_seed = sha512(self.master_seed).digest()
-
         # I AM VOLDEMORT
         m = hmac.new('IamVoldemort'.encode('utf8'), digestmod=sha512)
-        m.update(hashed_seed)
+        m.update(self.master_seed)
         secret = m.digest()
 
         # derive the seed at the path
