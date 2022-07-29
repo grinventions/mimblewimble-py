@@ -28,17 +28,17 @@ recovery_phrase = 'sign interest obtain raw window monster jump bring nice crunc
 accounts = [
     (
         'default',
-        'm/0/0',
+        'm/0/1/0', # core wallet shows m/0/0
         'grin14kgku7l5x6te3arast3p59zk4rteznq2ug6kmmypf2d6z8md76eqg3su35'
     ),
     (
         'alice',
-        'm/1/0',
+        'm/1/1/0', # core wallet shows m/1/0
         'grin1uqan8sf49yf0369ezef9jhl25jll9fc8xc5wjkcg0w6nv6v85v2sp4wgwy'
     ),
     (
         'bob',
-        'm/2/0',
+        'm/2/1/0', # core wallet shows m/2/0
         'grin1guszgjsjlt9vrppu42l03xx080epzzvse5nev3nvdh632explc0sj8ylja'
     ),
 ]
@@ -72,7 +72,7 @@ def test_from_seed_phrase():
         print(path)
         print(address)
         print(expected_address)
-        # assert address == expected_address
+        assert address == expected_address
 
 
 # @pytest.mark.skip(reason='wip')
