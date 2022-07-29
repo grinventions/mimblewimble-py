@@ -1,6 +1,7 @@
+import hmac
 import pytest
 
-from hashlib import blake2b
+from hashlib import blake2b, sha512
 
 from bip32 import BIP32
 from bip_utils import Bech32Encoder
@@ -62,38 +63,46 @@ def test_decrypt():
     assert w.encrypted_seed == encrypted_seed
 
 
-@pytest.mark.skip(reason='wip')
+# @pytest.mark.skip(reason='wip')
 def test_from_seed_phrase():
     w = Wallet.fromSeedPhrase(recovery_phrase)
     for label, path, expected_address in accounts:
         address = w.getSlatepackAddress(path=path)
         print()
+        print(path)
         print(address)
         print(expected_address)
+        # assert address == expected_address
 
 
-@pytest.mark.skip(reason='wip')
+# @pytest.mark.skip(reason='wip')
 def test_grin_plusplus():
-    seed_words = 'dehydrate opened lilac elapse subtly prying swept ruby liar veteran wife afloat strained camp tugs pager dual tomorrow aimless boxes saucepan invoke utensils vapidly lilac'
-    just_seed_words = ' '.join(seed_words.split(' ')[0:-1])
-    print(len(seed_words.split(' ')))
-    M = Mnemonic()
-    master_seed = M.entropyFromMnemonic(just_seed_words)
+    # seed_words = 'dehydrate opened lilac elapse subtly prying swept ruby liar veteran wife afloat strained camp tugs pager dual tomorrow aimless boxes saucepan invoke utensils vapidly lilac'
+    # just_seed_words = ' '.join(seed_words.split(' ')[0:-1])
+    # print(len(seed_words.split(' ')))
+    # M = Mnemonic()
+    # master_seed = M.entropyFromMnemonic(just_seed_words)
 
     # print('by', bindings.crypto_sign_SECRETKEYBYTES)
     seed = bytes.fromhex('f9a0e73d3cd533368f75ff63cbd97b2100beffbc339cdfa5c203c1a022d9cf11')
-    assert seed == master_seed
+    # assert seed == master_seed
 
-    bip32 = BIP32.from_seed(seed)
-    path = 'm/0/1/0'
-    print()
-    sk_der = bip32.get_privkey_from_path(path)
-    print(sk_der.hex())
-    sk_der_blake = blake2b(sk_der, digest_size=64).digest()
-    pk = bindings.crypto_sign_ed25519_sk_to_pk(sk_der_blake)
-    print()
-    print(pk.hex())
-    print('068131549ec5c3bdcb3d13a855e1b76d179919efd974669292b322f5d59a4ccc')
+    # I AM VOLDEMORT
+    m = hmac.new('IamVoldemort'.encode('utf8'), digestmod=sha512)
+    m.update(seed)
+    secret = m.digest()
+
+    # derive the seed at the path
+    bip32 = BIP32(chaincode=secret[32:], privkey=secret[:32])
+    sk_der = bip32.get_privkey_from_path('m/0/1/0')
+
+    # compute the blake2 hash of that key and that is ed25519 seed
+    seed_blake = blake2b(sk_der, digest_size=32).digest()
+
+    # get the ed25519 secret key and public key from it
+    pk, sk = bindings.crypto_sign_seed_keypair(seed_blake)
+
+    # compute the slatepack address
     slatepack_address = Bech32Encoder.Encode('grin', pk)
-    print(slatepack_address)
-    print('grin1q6qnz4y7chpmmjeazw59tcdhd5tejx00m96xdy5jkv30t4v6fnxqv9kwer')
+
+    assert slatepack_address == 'grin1q6qnz4y7chpmmjeazw59tcdhd5tejx00m96xdy5jkv30t4v6fnxqv9kwer'

@@ -1,3 +1,4 @@
+import hmac
 import os
 
 from nacl import bindings
@@ -5,7 +6,7 @@ from nacl import bindings
 from Crypto.Cipher import ChaCha20_Poly1305
 from Crypto.Random import get_random_bytes
 
-from hashlib import blake2b, pbkdf2_hmac
+from hashlib import blake2b, pbkdf2_hmac, sha512
 
 from bip32 import BIP32
 from bip_utils import Bech32Encoder
@@ -67,14 +68,34 @@ class Wallet:
         return M.mnemonicFromEntropy(self.master_seed)
 
 
-    def getSlatepackAddress(self, path=None, testnet=False):
+    def getSlatepackAddress(self, path='m/0/0', testnet=False):
         if self.master_seed is None:
             raise Exception('The wallet is shielded')
-        bip32 = BIP32.from_seed(self.master_seed)
+
+        hashed_seed = sha512(self.master_seed).digest()
+
+        # I AM VOLDEMORT
+        m = hmac.new('IamVoldemort'.encode('utf8'), digestmod=sha512)
+        m.update(hashed_seed)
+        secret = m.digest()
+
+        # derive the seed at the path
+        bip32 = BIP32(chaincode=secret[32:], privkey=secret[:32])
         sk_der = bip32.get_privkey_from_path(path)
-        sk_der_blake = blake2b(sk_der, digest_size=64).digest()
-        pk = bindings.crypto_sign_ed25519_sk_to_pk(sk_der_blake)
-        return Bech32Encoder.Encode('grin', pk)
+
+        # compute the blake2 hash of that key and that is ed25519 seed
+        seed_blake = blake2b(sk_der, digest_size=32).digest()
+
+        # get the ed25519 secret key and public key from it
+        pk, sk = bindings.crypto_sign_seed_keypair(seed_blake)
+
+        # compute the slatepack address
+        network = 'grin'
+        if testnet:
+            network = 'tgrin'
+        slatepack_address = Bech32Encoder.Encode(network, pk)
+
+        return slatepack_address
 
 
     @classmethod
