@@ -98,8 +98,8 @@ class Wallet:
 
     @classmethod
     def initialize(self):
-        # TODO
-        pass
+        master_seed = os.urandom(32)
+        return Wallet(master_seed=master_seed)
 
 
     @classmethod
