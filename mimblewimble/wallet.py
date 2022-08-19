@@ -15,35 +15,36 @@ from mimblewimble.mnemonic import Mnemonic
 
 
 class Wallet:
-    def __init__(self, encrypted_seed=None, salt=None, nonce=None, master_seed=None, master_seed_rem=None):
+    def __init__(self, encrypted_seed=None, salt=None, nonce=None, master_seed=None, tag=None):
         self.encrypted_seed = encrypted_seed
         self.salt = salt
         self.nonce = nonce
         self.master_seed = master_seed # 32 bytes
-        self.master_seed_rem = master_seed_rem # TODO find what it represents, 16 bytes
 
 
-    def encryptWallet(self, passphrase, salt=None, nonce=None):
+    def shieldWallet(self, passphrase: str, salt=None, nonce=None):
         if self.master_seed is None:
-            raise Exception('The wallet is shielded')
-        if salt is not None:
-            self.salt = salt
-        if nonce is not None:
-            self.nonce = nonce
+            raise Exception('The wallet is already shielded')
+        if self.salt is None:
+            if salt is None:
+                self.salt = os.urandom(8)
+            else:
+                self.salt = salt
+        if self.nonce is None:
+            if nonce is None:
+                self.nonce = os.urandom(12)
+            else:
+                self.nonce = nonce
         # compute encrypted_seed from master_seed
-        key = pbkdf2_hmac('sha512', bytes(passphrase, 'utf-8'), salt, 100)
-        cipher = ChaCha20_Poly1305.new(key=key[0:32], nonce=nonce)
-        self.encrypted_seed = cipher.encrypt(self.master_seed + self.master_seed_rem)
-
-
-    def shieldWallet(self, salt=None, nonce=None, passphrase=None):
-        if None in [self.encrypted_seed, self.salt, self.nonce]:
-            raise Exception('The wallet cannot be shielded as password is not set')
+        key = pbkdf2_hmac('sha512', bytes(passphrase, 'utf-8'), self.salt, 100)
+        cipher = ChaCha20_Poly1305.new(key=key[0:32], nonce=self.nonce)
+        ciphertext = cipher.encrypt(self.master_seed)
+        tag = cipher.digest()
+        self.encrypted_seed = ciphertext + tag
         self.master_seed = None
-        self.master_seed_rem = None
 
 
-    def unshieldWallet(self, passphrase, salt=None, nonce=None):
+    def unshieldWallet(self, passphrase: str, salt=None, nonce=None):
         if self.salt is None and salt is None:
             raise Exception('Missing salt')
         elif self.salt is None and salt is not None:
@@ -55,9 +56,10 @@ class Wallet:
         # compute master_seed from encrypted_seed
         key = pbkdf2_hmac('sha512', bytes(passphrase, 'utf-8'), salt, 100)
         cipher = ChaCha20_Poly1305.new(key=key[0:32], nonce=nonce)
-        plaintext = cipher.decrypt(self.encrypted_seed)
-        self.master_seed = plaintext[:32]
-        self.master_seed_rem = plaintext[32:]
+        ciphertext = self.encrypted_seed[:32]
+        tag = self.encrypted_seed[32:]
+        plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+        self.master_seed = plaintext
         del plaintext
 
 
@@ -68,7 +70,17 @@ class Wallet:
         return M.mnemonicFromEntropy(self.master_seed)
 
 
-    def getSlatepackAddress(self, path='m/0/0', testnet=False):
+    def getEncryptedSeed(self):
+        if None in [self.encrypted_seed, self.salt, self.nonce]:
+            raise Exception('The wallet is not shielded')
+        return {
+            'encrypted_seed': self.encrypted_seed.hex(),
+            'salt': self.salt.hex(),
+            'nonce': self.nonce.hex()
+        }
+
+
+    def getSlatepackAddress(self, path='m/0/1/0', testnet=False):
         if self.master_seed is None:
             raise Exception('The wallet is shielded')
 
@@ -110,7 +122,20 @@ class Wallet:
 
 
     @classmethod
-    def fromEncryptedSeed(encrypted_seed_hex: str, salt: str, nonce: str, passphrase: str):
-        # TODO
-        pass
+    def fromEncryptedSeedDict(self, seed: dict, passphrase=None):
+        return self.fromEncryptedSeed(
+            seed['encrypted_seed'], seed['salt'], seed['nonce'],
+            passphrase=passphrase)
 
+
+    @classmethod
+    def fromEncryptedSeed(
+            self, encrypted_seed_hex: str, salt_hex: str, nonce_hex: str,
+            passphrase=None):
+        encrypted_seed = bytes.fromhex(encrypted_seed_hex)
+        nonce = bytes.fromhex(nonce_hex)
+        salt = bytes.fromhex(salt_hex)
+        w = Wallet(encrypted_seed=encrypted_seed, salt=salt, nonce=nonce)
+        if passphrase is not None:
+            w.unshieldWallet(passphrase, nonce=nonce, salt=salt)
+        return w

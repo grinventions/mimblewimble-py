@@ -118,6 +118,49 @@ Your recovery phrase is
 sign interest obtain raw window monster jump bring nice crunch toward grunt prosper recycle sphere battle mother fold reject velvet emotion similar romance govern
 ```
 
+### Detecting invalid password
+
+While the master seed is being encrypted, the MAC tag digest will be verified indicating if password was correct.
+
+```python
+from mimblewimble.wallet import Wallet
+
+# content of the core wallet encrypted seed file
+seed = {
+    'encrypted_seed': '839773da8062af7dc51714fd98a7f9a72750e17aa54541d5317b5ea1be5c5751db85497aa630380dd984e2ecd603ae0b',
+    'salt': '356f045acf2b2787',
+    'nonce': 'b5a490e1c942e6a5147bb740'
+}
+
+# convert to bytes
+encrypted_seed = bytes.fromhex(seed['encrypted_seed'])
+nonce = bytes.fromhex(seed['nonce'])
+salt = bytes.fromhex(seed['salt'])
+
+# don't forget your invalid password
+password = 'Lt. Col. Frank Slade'
+
+# instantiate the wallet
+w = Wallet(encrypted_seed=encrypted_seed, nonce=nonce, salt=salt)
+
+# decrypt
+valid = True
+try:
+    w.unshieldWallet(password, nonce=nonce, salt=salt)
+except Exception as e:
+    if str(e) == 'MAC check failed':
+        valid = False
+if valid:
+    print('Password correct!')
+else:
+    print('Password invalid!')
+```
+
+it will indicate failure of verification of the MAC tag
+
+```
+Password invalid!
+```
 
 ## Expected features
 

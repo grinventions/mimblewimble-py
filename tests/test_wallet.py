@@ -1,5 +1,6 @@
 import hmac
 import pytest
+import os
 
 from hashlib import blake2b, sha512
 
@@ -43,6 +44,23 @@ accounts = [
     ),
 ]
 
+def test_reflexivity():
+    random_password = os.urandom(32).hex()
+    w = Wallet.initialize()
+
+    slatepack_address = w.getSlatepackAddress()
+    recovery_phrase = w.getSeedPhrase()
+
+    w.shieldWallet(random_password)
+    seed = w.getEncryptedSeed()
+
+    w_restored = Wallet.fromEncryptedSeedDict(
+        seed, passphrase=random_password)
+
+    assert w_restored.getSlatepackAddress() == slatepack_address
+    assert w_restored.getSeedPhrase() == recovery_phrase
+
+
 # this simply tests if runs, does not check any correctness
 def test_decrypt():
     M = Mnemonic()
@@ -58,9 +76,30 @@ def test_decrypt():
     assert w.master_seed == master_seed_ref
     assert recovery_phrase == w.getSeedPhrase()
 
-    w.encryptWallet(password, nonce=nonce, salt=salt)
+    w.shieldWallet(password, nonce=nonce, salt=salt)
 
     assert w.encrypted_seed == encrypted_seed
+
+
+def test_invalid_password():
+    invalid_password = 'Lt. Col. Frank Slade'
+    try:
+        Wallet.fromEncryptedSeedDict(
+            seed, passphrase=invalid_password)
+    except Exception as e:
+        assert str(e) == 'MAC check failed'
+
+
+def test_restore_from_encrypted_seed():
+    w = Wallet.fromEncryptedSeedDict(
+        seed, passphrase=password)
+
+    M = Mnemonic()
+    master_seed_ref = M.entropyFromMnemonic(recovery_phrase)
+    assert w.master_seed == master_seed_ref
+
+    address = w.getSlatepackAddress(path='m/0/1/0')
+    assert address == 'grin14kgku7l5x6te3arast3p59zk4rteznq2ug6kmmypf2d6z8md76eqg3su35'
 
 
 # @pytest.mark.skip(reason='wip')
