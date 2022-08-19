@@ -63,6 +63,18 @@ def test_decrypt():
     assert w.encrypted_seed == encrypted_seed
 
 
+def test_restore_from_encrypted_seed():
+    w = Wallet.fromEncryptedSeedDict(
+        seed, passphrase=password)
+
+    M = Mnemonic()
+    master_seed_ref = M.entropyFromMnemonic(recovery_phrase)
+    assert w.master_seed == master_seed_ref
+
+    address = w.getSlatepackAddress(path='m/0/1/0')
+    assert address == 'grin14kgku7l5x6te3arast3p59zk4rteznq2ug6kmmypf2d6z8md76eqg3su35'
+
+
 # @pytest.mark.skip(reason='wip')
 def test_from_seed_phrase():
     w = Wallet.fromSeedPhrase(recovery_phrase)

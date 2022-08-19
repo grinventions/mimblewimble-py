@@ -43,7 +43,7 @@ class Wallet:
         self.master_seed_rem = None
 
 
-    def unshieldWallet(self, passphrase, salt=None, nonce=None):
+    def unshieldWallet(self, passphrase: str, salt=None, nonce=None):
         if self.salt is None and salt is None:
             raise Exception('Missing salt')
         elif self.salt is None and salt is not None:
@@ -68,7 +68,7 @@ class Wallet:
         return M.mnemonicFromEntropy(self.master_seed)
 
 
-    def getSlatepackAddress(self, path='m/0/0', testnet=False):
+    def getSlatepackAddress(self, path='m/0/1/0', testnet=False):
         if self.master_seed is None:
             raise Exception('The wallet is shielded')
 
@@ -110,7 +110,18 @@ class Wallet:
 
 
     @classmethod
-    def fromEncryptedSeed(encrypted_seed_hex: str, salt: str, nonce: str, passphrase: str):
-        # TODO
-        pass
+    def fromEncryptedSeedDict(self, seed: dict, passphrase=None):
+        return self.fromEncryptedSeed(
+            seed['encrypted_seed'], seed['salt'], seed['nonce'], passphrase=passphrase)
 
+
+    @classmethod
+    def fromEncryptedSeed(
+            self, encrypted_seed_hex: str, salt_hex: str, nonce_hex: str, passphrase=None):
+        encrypted_seed = bytes.fromhex(encrypted_seed_hex)
+        nonce = bytes.fromhex(nonce_hex)
+        salt = bytes.fromhex(salt_hex)
+        w = Wallet(encrypted_seed=encrypted_seed, salt=salt, nonce=nonce)
+        if passphrase is not None:
+            w.unshieldWallet(passphrase, nonce=nonce, salt=salt)
+        return w
