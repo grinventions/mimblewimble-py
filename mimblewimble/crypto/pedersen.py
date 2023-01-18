@@ -68,7 +68,7 @@ class Pedersen:
 
     def blindSum(self, positive: Commitment, negative: Commitment):
         positives = [p.getBytes() for p in positive]
-        negatives = [n.getBytes() for p in negative]
+        negatives = [p.getBytes() for p in negative]
         blinding_factors = positives + negatives
         summed = secp256k1_pedersen_blind_sum(
             self.ctx, blinding_factors, len(positive))
@@ -97,6 +97,7 @@ class Pedersen:
     def convertCommitments(self, ctx, commitments):
         converted = []
         for commitment in commitments:
-            parsed = secp256k1_pedersen_commitment_parse(ctx, commitment)
+            parsed = secp256k1_pedersen_commitment_parse(
+                ctx, commitment.getBytes())
             converted.append(parsed)
         return converted
