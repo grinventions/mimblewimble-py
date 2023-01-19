@@ -2,8 +2,9 @@ from mimblewimble.serializer import Serializer
 
 
 class Signature:
-    def __init__(self, signatureBytes):
+    def __init__(self, signatureBytes, compact=False):
         self.signatureBytes = signatureBytes
+        self.compact = compact
 
     # operators
 
@@ -11,6 +12,9 @@ class Signature:
         return self.getSignatureBytes() == other.getSignatureBytes()
 
     # getters
+
+    def isCompact(self):
+        return self.compact
 
     def getSignatureBytes(self):
         return self.signatureBytes
