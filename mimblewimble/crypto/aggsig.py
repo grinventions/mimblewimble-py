@@ -53,33 +53,37 @@ class AggSig:
             self.ctx, commitment.getBytes())
         pubkey = secp256k1_pedersen_commitment_to_pubkey(
             self.ctx, parsed_commitment)
-        signature_bytes = secp256k1_aggsig_sign_single(
+        signature = secp256k1_aggsig_sign_single(
             self.ctx, message, secret_key.getBytes(),
             None, None, None, None, pubkey, seed)
-        return Signature(signature_bytes)
+        compact_signature = secp256k1_ecdsa_signature_serialize_compact(
+            self.ctx, signature)
+        return Signature(compact_signature, compact=True)
 
     def calculatePartialSignature(
             self, secretKey: SecretKey, secretNonce: SecretKey,
             sumPubKeys: PublicKey, sumPubNonces: PublicKey,
-            sumPubNonces: bytes):
+            message: bytes):
         seed = os.urandom(32)
         secp256k1_context_randomize(self.ctx, seed)
         pubKeyForE = secp256k1_ec_pubkey_parse(
             self.ctx, sumPubKeys.getBytes())
         pubNoncesForE = secp256k1_ec_pubkey_parse(
             self.ctx, sumPubNonces.getBytes())
-        signature_bytes = secp256k1_aggsig_sign_single(
+        signature = secp256k1_aggsig_sign_single(
             self.ctx, message,
             secretKey.getBytes(), secretNonce.getBytes(),
-            None, pubNoncesForE, pubNoncesForE, pubNoncesForE, seed)
-        return Signature(signature_bytes)
+            None, pubNoncesForE, pubNoncesForE, pubKeyForE, seed)
+        compact_signature = secp256k1_ecdsa_signature_serialize_compact(
+            self.ctx, signature)
+        return Signature(compact_signature, compact=True)
 
     def verifyPartialSignature(
             self, partialSignature: Signature,
             publicKey: PublicKey, sumPubKeys: PublicKey,
             sumPubNonces: PublicKey, message: bytes):
         signature = secp256k1_ecdsa_signature_parse_compact(
-            self.ctx, partialSignature.getBytes())
+            self.ctx, partialSignature.getSignatureBytes())
         pubkey = secp256k1_ec_pubkey_parse(
             self.ctx, publicKey.getBytes())
         sumPubKey = secp256k1_ec_pubkey_parse(
@@ -123,23 +127,20 @@ class AggSig:
         parsedPubKey = secp256k1_ec_pubkey_parse(
             self.ctx, publicKey.getBytes())
         is_valid = secp256k1_aggsig_verify_single(
-            self.ctx, signature.getBytes(), message,
+            self.ctx, signature.getSignatureBytes(), message,
             None, parsedPubKey, parsedPubKey, None, False)
         return is_valid
 
     def parseCompactSignatures(self, signatures):
         parsed_signatures = []
         for signature in signatures:
-            if not signature.isCompact():
-                parsed_signature = secp256k1_ecdsa_signature_parse_compact(
-                    self.ctx, signature.getBytes())
-                parsed_signatures.append(parsed_signature)
-            else:
-                parsed_signatures.append(signature.getBytes())
+            parsed_signature = secp256k1_ecdsa_signature_parse_compact(
+                self.ctx, signature.getSignatureBytes())
+            parsed_signatures.append(parsed_signature)
         return parsed_signatures
 
     def toCompact(self, signature: Signature):
         assert signature.isCompact()
         compact_signature = secp256k1_ecdsa_signature_serialize_compact(
-            self.ctx, signature.getBytes())
+            self.ctx, signature.getSignatureBytes())
         return Signature(compact_signature, compact=True)
