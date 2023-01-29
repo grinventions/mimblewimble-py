@@ -107,6 +107,15 @@ class Wallet:
 
         return slatepack_address
 
+    def createCoinbase(self, amount, path='m/0/1/0'):
+        if self.master_seed is None:
+            raise Exception('The wallet is shielded')
+        # TODO CommitBlinded
+        # TODO GenerateRangeProof
+        # TODO AddCommitments
+        # TODO BuildCoinbaseSignature
+        pass
+
 
     @classmethod
     def initialize(self):
