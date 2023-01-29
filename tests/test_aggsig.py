@@ -2,7 +2,6 @@ import os
 
 from mimblewimble.crypto.secret_key import SecretKey
 from mimblewimble.crypto.public_key import PublicKey
-from mimblewimble.crypto.pedersen import Pedersen
 
 from mimblewimble.crypto.aggsig import AggSig
 from mimblewimble.crypto.public_keys import PublicKeys
