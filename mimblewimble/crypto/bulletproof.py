@@ -1,3 +1,5 @@
+import os
+
 from typing import List, Tuple
 from enum import Enum
 
@@ -9,6 +11,7 @@ from secp256k1_zkp_mw import secp256k1_generator_const_g
 
 from secp256k1_zkp_mw import secp256k1_context_create
 from secp256k1_zkp_mw import secp256k1_context_destroy
+from secp256k1_zkp_mw import secp256k1_context_randomize
 
 from secp256k1_zkp_mw import secp256k1_scratch_space_create
 from secp256k1_zkp_mw import secp256k1_scratch_space_destroy
@@ -33,7 +36,7 @@ class EBulletproofType(Enum):
 
 class ProofMessage:
     def __init__(self, proof_message: bytes):
-        self.proof_message
+        self.proof_message = proof_message
 
     def getBytes(self):
         return self.proof_message
@@ -56,7 +59,6 @@ class ProofMessage:
     def toKeyIndices(self, bulletproof_type: EBulletproofType):
         proof_message = list(self.proof_message)
         length = 3
-        i = 0
         if bulletproof_type == EBulletproofType.ENHANCED:
             if proof_message[0] != 0x0:
                 raise ValueError(
@@ -64,7 +66,6 @@ class ProofMessage:
             wallet_type = proof_message[1]
             switch_commits = proof_message[2]
             length = proof_message[3]
-            i = 3
         else:
             try:
                 for j in range(4):
@@ -72,6 +73,7 @@ class ProofMessage:
             except:
                 raise ValueError(
                     'Expected first 4 bytes of proof message to be 0x00')
+        i = 4
         if length == 0:
             length = 3
 
@@ -98,7 +100,7 @@ class RewoundProof:
         return self.message
 
     def toKeyIndices(self, bulletproof_type: EBulletproofType):
-        self.message.toKeyIndices(bulletproof_type)
+        return self.message.toKeyIndices(bulletproof_type)
 
 
 class Bulletproof:
@@ -165,7 +167,9 @@ class Bulletproof:
 
     def generateRangeProof(
             self, amount: int,
-            key: SecretKey, private_nonce: SecretKey, rewind_nonce: SecretKey,
+            key: SecretKey,
+            private_nonce: SecretKey,
+            rewind_nonce: SecretKey,
             proof_message: ProofMessage):
         seed = os.urandom(32)
         secp256k1_context_randomize(self.ctx, seed)
