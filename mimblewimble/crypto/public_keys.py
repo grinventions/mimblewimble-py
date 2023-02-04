@@ -26,7 +26,7 @@ class PublicKeys:
         is_valid = secp256k1_ec_seckey_verify(self.ctx, sk.getBytes())
         return is_valid
 
-    def calculatePublicKey(self, sk: SecretKey, compressed=False):
+    def calculatePublicKey(self, sk: SecretKey, compressed=True):
         assert self.isSecretKeyValid(sk)
         pk = secp256k1_ec_pubkey_create(self.ctx, sk.getBytes())
         pk_serialized = secp256k1_ec_pubkey_serialize(

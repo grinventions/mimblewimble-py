@@ -74,7 +74,7 @@ class KeyChain:
             master_public_key = pks.calculatePublicKey(self.master_key)
 
             rewind_nonce_hash = SecretKey(blake2b(
-                master_public_key,
+                master_public_key.getBytes(),
                 digest_size=32).digest())
 
             return b.rewindProof(
@@ -104,14 +104,14 @@ class KeyChain:
                 amount, blinding_factor, nonce, nonce, proof_message)
         elif bulletproof_type == EBulletproofType.ENHANCED:
             private_nonce_hash = SecretKey(blake2b(
-                self.master_key,
+                self.master_key.getBytes(),
                 digest_size=32).digest())
 
             pks = PublicKeys()
             master_public_key = pks.calculatePublicKey(self.master_key)
 
             rewind_nonce_hash = SecretKey(blake2b(
-                master_public_key,
+                master_public_key.getBytes(),
                 digest_size=32).digest())
 
             return b.generateRangeProof(

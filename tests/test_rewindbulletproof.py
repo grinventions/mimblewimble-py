@@ -11,7 +11,6 @@ from mimblewimble.models.transaction import BlindingFactor
 
 
 def test_rewind_bulletproof_original():
-    username = 'kamikaze'
     master_seed = os.urandom(32)
 
     bulletproof_type = EBulletproofType.ORIGINAL
@@ -37,6 +36,27 @@ def test_rewind_bulletproof_original():
     assert blinding_factor.getBytes() == rewoundproof.getBlindingFactor().getBytes()
     assert KeyChain.getKeyIndices(path) == rewoundproof.toKeyIndices(bulletproof_type)
 
-@pytest.mark.skip('this is not yet implemented')
 def test_rewind_bulletproof_enhanced():
-    pass
+    master_seed = os.urandom(32)
+
+    bulletproof_type = EBulletproofType.ENHANCED
+
+    path = 'm/0/1/0'
+    amount = 45
+    keychain = KeyChain.fromSeed(master_seed)
+    blinding_factor = keychain.derivePrivateKeyAmount(
+        path, amount)
+
+    p = Pedersen()
+    commitment = p.commit(amount, blinding_factor)
+    del p
+
+    rangeproof = keychain.generateRangeProof(
+        path, amount, commitment,
+        blinding_factor, bulletproof_type)
+
+    rewoundproof = keychain.rewindRangeProof(
+        commitment, rangeproof, bulletproof_type)
+
+    assert amount == rewoundproof.getAmount()
+    assert KeyChain.getKeyIndices(path) == rewoundproof.toKeyIndices(bulletproof_type)

@@ -51,8 +51,9 @@ class ProofMessage:
             padded_path[2] = 0x01 # switch commits
             padded_path[3] = len(key_indices)
 
-        for i, key_index in enumerate(key_indices):
-            padded_path[i + 4] = key_index
+        i = 4
+        for j, key_index in enumerate(key_indices):
+            padded_path[j + 4] = key_index
 
         return ProofMessage(bytes(padded_path))
 
