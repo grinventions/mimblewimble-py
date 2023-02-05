@@ -1,3 +1,5 @@
+from io import BytesIO
+
 from mimblewimble.serializer import Serializer
 
 

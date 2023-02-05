@@ -1,3 +1,4 @@
+from typing import List
 from ecdsa import SigningKey, SECP256k1
 
 from secp256k1_zkp_mw import SECP256K1_CONTEXT_SIGN
@@ -54,16 +55,18 @@ class Pedersen:
             self.ctx, commitment)
         return Commitment(serialized)
 
-    def commitSum(self, positive: Commitment, negative: Commitment):
+    def commitSum(self, positive: List[Commitment], negative: List[Commitment]):
         positive_commitments = Pedersen.convertCommitments(self.ctx, positive)
         negative_commitments = Pedersen.convertCommitments(self.ctx, negative)
         commitment = secp256k1_pedersen_commit_sum(
             self.ctx, positive_commitments, negative_commitments)
+        print('commitment is')
+        print(commitment)
         serialized = secp256k1_pedersen_commitment_serialize(
             self.ctx, commitment)
         return Commitment(serialized)
 
-    def blindSum(self, positive: Commitment, negative: Commitment):
+    def blindSum(self, positive: List[Commitment], negative: List[Commitment]):
         positives = [p.getBytes() for p in positive]
         negatives = [p.getBytes() for p in negative]
         blinding_factors = positives + negatives
@@ -91,7 +94,7 @@ class Pedersen:
         return Commitment(serialized)
 
     @classmethod
-    def convertCommitments(self, ctx, commitments):
+    def convertCommitments(self, ctx, commitments: List[Commitment]):
         converted = []
         for commitment in commitments:
             parsed = secp256k1_pedersen_commitment_parse(

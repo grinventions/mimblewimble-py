@@ -162,6 +162,36 @@ it will indicate failure of verification of the MAC tag
 Password invalid!
 ```
 
+### Building coinbase
+
+```python
+from mimblewimble.wallet import Wallet
+
+# instantiate the wallet
+w = Wallet.initialize()
+
+# pick path and amount
+coinbase_path = 'm/0/1/0'
+coinbase_amount = 60
+
+kernel, output, path = w.createCoinbase(amount, path=path)
+
+# display  the output
+print('Kernel')
+print(kernel.toJSON())
+print('Output')
+print(output.toJSON())
+```
+
+it will output something like
+
+```
+Kernel
+{'features': {}, 'excess': '0927759d4f4fc554e148f1906166381b6c1889895c6f96c3e2e76c55c9e219848b', 'excess_sig': ''}
+Output
+{'features': 1, 'commit': '098dcf471cf019030c82044cee5e794b0e31d11e00567920d8e5a40103eb63071f', 'proof': '00000000000002a352184e4a3f6dc6c75b447c3228a3202ac1c8a54d259a8441c89aea9b8bc6d9c820f71e8a5a567266e985071ea585cbee1808add28949695f416041d979685d4608b011d3594cc2437f1dff7d37653110f44328d8f7238cd414cbd314d424cbaa14b75e5df5dfb6f7627c0cf88516fea9a6c9f4a78702adf04f973027364ff5ff1c266115f6426230d268ee0437b17db66c769afce8f4af169d8a4394382fddc20ec4f6db705fc8f0c62cf27b28b965c0865609b7570d61a490a702ebef7e47f5b0c0150b88b276dd7aa34b273fe03972ae56d6bf9ca2e08a9dc13b556ff39ab1a6e756b49258e7a98c09e545e404cc676f891172d06844525ac709af135f4ff96d33d24522fd2274b49a955fe733069e45057e6b7a6cbd5f6afe8aa532b33bbbead86932d5563e4197da22077aa7c1271e09412ce6cd7e5be6ea7e52e335a50e34eea38f05bf389690c2a10c6313b9de376bcc95c5a306c4e4b418a0484fa7c124260019558b9b0507cdfcdbaeead4f51e1c727ec08ae4d8855b0a81b00afa03f48d0c484ed7ed0226a5f39076a31dd2369724d870d227b0e7f0822ac2eb1add54c6e3a37dd62dbf4cf6b6890f9881852a40c6a849ffaa1172aa941a0a9fb34f110e5d9f0695d058f4fe6a1b5202758c520e77f318e47fbd2eaed55d4320e0fb9c0b0cbdfaaed051c24c1bfa7aa565ff5df81ca434e03d392df1da255a7e877ec2d4cf8cec0f366bf3fa45738900d92c4e330e9ae586306c5b03f9d65068f884927a8102337f95ae6be17a72975b9d0ba134f41ef9c331d8e8da1fb1d30e8f722e8e9bc2a789f532c04529cdb31332bd5cb21d4d3a8ccd66b2635a797e930df87389a6b67d71a525d6ed5b57a413fa29e558d8ece38a09b69350943a5e681eedbfbe907b4b0e9ae9a0daa470d500866a2cda57a2840c959b2f4992e1573d2b91c25186'}
+```
+
 ## Expected features
 
 * Managing blocks

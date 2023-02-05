@@ -45,6 +45,8 @@ class KeyChain:
         return seed_blake
 
     def deriveSlatepackAddress(self, path: str, testnet=False):
+        raise Exception(
+            'You should not use it for now, just use wallet.getSlatepackAddress()')
         seed_blake = self.deriveED25519Key(path)
 
         # get the ed25519 secret key and public key from it
