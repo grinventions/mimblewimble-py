@@ -1,5 +1,7 @@
 from mimblewimble.serializer import Serializer
 
+from mimblewimble.crypto.public_key import PublicKey
+
 
 class Commitment:
     def __init__(self, commitmentBytes: bytes):
@@ -40,6 +42,11 @@ class Commitment:
     @classmethod
     def fromHex(self, _hex: str):
         return Commitment(bytes.fromhex(_hex))
+
+    @classmethod
+    def fromPublicKey(self, pk: PublicKey):
+        # TODO
+        return Commitment(b'\x00')
 
     def toJSON(self):
         return self.hex()

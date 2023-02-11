@@ -1,3 +1,5 @@
+from io import BytesIO
+
 from mimblewimble.serializer import Serializer
 
 MAX_PROOF_SIZE = 675;
