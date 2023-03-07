@@ -6,6 +6,11 @@ class SecretKey:
         self.seed = seed
         self.NUM_BYTES = len(seed)
 
+    # getters and setters
+
+    def getBytes(self):
+        return self.seed
+
     # operators
 
     def __eq__(self, other):

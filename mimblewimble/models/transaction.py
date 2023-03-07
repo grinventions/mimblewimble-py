@@ -1,7 +1,7 @@
 import hashlib
 
 from io import BytesIO
-from enum import Enum
+from enum import IntEnum
 
 from mimblewimble.consensus import Consensus
 from mimblewimble.serializer import Serializer, EProtocolVersion
@@ -12,7 +12,7 @@ from mimblewimble.crypto.rangeproof import RangeProof
 from mimblewimble.models.fee import Fee
 
 
-class EOutputFeatures(Enum):
+class EOutputFeatures(IntEnum):
     DEFAULT = 0
     COINBASE_OUTPUT = 1
 
@@ -35,7 +35,7 @@ class OutputFeatures:
         raise ValueError('Failed to deserialize output features: {0}'.format(string))
 
 
-class EKernelFeatures(Enum):
+class EKernelFeatures(IntEnum):
     DEFAULT_KERNEL = 0
     COINBASE_KERNEL = 1
     HEIGHT_LOCKED = 2
