@@ -1,6 +1,8 @@
 import hmac
 import os
 
+from typing import Tuple
+
 from nacl import bindings
 
 from Crypto.Cipher import ChaCha20_Poly1305
@@ -180,6 +182,18 @@ class Wallet:
 
         # return the result
         return transaction_kernel, transaction_output, path
+
+
+    def txSend(self, output: Tuple[TransactionKernel, TransactionOutput], amount: int):
+        pass
+
+
+    def txReceive(self):
+        pass
+
+
+    def txFinalize(self):
+        pass
 
 
     @classmethod
