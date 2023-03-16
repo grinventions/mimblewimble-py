@@ -1,8 +1,8 @@
-from mimblewimble.models.transaction import BlindingFactor
-from mimblewimble.models.transaction import EKernelFeatures
 from typing import Union
 
-from mimblewimble.models.fee import Fee
+from mimblewimble.models.transaction import BlindingFactor
+from mimblewimble.models.transaction import EKernelFeatures
+
 from mimblewimble.slatebuilder import SlatePaymentProof
 
 
