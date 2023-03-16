@@ -4,6 +4,7 @@ from typing import List, Tuple
 
 from mimblewimble.entity import OutputDataEntity
 
+from mimblewimble.crypto.aggsig import AggSig
 from mimblewimble.crypto.pedersen import Pedersen
 from mimblewimble.crypto.public_keys import PublicKeys
 
