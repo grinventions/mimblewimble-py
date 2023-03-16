@@ -12,6 +12,15 @@ from mimblewimble.crypto.rangeproof import RangeProof
 from mimblewimble.models.fee import Fee
 
 
+class EOutputStatus(IntEnum):
+    SPENDABLE = 0
+    IMMATURE = 1 # DEPRECATED: Outputs should be marked as spendable.
+    NO_CONFIRMATIONS = 2
+    SPENT = 3
+    LOCKED = 4
+    CANCELED = 5
+
+
 class EOutputFeatures(IntEnum):
     DEFAULT = 0
     COINBASE_OUTPUT = 1

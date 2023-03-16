@@ -1,5 +1,7 @@
 from typing import List, Tuple
 
+from mimblewimble.entity import OutputDataEntity
+
 from mimblewimble.helpers.fee import calculateFee
 
 
@@ -16,7 +18,7 @@ class SendSlateBuilder:
             changeOutputs: int,
             sendEntireBalance: bool,
             inputTotal: int,
-            inputs: List[Tuple[TransactionKernel, TransactionOutput]]
+            inputs: List[OutputDataEntity]
             recipients: List[str],
             slateVersion=0, strategy=0, addressOpt={}):
         numChangeOutputs = 0

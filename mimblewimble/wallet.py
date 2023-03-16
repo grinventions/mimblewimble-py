@@ -1,7 +1,7 @@
 import hmac
 import os
 
-from typing import Tuple
+from typing import Tuple, List
 
 from nacl import bindings
 
@@ -22,11 +22,14 @@ from mimblewimble.crypto.commitment import Commitment
 from mimblewimble.crypto.bulletproof import EBulletproofType
 from mimblewimble.crypto.pedersen import Pedersen
 
+from mimblewimble.models.transaction import EOutputStatus
 from mimblewimble.models.transaction import EOutputFeatures
 from mimblewimble.models.transaction import EKernelFeatures
 from mimblewimble.models.transaction import BlindingFactor
 from mimblewimble.models.transaction import TransactionOutput
 from mimblewimble.models.transaction import TransactionKernel
+
+from mimblewimble.entity import OutputDataEntity
 
 from mimblewimble.models.fee import Fee
 
@@ -184,16 +187,57 @@ class Wallet:
         return transaction_kernel, transaction_output, path
 
 
-    def txSend(self, output: Tuple[TransactionKernel, TransactionOutput], amount: int):
-        pass
+    def createBlindedOutput(
+            self,
+            amount: int,
+            wallet_tx_id: bytes,
+            bulletproof_type: EBulletproofType,
+            path='m/0/1/0'):
+
+        # instantiate the keychain for this wallet seed
+        keychain = KeyChain.fromSeed(self.master_seed)
+
+        blinding_factor = keychain.derivePrivateKeyAmount(
+            path, amount)
+        commitment = p.commit(amount, blinding_factor)
+
+        # bulletproof
+        rangeproof = keychain.generateRangeProof(
+            path, amount, commitment,
+            blinding_factor, bulletproof_type)
+
+        # build the output
+        transaction_output = TransactionOutput(
+            EOutputFeatures.DEFAULT,
+            commitment,
+            rangeproof)
+
+        return OutputDataEntity(
+            path, blinding_factor, output, amount,
+            EOutputStatus.NO_CONFIRMATIONS, wallet_tx_id=wallet_tx_id)
 
 
-    def txReceive(self):
-        pass
+    def send(self, inputs: List[OutputDataEntity], amount: int):
+        # TODO list inputs
+        # TODO list outputs
+        # TODO build send slate
+        raise Exception('unimplemented')
 
 
-    def txFinalize(self):
-        pass
+    def receive(self):
+        raise Exception('unimplemented')
+
+
+    def finalize(self):
+        raise Exception('unimplemented')
+
+
+    def invoice(self):
+        raise Exception('unimplemented')
+
+
+    def pay(self):
+        raise Exception('unimplemented')
 
 
     @classmethod
