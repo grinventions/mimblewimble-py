@@ -1,8 +1,25 @@
+from mimblewimble.models.transaction import BlindingFactor
+from mimblewimble.models.transaction import EKernelFeatures
+from typing import Union
+
+from mimblewimble.models.fee import Fee
+from mimblewimble.slatebuilder import SlatePaymentProof
+
+
 class Slate:
-    def __init__(self):
-        pass
-
-
-class SlatePaymentProof:
-    def __init__(self):
-        pass
+    def __init__(
+            self,
+            version: int,
+            block_version: int,
+            amount: int,
+            fee: Fee,
+            proof_opt: Union[SlatePaymentProof, None],
+            kernel_features: EKernelFeatures,
+            transaction_offest: BlindingFactor,
+            signatures=[]):
+        self.version = version
+        self.block_version = block_version
+        self.amount = amount
+        self.fee = fee
+        self.proof_opt = proof_opt
+        self.signatures = signatures

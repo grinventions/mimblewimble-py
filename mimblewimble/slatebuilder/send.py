@@ -4,11 +4,16 @@ from typing import List, Tuple
 
 from mimblewimble.entity import OutputDataEntity
 
+from mimblewimble.consensus import Consensus
+
 from mimblewimble.crypto.aggsig import AggSig
 from mimblewimble.crypto.pedersen import Pedersen
 from mimblewimble.crypto.public_keys import PublicKeys
 
 from mimblewimble.models.transaction import BlindingFactor
+from mimblewimble.models.transaction import EKernelFeatures
+
+from mimblewimble.slatebuilder import Slate, SlatePaymentProof
 
 
 class SendSlateBuilder:
@@ -56,19 +61,34 @@ class SendSlateBuilder:
     def build(
             self,
             amount: int,
+            fee: int,
+            block_height: int,
             inputs: List[OutputDataEntity],
             change_outputs: List[OutputDataEntity],
-            recipients: List[str],
-            slateVersion=0, strategy=0, addressOpt={}, tor_path='m/0/1/1'):
+            slate_version=0, sender_address=None, receiver_address=None, env=None):
         # select random transaction offset,
         # and calculate secret key used in kernel signature
         transaction_offset = BlindingFactor.random()
         signing_keys = self.calculateSigningKeys(
             inputs, change_outputs, transaction_offset)
+        secret_key, public_key, secret_nonce, public_nonce = signing_keys
 
-        # TODO payment proof
+        # payment proof
+        payment_proof = None
+        if None not in [sender_address, receiver_address]:
+            payment_proof = SlatePaymentProof(sender_address, receiver_address)
 
-        # TODO add values to Slate for passing to other participants: UUID, inputs, change_outputs, fee, amount, lock_height, kSG, xSG, oS
+        # add values to Slate for passing to other participants:
+        # UUID, inputs, change_outputs, fee, amount, lock_height, kSG, xSG, oS
+        block_version = Consensus.getHeaderVersion(env, block_height)
+        slate = Slate(
+            slate_version,
+            block_version,
+            amount,
+            fee,
+            payment_proof,
+            EKernelFeatures.DEFAULT_KERNEL,
+            transaction_offset, signatures=[(public_key, public_nonce)])
         pass
 
     def buildWalletTx(
@@ -76,7 +96,7 @@ class SendSlateBuilder:
             tx_offset: BlindingFactor,
             inputs: List[OutputDataEntity],
             change_outputs: List[OutputDataEntity],
-            slate,
+            slate: Slate,
             address=None,
             proof=None):
         # TODO

@@ -227,7 +227,10 @@ class Wallet:
             inputs: List[OutputDataEntity],
             num_change_outputs: int,
             amount: int,
-            send_entire_balance: bool):
+            block_height: int,
+            send_entire_balance: bool,
+            receiver_address=None,
+            path='m/0/1/0'):
         # TODO parameters that need to be adjusted
         wallet_tx_id = None
         fee_base = 0
@@ -261,13 +264,22 @@ class Wallet:
             coin_amount = change_amount / num_change_outputs
             if i == 0:
                 coin_amount += change_amount % num_change_outputs
-            path = 'm/0/1/0' # TODO this should increment for each change output
             change_outputs.append(self.createBlindedOutput(
                 coin_amount, wallet_tx_id, EBulletproofType.ENHANCED, path))
 
+        # prepare sender and receiver address for the payment proof
+        keychain = KeyChain.fromSeed(self.master_seed)
+        sender_address = keychain.deriveED25519Key(path)
+
         # build send slate
         slate_builder = SendSlateBuilder(self.master_seed)
-        return slate_builder.build(amount, inputs, change_outputs, recipients)
+        return slate_builder.build(
+            amount,
+            block_height,
+            inputs,
+            change_outputs,
+            sender_address=sender_address,
+            receiver_address=receiver_address)
 
 
     def receive(self):
