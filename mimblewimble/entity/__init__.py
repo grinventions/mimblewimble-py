@@ -20,3 +20,6 @@ class OutputDataEntity:
         self.mmr_index = mmr_index
         self.block_height = block_height
         self.wallet_tx_id = wallet_tx_id
+
+    def getAmount(self):
+        return self.amount

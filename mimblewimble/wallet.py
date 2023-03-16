@@ -28,10 +28,11 @@ from mimblewimble.models.transaction import EKernelFeatures
 from mimblewimble.models.transaction import BlindingFactor
 from mimblewimble.models.transaction import TransactionOutput
 from mimblewimble.models.transaction import TransactionKernel
+from mimblewimble.models.fee import Fee
 
 from mimblewimble.entity import OutputDataEntity
 
-from mimblewimble.models.fee import Fee
+from mimblewimble.slatebuilder import SendSlateBuilder
 
 
 class Wallet:
@@ -221,19 +222,57 @@ class Wallet:
             EOutputStatus.NO_CONFIRMATIONS, wallet_tx_id=wallet_tx_id)
 
 
-    def send(self, inputs: List[OutputDataEntity], amount: int):
-        # TODO list inputs
-        # TODO list outputs
-        # TODO build send slate
-        raise Exception('unimplemented')
+    def send(
+            self,
+            inputs: List[OutputDataEntity],
+            num_change_outputs: int,
+            amount: int,
+            send_entire_balance: bool):
+        # TODO parameters that need to be adjusted
+        wallet_tx_id = None
+        fee_base = 0
+        recipients = []
+
+        # if entire balance is sent, no change outputs
+        if send_entire_balance:
+            change_outputs = 0
+
+        # the total number of outputs and number of kernels
+        num_total_outputs = 1 + num_change_outputs
+        num_kernels = 1
+
+        # calculate fee
+        fee = calculateFee(fee_base, len(inputs), num_total_outputs, num_kernels)
+
+        # compute the total input
+        input_total = 0
+        for input_entry in inputs:
+            input_total += input_entry.getAmount()
+
+        # adjust the send amount if entire balance is being sent
+        if send_entire_balance:
+            amount = input_total - fee
+
+        # compute the change amount and prepare the change outputs
+        # each with own blinding factor xC
+        change_amount = input_total - (amount + fee)
+        change_outputs = []
+        for i in range(num_change_outputs):
+            coin_amount = change_amount / num_change_outputs
+            if i == 0:
+                coin_amount += change_amount % num_change_outputs
+            path = 'm/0/1/0' # TODO this should increment for each change output
+            change_outputs.append(self.createBlindedOutput(
+                coin_amount, wallet_tx_id, EBulletproofType.ENHANCED, path))
+
+        # build send slate
+        slate_builder = SendSlateBuilder(self.master_seed)
+        return slate_builder.build(amount, inputs, change_outputs, recipients)
 
 
     def receive(self):
         raise Exception('unimplemented')
 
-
-    def finalize(self):
-        raise Exception('unimplemented')
 
 
     def invoice(self):
@@ -241,6 +280,10 @@ class Wallet:
 
 
     def pay(self):
+        raise Exception('unimplemented')
+
+
+    def finalize(self):
         raise Exception('unimplemented')
 
 

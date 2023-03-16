@@ -1,8 +1,10 @@
+import os
+
 from typing import List, Tuple
 
 from mimblewimble.entity import OutputDataEntity
 
-from mimblewimble.helpers.fee import calculateFee
+from mimblewimble.models.transaction import BlindingFactor
 
 
 class SendSlateBuilder:
@@ -14,31 +16,12 @@ class SendSlateBuilder:
     def build(
             self,
             amount: int,
-            fee_base: int,
-            changeOutputs: int,
-            sendEntireBalance: bool,
-            inputTotal: int,
-            inputs: List[OutputDataEntity]
+            inputs: List[OutputDataEntity],
+            change_outputs: List[OutputDataEntity],
             recipients: List[str],
             slateVersion=0, strategy=0, addressOpt={}):
-        numChangeOutputs = 0
-        if not sendEntireBalance:
-            numChangeOutputs = changeOutputs
-
-        totalNumOutputs = 1 + numChangeOutputs
-        numKernels = 1
-
-        # calculate fee
-        fee = calculateFee(fee_base, len(inputs), totalNumOutputs, numKernels)
-
-        # amount to send
-        amountToSend = amount
-        if sendEntireBalance:
-            amountToSend = inputTotal - fee
-
-        # TODO create change outputs with total blinding factor xC
-
         # TODO select random transaction offset, and calculate secret key used in kernel signature
+        transaction_offset = os.urandom(32)
 
         # TODO payment proof
 
@@ -48,9 +31,9 @@ class SendSlateBuilder:
     def buildWalletTx(
             self,
             tx_offset: BlindingFactor,
-            inputs: List[Nugget],
-            change_outputs: List[Nugget],
-            slate: Slate,
+            inputs: List[OutputDataEntity],
+            change_outputs: List[OutputDataEntity],
+            slate,
             address=None,
             proof=None):
         # TODO
