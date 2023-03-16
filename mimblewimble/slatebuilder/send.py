@@ -22,6 +22,7 @@ class SendSlateBuilder:
             master_seed: bytes):
         self.master_seed = master_seed
 
+
     def calculateSigningKeys(
             self,
             inputs: List[OutputDataEntity],
@@ -65,7 +66,8 @@ class SendSlateBuilder:
             block_height: int,
             inputs: List[OutputDataEntity],
             change_outputs: List[OutputDataEntity],
-            slate_version=0, sender_address=None, receiver_address=None, env=None):
+            slate_version=0, testnet=False,
+            sender_address=None, receiver_address=None):
         # select random transaction offset,
         # and calculate secret key used in kernel signature
         transaction_offset = BlindingFactor.random()
@@ -80,7 +82,7 @@ class SendSlateBuilder:
 
         # add values to Slate for passing to other participants:
         # UUID, inputs, change_outputs, fee, amount, lock_height, kSG, xSG, oS
-        block_version = Consensus.getHeaderVersion(env, block_height)
+        block_version = Consensus.getHeaderVersion(block_height)
         slate = Slate(
             slate_version,
             block_version,
@@ -89,7 +91,8 @@ class SendSlateBuilder:
             payment_proof,
             EKernelFeatures.DEFAULT_KERNEL,
             transaction_offset, signatures=[(public_key, public_nonce)])
-        pass
+        return slate
+
 
     def buildWalletTx(
             self,
@@ -97,7 +100,13 @@ class SendSlateBuilder:
             inputs: List[OutputDataEntity],
             change_outputs: List[OutputDataEntity],
             slate: Slate,
-            address=None,
-            proof=None):
+            receiver_address=None,
+            payment_proof=None):
+        if receiver_address is not None and isinstance(payment_proof, bytes):
+            raise TypeError(
+                'Expected bytes type argument or None for the receipient address')
+        if payment_proof is not None and isinstance(payment_proof, SlatePaymentProof):
+            raise TypeError('Expected SlatePaymentProof type argument or None')
+
         # TODO
         pass

@@ -12,7 +12,7 @@ class Slate:
             version: int,
             block_version: int,
             amount: int,
-            fee: Fee,
+            fee: int,
             proof_opt: Union[SlatePaymentProof, None],
             kernel_features: EKernelFeatures,
             transaction_offest: BlindingFactor,

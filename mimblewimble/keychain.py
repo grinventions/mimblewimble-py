@@ -41,7 +41,7 @@ class KeyChain:
         sk_der = self.derivePrivateKey(path)
 
         # compute the blake2 hash of that key and that is ed25519 seed
-        seed_blake = blake2b(sk_der, digest_size=32).digest()
+        seed_blake = blake2b(sk_der.getBytes(), digest_size=32).digest()
         return seed_blake
 
     def deriveSlatepackAddress(self, path: str, testnet=False):

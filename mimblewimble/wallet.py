@@ -31,7 +31,9 @@ from mimblewimble.models.transaction import TransactionKernel
 from mimblewimble.models.fee import Fee
 
 from mimblewimble.entity import OutputDataEntity
+from mimblewimble.helpers.fee import calculateFee
 
+from mimblewimble.slatebuilder import Slate
 from mimblewimble.slatebuilder import SendSlateBuilder
 
 
@@ -195,9 +197,11 @@ class Wallet:
     def createBlindedOutput(
             self,
             amount: int,
-            wallet_tx_id: bytes,
             bulletproof_type: EBulletproofType,
-            path='m/0/1/0'):
+            path='m/0/1/0',
+            wallet_tx_id=None):
+        # Pedersen commitment class
+        p = Pedersen()
 
         # instantiate the keychain for this wallet seed
         keychain = KeyChain.fromSeed(self.master_seed)
@@ -217,8 +221,11 @@ class Wallet:
             commitment,
             rangeproof)
 
+        # clean-up
+        del p
+
         return OutputDataEntity(
-            path, blinding_factor, output, amount,
+            path, blinding_factor, transaction_output, amount,
             EOutputStatus.NO_CONFIRMATIONS, wallet_tx_id=wallet_tx_id)
 
 
@@ -227,15 +234,13 @@ class Wallet:
             inputs: List[OutputDataEntity],
             num_change_outputs: int,
             amount: int,
+            fee_base: int,
             block_height: int,
-            send_entire_balance: bool,
+            send_entire_balance=False,
             receiver_address=None,
-            path='m/0/1/0'):
-        # TODO parameters that need to be adjusted
-        wallet_tx_id = None
-        fee_base = 0
-        recipients = []
-
+            path='m/0/1/0',
+            wallet_tx_id=None,
+            testnet=False) -> Slate:
         # if entire balance is sent, no change outputs
         if send_entire_balance:
             change_outputs = 0
@@ -261,11 +266,12 @@ class Wallet:
         change_amount = input_total - (amount + fee)
         change_outputs = []
         for i in range(num_change_outputs):
-            coin_amount = change_amount / num_change_outputs
+            coin_amount = int(change_amount / num_change_outputs)
             if i == 0:
                 coin_amount += change_amount % num_change_outputs
             change_outputs.append(self.createBlindedOutput(
-                coin_amount, wallet_tx_id, EBulletproofType.ENHANCED, path))
+                coin_amount, EBulletproofType.ENHANCED,
+                path=path, wallet_tx_id=wallet_tx_id))
 
         # prepare sender and receiver address for the payment proof
         keychain = KeyChain.fromSeed(self.master_seed)
@@ -275,11 +281,13 @@ class Wallet:
         slate_builder = SendSlateBuilder(self.master_seed)
         return slate_builder.build(
             amount,
+            fee,
             block_height,
             inputs,
             change_outputs,
             sender_address=sender_address,
-            receiver_address=receiver_address)
+            receiver_address=receiver_address,
+            testnet=testnet)
 
 
     def receive(self):
