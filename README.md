@@ -174,13 +174,13 @@ w = Wallet.initialize()
 coinbase_path = 'm/0/1/0'
 coinbase_amount = 60
 
-kernel, output, path = w.createCoinbase(amount, path=path)
+kernel, output = w.createCoinbase(coinbase_amount, path=coinbase_path)
 
 # display  the output
 print('Kernel')
 print(kernel.toJSON())
 print('Output')
-print(output.toJSON())
+print(output.output.toJSON())
 ```
 
 it will output something like

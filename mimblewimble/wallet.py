@@ -160,7 +160,11 @@ class Wallet:
             EOutputFeatures.COINBASE_OUTPUT,
             commitment,
             rangeproof)
-        serializer = Serializer()
+
+        # build the output data entity
+        output_data_entity = OutputDataEntity(
+            path, blinding_factor, transaction_output, amount,
+            EOutputStatus.NO_CONFIRMATIONS)
 
         # build the coinbase signature
         message = blake2b(
@@ -184,7 +188,7 @@ class Wallet:
         del agg
 
         # return the result
-        return transaction_kernel, transaction_output, path
+        return transaction_kernel, output_data_entity
 
 
     def createBlindedOutput(
