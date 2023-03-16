@@ -23,3 +23,6 @@ class OutputDataEntity:
 
     def getAmount(self):
         return self.amount
+
+    def getBlindingFactor(self):
+        return self.blinding_factor

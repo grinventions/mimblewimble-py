@@ -1,4 +1,5 @@
 import hashlib
+import os
 
 from io import BytesIO
 from enum import IntEnum
@@ -92,6 +93,10 @@ class BlindingFactor:
 
     def serialize(self):
         return self.blindingFactorBytes
+
+    @classmethod
+    def random(self):
+        return BlindingFactor(os.urandom(32))
 
     @classmethod
     def deserialize(self, blindingFactorBytes):
