@@ -492,7 +492,23 @@ class TransactionKernel:
     def __hash__(self):
         serializer = BytesIO()
         self.serialize(serializer)
-        return hashlib.blake2b(serialize.readall())
+        return hashlib.blake2b(serializer.readall())
+
+    # other utils
+    @classmethod
+    def getSignatureMessage(
+            self, features: EKernelFeatures, fee: int, lock_height: int):
+        serializer = Serializer()
+
+        serializer.write(features.value.to_bytes(1, 'big'))
+        if features != EKernelFeatures.COINBASE_KERNEL:
+            fee.serialize(serializer)
+        if features == EKernelFeatures.HEIGHT_LOCKED:
+            serializer.write(lock_height.to_bytes(8, 'big'))
+        if features == EKernelFeatures.NO_RECENT_DUPLICATE:
+            serializer.write(lock_height.to_bytes(2, 'big'))
+
+        return hashlib.blake2b(serializer.readall())
 
 
 

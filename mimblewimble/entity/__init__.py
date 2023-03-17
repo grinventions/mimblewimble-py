@@ -26,3 +26,12 @@ class OutputDataEntity:
 
     def getBlindingFactor(self):
         return self.blinding_factor
+
+    def getCommitment(self):
+        pass # TODO
+
+    def getFeatures(self):
+        pass # TODO
+
+    def getRangeProof(self):
+        pass # TODO

@@ -46,4 +46,8 @@ class Fee:
         byteBuffer = BytesIO(feeJSON.to_bytes(64))
         return Fee().deserialize(byteBuffer)
 
+    @classmethod
+    def fromInt(self, fee: int):
+        return Fee(0, fee)
+
 

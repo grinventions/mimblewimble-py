@@ -35,6 +35,7 @@ from mimblewimble.helpers.fee import calculateFee
 
 from mimblewimble.slatebuilder import Slate
 from mimblewimble.slatebuilder import SendSlateBuilder
+from mimblewimble.slatebuilder import ReceiveSlateBuilder
 
 
 class Wallet:
@@ -290,9 +291,26 @@ class Wallet:
             testnet=testnet)
 
 
-    def receive(self):
-        raise Exception('unimplemented')
+    def receive(
+            self,
+            send_slate: Slate,
+            path='m/0/1/0',
+            wallet_tx_id=None,
+            sender_address=None,
+            testnet=False) -> Slate:
+        output = self.createBlindedOutput(
+            send_slate.getAmount(),
+            EBulletproofType.ENHANCED,
+            path=path,
+            wallet_tx_id=wallet_tx_id)
 
+        # build the receive slate
+        slate_builder = ReceiveSlateBuilder(self.master_seed)
+        return slate_builder.addReceiverData(
+            send_slate,
+            output,
+            sender_address=sender_address,
+            testnet=testnet)
 
 
     def invoice(self):
