@@ -2,7 +2,9 @@ import hmac
 import os
 
 from bip32 import BIP32
+from bip_utils import Bech32Encoder, Bech32Decoder
 from hashlib import blake2b, pbkdf2_hmac, sha512
+from nacl import bindings
 
 from mimblewimble.crypto.bulletproof import EBulletproofType
 
@@ -37,20 +39,37 @@ class KeyChain:
         ska = p.blindSwitch(sk, amount)
         return ska
 
-    def deriveED25519Key(self, path: str):
+    def deriveED25519Seed(self, path: str):
         sk_der = self.derivePrivateKey(path)
 
         # compute the blake2 hash of that key and that is ed25519 seed
         seed_blake = blake2b(sk_der.getBytes(), digest_size=32).digest()
         return seed_blake
 
-    def deriveSlatepackAddress(self, path: str, testnet=False):
-        raise Exception(
-            'You should not use it for now, just use wallet.getSlatepackAddress()')
-        seed_blake = self.deriveED25519Key(path)
+    def deriveED25519SecretKey(self, path: str):
+        # get the seed
+        seed_blake = self.deriveED25519Seed(path)
 
         # get the ed25519 secret key and public key from it
         pk, sk = bindings.crypto_sign_seed_keypair(seed_blake)
+        return sk
+
+    def deriveED25519PublicKey(self, path: str):
+        # get the seed
+        seed_blake = self.deriveED25519Seed(path)
+
+        # get the ed25519 public key and public key from it
+        pk, sk = bindings.crypto_sign_seed_keypair(seed_blake)
+        return pk
+
+    def signED25519(self, message: bytes, path: str) -> bytes:
+        sk = self.deriveED25519SecretKey(path)
+        signature = sk.sign(message)
+        del sk
+        return signature
+
+    def deriveSlatepackAddress(self, path: str, testnet=False):
+        pk = self.deriveED25519PublicKey(path)
 
         # compute the slatepack address
         network = 'grin'
@@ -59,6 +78,16 @@ class KeyChain:
         slatepack_address = Bech32Encoder.Encode(network, pk)
 
         return slatepack_address
+
+    def slatepackAddressToED25519PublicKey(self, address: str, testnet=False) -> bytes:
+        # compute the slatepack address
+        network = 'grin'
+        if testnet:
+            network = 'tgrin'
+
+        public_key = Bech32Decoder.Decode(network, address)
+        return public_key
+
 
     def rewindRangeProof(
             self,

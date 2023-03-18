@@ -93,6 +93,14 @@ class Slate:
         return self.kernel_features
 
 
+    def getKernelCommitment(self) -> Commitment:
+        p = Pedersen()
+        kernel_commitment = p.toCommitment(
+            self.calculateTotalExcess())
+        del p
+        kernel_commitment
+
+
     def getFee(self):
         return self.fee
 

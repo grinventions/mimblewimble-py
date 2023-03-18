@@ -108,26 +108,8 @@ class Wallet:
         if self.master_seed is None:
             raise Exception('The wallet is shielded')
 
-        # I AM VOLDEMORT
-        m = hmac.new('IamVoldemort'.encode('utf8'), digestmod=sha512)
-        m.update(self.master_seed)
-        secret = m.digest()
-
-        # derive the seed at the path
-        bip32 = BIP32(chaincode=secret[32:], privkey=secret[:32])
-        sk_der = bip32.get_privkey_from_path(path)
-
-        # compute the blake2 hash of that key and that is ed25519 seed
-        seed_blake = blake2b(sk_der, digest_size=32).digest()
-
-        # get the ed25519 secret key and public key from it
-        pk, sk = bindings.crypto_sign_seed_keypair(seed_blake)
-
-        # compute the slatepack address
-        network = 'grin'
-        if testnet:
-            network = 'tgrin'
-        slatepack_address = Bech32Encoder.Encode(network, pk)
+        keychain = KeyChain.fromSeed(self.master_seed)
+        slatepack_address = keychain.deriveSlatepackAddress(path)
 
         return slatepack_address
 
@@ -276,7 +258,11 @@ class Wallet:
 
         # prepare sender and receiver address for the payment proof
         keychain = KeyChain.fromSeed(self.master_seed)
-        sender_address = keychain.deriveED25519Key(path)
+        sender_address_bytes = keychain.deriveED25519PublicKey(path)
+        receiver_address_bytes = None
+        if receiver_address is not None:
+            receiver_address_bytes = keychain.slatepackAddressToED25519PublicKey(
+                receiver_address)
 
         # build send slate
         slate_builder = SendSlateBuilder(self.master_seed)
@@ -286,8 +272,8 @@ class Wallet:
             block_height,
             inputs,
             change_outputs,
-            sender_address=sender_address,
-            receiver_address=receiver_address,
+            sender_address=sender_address_bytes,
+            receiver_address=receiver_address_bytes,
             testnet=testnet)
 
 
@@ -296,21 +282,45 @@ class Wallet:
             send_slate: Slate,
             path='m/0/1/0',
             wallet_tx_id=None,
-            sender_address=None,
-            testnet=False) -> Slate:
+            testnet=False,
+            sender_address=None) -> Slate:
         output = self.createBlindedOutput(
             send_slate.getAmount(),
             EBulletproofType.ENHANCED,
             path=path,
             wallet_tx_id=wallet_tx_id)
-
         # build the receive slate
         slate_builder = ReceiveSlateBuilder(self.master_seed)
-        return slate_builder.addReceiverData(
+        receive_slate = slate_builder.addReceiverData(
             send_slate,
             output,
-            sender_address=sender_address,
             testnet=testnet)
+
+        # update the payment proof
+        if sender_address is not None:
+            # prepare the receiver address to be able to update
+            # the payment proof
+            keychain = KeyChain.fromSeed(self.master_seed)
+            receiver_address = keychain.deriveED25519PublicKey(path)
+
+            # prepare the kernel commitment
+            kernel_commitment = receive_slate.getKernelCommitment()
+
+            # message to be signed:
+            # (amount | kernel commitment | sender address)
+            serializer = Serializer()
+            serializer.write(receive_slate.getAmount().to_bytes(8, 'big'))
+            serializer.write(kernel_commitment)
+            serializer.write(sender_address)
+            message = serializer.readall()
+
+            # produce the signature
+            receiver_signature = Signature(
+                keychain.signED25519(message, path))
+            receive_slate.proof_opt.setReceiverSignature(receiver_signature)
+
+        # done!
+        return receive_slate
 
 
     def invoice(self):

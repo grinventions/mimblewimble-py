@@ -22,7 +22,6 @@ class ReceiveSlateBuilder:
             self,
             send_slate: Slate,
             output: OutputDataEntity,
-            sender_address=None,
             testnet=False) -> Slate:
         # renaming the slate object
         receive_slate = send_slate
@@ -61,8 +60,6 @@ class ReceiveSlateBuilder:
             output.getFeatures(),
             output.getCommitment(),
             output.getRangeProof())
-
-        # TODO update the payment proof
 
         # done!
         return receive_slate
