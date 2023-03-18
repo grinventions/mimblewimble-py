@@ -1,6 +1,8 @@
 import hmac
 import os
 
+from typing import Union
+
 from bip32 import BIP32
 from bip_utils import Bech32Encoder, Bech32Decoder
 from hashlib import blake2b, pbkdf2_hmac, sha512
@@ -65,20 +67,22 @@ class KeyChain:
         return pk
 
     def signED25519(self, message: bytes, path: str) -> bytes:
-        seed_blake = self.deriveED25519Seed(path)
-        sk = SigningKey(seed_blake)
-        signature = sk.sign(message)
+        sk = self.deriveED25519SecretKey(path)
+        signature = bindings.crypto_sign(message, sk)
         del sk
         return signature
 
     @classmethod
     def verifyED25519(
             self,
-            public_key: bytes,
+            public_key: Union[bytes, str],
             signature: bytes,
             message: bytes) -> bool:
-        pk = VerifyKey(public_key)
-        return pk.verify(message, signature)
+        public_key_bytes = public_key
+        if isinstance(public_key, str):
+            public_key_bytes = KeyChain.slatepackAddressToED25519PublicKey(public_key)
+        recovered = bindings.crypto_sign_open(signature, public_key_bytes)
+        return recovered == message
 
     def deriveSlatepackAddress(self, path: str, testnet=False):
         pk = self.deriveED25519PublicKey(path)
@@ -91,7 +95,9 @@ class KeyChain:
 
         return slatepack_address
 
-    def slatepackAddressToED25519PublicKey(self, address: str, testnet=False) -> bytes:
+    @classmethod
+    def slatepackAddressToED25519PublicKey(
+            self, address: str, testnet=False) -> bytes:
         # compute the slatepack address
         network = 'grin'
         if testnet:
