@@ -3,6 +3,7 @@ from typing import Union
 
 from mimblewimble.crypto.pedersen import Pedersen
 from mimblewimble.crypto.public_key import PublicKey
+from mimblewimble.crypto.public_keys import PublicKeys
 from mimblewimble.crypto.signature import Signature
 from mimblewimble.crypto.commitment import Commitment
 from mimblewimble.crypto.rangeproof import RangeProof
@@ -30,6 +31,15 @@ class SlateSignature:
         self.excess = excess
         self.nonce = nonce
         self.signature = signature
+
+    def getExcess(self):
+        return self.excess
+
+    def getNonce(self):
+        return self.nonce
+
+    def getSignature(self):
+        return self.signature
 
     def setSignature(self, signature: Signature):
         self.signature = signature
@@ -123,8 +133,20 @@ class Slate:
 
 
     def calculateTotalExcess(self):
-        pass # TODO
+        pks = PublicKeys()
+        public_keys = []
+        for signature in self.signatures:
+            public_keys.append(signature.getExcess())
+        summed = pks.publicKeySum(public_keys)
+        del pks
+        return summed
 
 
     def calculateTotalNonce(self):
-        pass # TODO
+        pks = PublicKeys()
+        public_keys = []
+        for signature in self.signatures:
+            public_keys.append(signature.getNonce())
+        summed = pks.publicKeySum(public_keys)
+        del pks
+        return summed

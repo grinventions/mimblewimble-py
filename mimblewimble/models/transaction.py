@@ -508,7 +508,7 @@ class TransactionKernel:
         if features == EKernelFeatures.NO_RECENT_DUPLICATE:
             serializer.write(lock_height.to_bytes(2, 'big'))
 
-        return hashlib.blake2b(serializer.readall())
+        return hashlib.blake2b(serializer.readall()).digest()
 
 
 
