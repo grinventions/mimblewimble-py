@@ -261,10 +261,6 @@ class Wallet:
         # prepare sender and receiver address for the payment proof
         keychain = KeyChain.fromSeed(self.master_seed)
         sender_address_bytes = keychain.deriveED25519PublicKey(path)
-        receiver_address_bytes = None
-        if receiver_address is not None:
-            receiver_address_bytes = keychain.slatepackAddressToED25519PublicKey(
-                receiver_address)
 
         # build send slate
         slate_builder = SendSlateBuilder(self.master_seed)
@@ -275,7 +271,6 @@ class Wallet:
             inputs,
             change_outputs,
             sender_address=sender_address_bytes,
-            receiver_address=receiver_address_bytes,
             testnet=testnet)
         return slate, secret_key, secret_nonce
 
@@ -320,6 +315,9 @@ class Wallet:
 
             # produce the signature
             receiver_signature = keychain.signED25519(message, path)
+
+            # update the payment proof data
+            receive_slate.proof_opt.setReceiverAddress(receiver_address)
             receive_slate.proof_opt.setReceiverSignature(receiver_signature)
 
         # done!

@@ -17,6 +17,12 @@ class SlatePaymentProof:
     def getReceiverSignature(self):
         return self.receiver_signature
 
+    def setSenderAddress(self, sender_address):
+        self.sender_address = sender_address
+
+    def setReceiverAddress(self, receiver_address):
+        self.receiver_address = receiver_address
+
     def setReceiverSignature(self, receiver_signature):
         self.receiver_signature = receiver_signature
 
@@ -28,7 +34,20 @@ class SlatePaymentProof:
         raise Exception('unimplemented')
 
     def toJSON(self):
-        raise Exception('unimplemented')
+        saddr = None
+        if self.sender_address is not None:
+            saddr = self.sender_address.hex()
+        raddr = None
+        if self.receiver_address is not None:
+            raddr = self.receiver_address.hex()
+        rsig = None
+        if self.receiver_signature is not None:
+            rsig = self.receiver_signature.hex()
+        return {
+            'saddr': saddr,
+            'raddr': raddr,
+            'rsig': rsig
+        }
 
     @classmethod
     def fromJSON(self):

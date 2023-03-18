@@ -39,7 +39,7 @@ class Fee:
         return Fee(shift, fee)
 
     def toJSON(self):
-        return int(self.serialize())
+        return int(self.fee)
 
     @classmethod
     def fromJSON(self, feeJSON):

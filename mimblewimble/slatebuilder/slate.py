@@ -44,6 +44,16 @@ class SlateSignature:
     def setSignature(self, signature: Signature):
         self.signature = signature
 
+    def toJSON(self):
+        obj = {}
+        if self.excess is not None:
+            obj['xs'] = self.excess.getBytes().hex()
+        if self.nonce is not None:
+            obj['nonce'] = self.nonce.getBytes().hex()
+        if self.signature is not None:
+            obj['part'] = self.signature.hex()
+        return obj
+
 
 class SlateCommitment:
     def __init__(
@@ -56,6 +66,15 @@ class SlateCommitment:
 
     def setRangeProof(self, range_proof: RangeProof):
         self.range_proof = range_proof
+
+    def toJSON(self):
+        obj = {}
+        obj['c'] = self.commitment.hex()
+        if self.features == EOutputFeatures.COINBASE_OUTPUT:
+            obj['f'] = 1
+        if self.range_proof is not None:
+            obj['p'] = self.range_proof.hex()
+        return obj
 
 
 class Slate:
@@ -80,9 +99,7 @@ class Slate:
         self.stage = ESlateStage.NONE
         self.offset = transaction_offest
         self.lock_height = lock_height
-
-        self.inputs = []
-        self.outputs = []
+        self.commitments = []
 
 
     def getAmount(self):
@@ -136,7 +153,7 @@ class Slate:
             features: EOutputFeatures,
             commitment: Commitment):
         slate_commitment = SlateCommitment(features, commitment)
-        self.inputs.append(slate_commitment)
+        self.commitments.append(slate_commitment)
 
     def appendOutput(
             self,
@@ -145,7 +162,7 @@ class Slate:
             range_proof: RangeProof):
         slate_commitment = SlateCommitment(features, commitment)
         slate_commitment.setRangeProof(range_proof)
-        self.outputs.append(slate_commitment)
+        self.commitments.append(slate_commitment)
 
 
     def addOffset(self, offset: BlindingFactor):
@@ -172,3 +189,35 @@ class Slate:
         summed = pks.publicKeySum(public_keys)
         del pks
         return summed
+
+    def toJSON(self):
+        obj = {}
+        obj['amt'] = self.amount
+
+        if self.stage == ESlateStage.STANDARD_SENT:
+            obj['sta'] = 'S1'
+        if self.stage == ESlateStage.STANDARD_RECEIVED:
+            obj['sta'] = 'S2'
+        if self.stage == ESlateStage.STANDARD_FINALIZED:
+            obj['sta'] = 'S3'
+
+        if self.offset is not None:
+            obj['off'] = self.offset.hex()
+
+        if self.fee is not None:
+            obj['fee'] = self.fee.toJSON()
+
+        if len(self.signatures) > 0:
+            sigs = []
+            for sig in self.signatures:
+                sigs.append(sig.toJSON())
+
+        coms = []
+        for commitment in self.commitments:
+            coms.append(commitment.toJSON())
+        obj['coms'] = coms
+
+        if self.proof_opt is not None:
+            obj['proof'] = self.proof_opt.toJSON()
+
+        return obj
