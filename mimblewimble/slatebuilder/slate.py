@@ -88,6 +88,20 @@ class Slate:
     def getAmount(self):
         return self.amount
 
+    def getPaymentProof(self) -> Union[SlatePaymentProof, None]:
+        return self.proof_opt
+
+
+    def getSignature(self, i: int):
+        if i < 0 or i > len(self.signatures):
+            raise Exception('Signature index our of bounds')
+        return self.signatures[i]
+
+    def setSignature(self, i: int, signature: SlateSignature):
+        if i < 0 or i > len(self.signatures):
+            raise Exception('Signature index our of bounds')
+        self.signatures[i] = signature
+
 
     def getKernelFeatures(self) -> EKernelFeatures:
         return self.kernel_features
@@ -98,7 +112,7 @@ class Slate:
         kernel_commitment = p.toCommitment(
             self.calculateTotalExcess())
         del p
-        kernel_commitment
+        return kernel_commitment
 
 
     def getFee(self):

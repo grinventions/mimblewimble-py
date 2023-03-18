@@ -21,6 +21,7 @@ from mimblewimble.crypto.aggsig import AggSig
 from mimblewimble.crypto.commitment import Commitment
 from mimblewimble.crypto.bulletproof import EBulletproofType
 from mimblewimble.crypto.pedersen import Pedersen
+from mimblewimble.crypto.secret_key import SecretKey
 
 from mimblewimble.models.transaction import EOutputStatus
 from mimblewimble.models.transaction import EOutputFeatures
@@ -36,6 +37,7 @@ from mimblewimble.helpers.fee import calculateFee
 from mimblewimble.slatebuilder import Slate
 from mimblewimble.slatebuilder import SendSlateBuilder
 from mimblewimble.slatebuilder import ReceiveSlateBuilder
+from mimblewimble.slatebuilder import FinalizeSlateBuilder
 
 
 class Wallet:
@@ -223,7 +225,7 @@ class Wallet:
             receiver_address=None,
             path='m/0/1/0',
             wallet_tx_id=None,
-            testnet=False) -> Slate:
+            testnet=False) -> Tuple[Slate, SecretKey, SecretKey]:
         # if entire balance is sent, no change outputs
         if send_entire_balance:
             change_outputs = 0
@@ -266,7 +268,7 @@ class Wallet:
 
         # build send slate
         slate_builder = SendSlateBuilder(self.master_seed)
-        return slate_builder.build(
+        slate, secret_key, secret_nonce = slate_builder.build(
             amount,
             fee,
             block_height,
@@ -275,6 +277,7 @@ class Wallet:
             sender_address=sender_address_bytes,
             receiver_address=receiver_address_bytes,
             testnet=testnet)
+        return slate, secret_key, secret_nonce
 
 
     def receive(
@@ -282,8 +285,7 @@ class Wallet:
             send_slate: Slate,
             path='m/0/1/0',
             wallet_tx_id=None,
-            testnet=False,
-            sender_address=None) -> Slate:
+            testnet=False) -> Slate:
         output = self.createBlindedOutput(
             send_slate.getAmount(),
             EBulletproofType.ENHANCED,
@@ -297,14 +299,16 @@ class Wallet:
             testnet=testnet)
 
         # update the payment proof
-        if sender_address is not None:
+        payment_proof = receive_slate.getPaymentProof()
+        if payment_proof is not None:
+            sender_address = payment_proof.getSenderAddress()
             # prepare the receiver address to be able to update
             # the payment proof
             keychain = KeyChain.fromSeed(self.master_seed)
             receiver_address = keychain.deriveED25519PublicKey(path)
 
             # prepare the kernel commitment
-            kernel_commitment = receive_slate.getKernelCommitment()
+            kernel_commitment = receive_slate.getKernelCommitment().getBytes()
 
             # message to be signed:
             # (amount | kernel commitment | sender address)
@@ -315,8 +319,7 @@ class Wallet:
             message = serializer.readall()
 
             # produce the signature
-            receiver_signature = Signature(
-                keychain.signED25519(message, path))
+            receiver_signature = keychain.signED25519(message, path)
             receive_slate.proof_opt.setReceiverSignature(receiver_signature)
 
         # done!
@@ -331,8 +334,27 @@ class Wallet:
         raise Exception('unimplemented')
 
 
-    def finalize(self):
-        raise Exception('unimplemented')
+    def finalize(
+            self,
+            receive_slate: Slate,
+            secret_key: SecretKey,
+            secret_nonce: SecretKey,
+            path='m/0/1/0',
+            wallet_tx_id=None,
+            testnet=False):
+        # prepare the original sender address for the payment proof validation
+        keychain = KeyChain.fromSeed(self.master_seed)
+        sender_address_bytes = keychain.deriveED25519PublicKey(path)
+
+        # build the receive slate
+        slate_builder = FinalizeSlateBuilder(self.master_seed)
+        finalized_slate = slate_builder.finalize(
+            receive_slate,
+            secret_key,
+            secret_nonce,
+            sender_address_bytes,
+            testnet=testnet)
+        return finalized_slate
 
 
     @classmethod

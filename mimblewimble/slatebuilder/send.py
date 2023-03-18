@@ -4,6 +4,8 @@ from mimblewimble.entity import OutputDataEntity
 
 from mimblewimble.consensus import Consensus
 
+from mimblewimble.crypto.secret_key import SecretKey
+
 from mimblewimble.models.transaction import BlindingFactor
 from mimblewimble.models.transaction import EKernelFeatures
 from mimblewimble.models.fee import Fee
@@ -30,7 +32,8 @@ class SendSlateBuilder:
             inputs: List[OutputDataEntity],
             change_outputs: List[OutputDataEntity],
             slate_version=0, testnet=False,
-            sender_address=None, receiver_address=None):
+            sender_address=None, receiver_address=None) -> Tuple[
+                Slate, SecretKey, SecretKey]:
         # select random transaction offset,
         # and calculate secret key used in kernel signature
         transaction_offset = BlindingFactor.random()
@@ -64,7 +67,7 @@ class SendSlateBuilder:
                 out.getFeatures(),
                 out.getCommitment(),
                 out.getRangeProof())
-        return slate
+        return slate, secret_key, secret_nonce
 
 
     def buildWalletTx(

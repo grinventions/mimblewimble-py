@@ -4,7 +4,9 @@ import os
 from bip32 import BIP32
 from bip_utils import Bech32Encoder, Bech32Decoder
 from hashlib import blake2b, pbkdf2_hmac, sha512
+
 from nacl import bindings
+from nacl.signing import SigningKey, VerifyKey
 
 from mimblewimble.crypto.bulletproof import EBulletproofType
 
@@ -63,10 +65,20 @@ class KeyChain:
         return pk
 
     def signED25519(self, message: bytes, path: str) -> bytes:
-        sk = self.deriveED25519SecretKey(path)
+        seed_blake = self.deriveED25519Seed(path)
+        sk = SigningKey(seed_blake)
         signature = sk.sign(message)
         del sk
         return signature
+
+    @classmethod
+    def verifyED25519(
+            self,
+            public_key: bytes,
+            signature: bytes,
+            message: bytes) -> bool:
+        pk = VerifyKey(public_key)
+        return pk.verify(message, signature)
 
     def deriveSlatepackAddress(self, path: str, testnet=False):
         pk = self.deriveED25519PublicKey(path)
