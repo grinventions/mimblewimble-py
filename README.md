@@ -2,6 +2,8 @@
 
 # Mimblewimble in Python
 
+![mimblewimble-py logo](https://github.com/grinventions/mimblewimble-py/blob/main/assets/logo.png?raw=true)
+
 We are building the first Python-based implementation of the Mimblewimble protocol for the [grin cryptocurrency](https://grin.mw/). At the moment it is at the most early stage of development. Heavily based on the [grin++ wallet](https://github.com/GrinPlusPlus/GrinPlusPlus).
 
 ## Usage
