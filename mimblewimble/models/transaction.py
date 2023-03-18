@@ -1,4 +1,5 @@
 import hashlib
+import os
 
 from io import BytesIO
 from enum import IntEnum
@@ -10,6 +11,15 @@ from mimblewimble.crypto.secret_key import SecretKey
 from mimblewimble.crypto.signature import Signature
 from mimblewimble.crypto.rangeproof import RangeProof
 from mimblewimble.models.fee import Fee
+
+
+class EOutputStatus(IntEnum):
+    SPENDABLE = 0
+    IMMATURE = 1 # DEPRECATED: Outputs should be marked as spendable.
+    NO_CONFIRMATIONS = 2
+    SPENT = 3
+    LOCKED = 4
+    CANCELED = 5
 
 
 class EOutputFeatures(IntEnum):
@@ -83,6 +93,10 @@ class BlindingFactor:
 
     def serialize(self):
         return self.blindingFactorBytes
+
+    @classmethod
+    def random(self):
+        return BlindingFactor(os.urandom(32))
 
     @classmethod
     def deserialize(self, blindingFactorBytes):
@@ -478,7 +492,23 @@ class TransactionKernel:
     def __hash__(self):
         serializer = BytesIO()
         self.serialize(serializer)
-        return hashlib.blake2b(serialize.readall())
+        return hashlib.blake2b(serializer.readall())
+
+    # other utils
+    @classmethod
+    def getSignatureMessage(
+            self, features: EKernelFeatures, fee: int, lock_height: int):
+        serializer = Serializer()
+
+        serializer.write(features.value.to_bytes(1, 'big'))
+        if features != EKernelFeatures.COINBASE_KERNEL:
+            fee.serialize(serializer)
+        if features == EKernelFeatures.HEIGHT_LOCKED:
+            serializer.write(lock_height.to_bytes(8, 'big'))
+        if features == EKernelFeatures.NO_RECENT_DUPLICATE:
+            serializer.write(lock_height.to_bytes(2, 'big'))
+
+        return hashlib.blake2b(serializer.readall()).digest()
 
 
 

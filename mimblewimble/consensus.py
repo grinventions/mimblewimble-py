@@ -35,7 +35,7 @@ class Consensus:
 
     @classmethod
     def calculateWeightV5(self, num_inputs, num_outputs, num_kernels):
-        return num_inputs*input_weight + num_outputs*output_weight + num_kernels*kernel_weight
+        return num_inputs*Consensus.input_weight + num_outputs*Consensus.output_weight + num_kernels*Consensus.kernel_weight
 
     # Block interval, in seconds
     block_time_sec = 60
@@ -196,29 +196,29 @@ class Consensus:
     hard_fork_interval = year_height / 2
 
     # Floonet-only hardforks
-    floonet_first_hard_fork = None # TODO
-    floonet_second_hard_fork = None # TODO
-    floonet_third_hard_fork = None # TODO
-    floonet_fourth_hard_fork = None # TODO
+    floonet_first_hard_fork = 185040
+    floonet_second_hard_fork = 298080
+    floonet_third_hard_fork = 552960
+    floonet_fourth_hard_fork = 642240
 
     def getHeaderVersion(height, testnet=False):
         if testnet:
-            if height < floonet_first_hard_fork:
+            if height < Consensus.floonet_first_hard_fork:
                 return 1
-            elif height < floonet_second_hard_fork:
+            elif height < Consensus.floonet_second_hard_fork:
                 return 2
-            elif height < floonet_third_hard_fork:
+            elif height < Consensus.floonet_third_hard_fork:
                 return 3
-            elif height < floonet_fourth_hard_fork:
+            elif height < Consensus.floonet_fourth_hard_fork:
                 return 4
         else:
-            if height < hard_fork_interval:
+            if height < Consensus.hard_fork_interval:
                 return 1
-            elif height < 2*hard_fork_interval:
+            elif height < 2*Consensus.hard_fork_interval:
                 return 2
-            elif height < 3*hard_fork_interval:
+            elif height < 3*Consensus.hard_fork_interval:
                 return 3
-            elif height < 4*hard_fork_interval:
+            elif height < 4*Consensus.hard_fork_interval:
                 return 4
         return 5
 

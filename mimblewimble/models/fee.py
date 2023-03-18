@@ -39,11 +39,15 @@ class Fee:
         return Fee(shift, fee)
 
     def toJSON(self):
-        return int(self.serialize())
+        return int(self.fee)
 
     @classmethod
     def fromJSON(self, feeJSON):
         byteBuffer = BytesIO(feeJSON.to_bytes(64))
         return Fee().deserialize(byteBuffer)
+
+    @classmethod
+    def fromInt(self, fee: int):
+        return Fee(0, fee)
 
 

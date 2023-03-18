@@ -60,8 +60,6 @@ class Pedersen:
         negative_commitments = Pedersen.convertCommitments(self.ctx, negative)
         commitment = secp256k1_pedersen_commit_sum(
             self.ctx, positive_commitments, negative_commitments)
-        print('commitment is')
-        print(commitment)
         serialized = secp256k1_pedersen_commitment_serialize(
             self.ctx, commitment)
         return Commitment(serialized)

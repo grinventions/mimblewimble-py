@@ -29,3 +29,9 @@ class Serializer:
 
     def getProtocol(self):
         return self.protocol
+
+    def readall(self):
+        self.raw.seek(0)
+        value = self.raw.read()
+        self.raw.seek(self.pnt)
+        return value
