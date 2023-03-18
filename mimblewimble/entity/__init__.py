@@ -28,10 +28,10 @@ class OutputDataEntity:
         return self.blinding_factor
 
     def getCommitment(self):
-        pass # TODO
+        return self.output.getCommitment()
 
     def getFeatures(self):
-        pass # TODO
+        return self.output.getFeatures()
 
     def getRangeProof(self):
-        pass # TODO
+        return self.output.getRangeProof()
