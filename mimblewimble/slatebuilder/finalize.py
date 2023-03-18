@@ -58,13 +58,14 @@ class FinalizeSlateBuilder:
         # verify payment proof addresses & signatures
         payment_proof = finalized_slate.getPaymentProof()
 
-        receiver_address = payment_proof.getSenderAddress()
+        receiver_address = payment_proof.getReceiverAddress()
         receiver_signature = payment_proof.getReceiverSignature()
 
         try:
             KeyChain.verifyED25519(
                 receiver_address, receiver_signature, message)
-        except:
+        except Exception as e:
+            print(e)
             raise ValueError('Invalid payment proof')
 
         # done!
