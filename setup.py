@@ -10,7 +10,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     author = 'Marek Narozniak',
     author_email = 'marek.yggdrasil@gmail.com',
-    install_requires=['siphash-cffi', 'secp256k1-zkp-mw'],
+    install_requires=['siphash-cffi', 'secp256k1-zkp-mw', 'sqlalchemy'],
     url = 'https://github.com/grinventions/mimblewimble-py',
     classifiers=[
         "Programming Language :: Python :: 3",
