@@ -10,14 +10,30 @@ from mimblewimble.models.data.models import VersionModel
 
 
 def SQLWalletService(SQLService):
-    def getNextChildPath(self):
-        pass
+    def getNextChildPath(self, parent_path: str):
+        q = self.session.query(AccountsModel).filter_by(
+            parent_path=parent_path)
+        return self.select(q, only_first=True)
 
-    def getCurrentAddressIndex(self):
-        pass
+    def updateNextChildIndex(self, parent_path: str, index: int):
+        account_record = self.getNextChildPath(parent_path)
+        account_record.next_child_index = index
+        self.update(account_record)
 
-    def increaseAddressIndex(self):
-        pass
+    def getCurrentAddressIndex(self, parent_path: str):
+        account_record = self.getNextChildPath(parent_path)
+        return account_record.current_address_index
+
+    def updateCurrentAddressIndex(self, parent_path: str, index: int):
+        account_record = self.getNextChildPath(parent_path)
+        account_record.current_address_index = index
+        self.update(account_record)
+
+    def increaseAddressIndex(self, parent_path: str):
+        current_index = self.getCurrentAddressIndex(parent_path)
+        next_index = current_index + 1
+        updateCurrentAddressIndex(parent_path, next_index)
+        return next_index
 
     def addOutputs(self):
         pass
