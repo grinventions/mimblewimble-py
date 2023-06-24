@@ -1,3 +1,7 @@
+from sqlalchemy import insert, update
+from sqlalchemy.sql import bindparam
+from sqlalchemy.exc import IntegrityError
+
 from mimblewimble.models.data import SQLService
 
 from mimblewimble.models.data.models import AccountsModel
@@ -9,7 +13,7 @@ from mimblewimble.models.data.models import TransactionsModel
 from mimblewimble.models.data.models import VersionModel
 
 
-def SQLWalletService(SQLService):
+class SQLWalletService(SQLService):
     def getNextChildPath(self, parent_path: str):
         q = self.session.query(AccountsModel).filter_by(
             parent_path=parent_path)
@@ -35,11 +39,43 @@ def SQLWalletService(SQLService):
         updateCurrentAddressIndex(parent_path, next_index)
         return next_index
 
-    def addOutputs(self):
-        pass
+    def updateOutput(
+            self, commitment, status, transaction_id, encrypted):
+        try:
+            stmt = update(OutputsModel).where(
+                OutputsModel.commitment==commitment
+            ).values(
+                    status=status,
+                transaction_id=transaction_id,
+                encrypted=encrypted)
+            self.session.execute(stmt)
+            self.session.commit()
+        except Exception as e:
+            self.session.rollback()
+            raise e
+
+    def addOutputs(
+            self, commitment, status, transaction_id, encrypted,
+            auto_update=True):
+        record = OutputsModel(
+            commitment=commitment,
+            status=status,
+            transaction_id=transaction_id,
+            encrypted=encrypted)
+        try:
+            self.insert(record)
+        except IntegrityError as e:
+            if 'UNIQUE constraint failed: outputs.commitment' in str(e):
+                self.updateOutput(
+                    commitment, status, transaction_id, encrypted)
+            else:
+                raise e
+        except Exception as e:
+            raise e
 
     def getOutputs(self):
-        pass
+        q = self.session.query(OutputsModel)
+        return self.select(q)
 
     def getRefreshBlockHeight(self):
         pass
@@ -68,7 +104,7 @@ def SQLWalletService(SQLService):
     def loadSlateContext(self):
         pass
 
-    def saveSlateContext(self):
+    def saveSlateContext(self, master_seed, slate_id, slate_context):
         pass
 
     def addTransaction(self):
@@ -83,8 +119,25 @@ def SQLWalletService(SQLService):
     def getNextTransactionID(self):
         pass
 
-    def getMetadata(self):
-        pass
+    def getMetadataRecord(self):
+        q = self.session.query(MetadataModel).filter_by(
+            id=1)
+        record = self.select(q)
+        if record is None:
+            raise ValueError('No metadata found')
+        return record
 
-    def saveMetadata(self):
-        pass
+    def getMetadata(self):
+        record = self.getMetadataRecord()
+        next_tx_id = record.next_tx_id
+        refresh_block_height = record.refresh_block_height
+        restore_leaf_index = record.restore_leaf_index
+        return next_tx_id, refresh_block_height, restore_leaf_index
+
+    def saveMetadata(
+            self, next_tx_id, refresh_block_height, restore_leaf_index):
+        metadata_record = self.getMetadataRecord()
+        metadata_record.next_tx_id = next_tx_id
+        metadata_record.refresh_block_height = refresh_block_height
+        metadata_record.restore_leaf_index = restore_leaf_index
+        self.update(metadata_record)

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Binary
+from sqlalchemy import Column, Integer, String, BLOB
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -31,23 +31,23 @@ class OutputsModel(Base):
     commitment = Column(String, unique=True, nullable=False)
     status = Column(Integer, nullable=False)
     transaction_id = Column(Integer)
-    encrypted = Column(Binary, nullable=False)
+    encrypted = Column(BLOB, nullable=False)
 
 
 class SlateContextModel(Base):
     __tablename__ = 'slate_contexts'
 
     slate_id = Column(String, primary_key=True)
-    iv = Column(Binary, nullable=False)
-    enc_context = Column(Binary, nullable=False)
+    iv = Column(BLOB, nullable=False)
+    enc_context = Column(BLOB, nullable=False)
 
 
 class SlateModel(Base):
     __tablename__ = 'slate'
 
-    slate_id = Column(String, nullable=False)
+    slate_id = Column(String, primary_key=True)
     stage = Column(String, nullable=False)
-    iv = Column(Binary, nullable=False)
+    iv = Column(BLOB, nullable=False)
     armored_slatepack = Column(String)
 
 
@@ -56,7 +56,7 @@ class TransactionsModel(Base):
 
     id = Column(Integer, primary_key=True)
     slate_id = Column(String)
-    encrypted = Column(Binary, nullable=False)
+    encrypted = Column(BLOB, nullable=False)
 
 
 class VersionModel(Base):
