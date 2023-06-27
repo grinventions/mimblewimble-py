@@ -89,8 +89,13 @@ class SQLWalletService(SQLService):
     def updateRestoreLeafIndex(self):
         pass
 
-    def loadSlate(self):
-        pass
+    def loadSlate(
+            self, master_seed, uuid: str, stage: str):
+        q = self.session.query(
+            SlateModel).filter_by(
+                slate_id=uuid, stage=stage)
+        # TODO use master_seed to decrypt the slate
+        return self.select(q, only_first=True)
 
     def loadLatestSlate(self):
         pass
@@ -98,13 +103,26 @@ class SQLWalletService(SQLService):
     def loadArmoredSlatepack(self):
         pass
 
-    def saveSlate(self):
-        pass
+    def saveSlate(
+            self,
+            uuid: str,
+            stage: str,
+            iv: bytes,
+            slatepack: string):
+        record = SlateModel(
+            slate_id=uuid,
+            stage=stage,
+            iv=iv,
+            armored_slatepack=slatepack)
+        return self.insert(record)
 
     def loadSlateContext(self):
         pass
 
     def saveSlateContext(self, master_seed, slate_id, slate_context):
+        # master_seed is SecureVector, we have this type?
+        # slate_id is UUID type, do we have this type? do we manage slate id at all?
+        # https://github.com/GrinPlusPlus/GrinPlusPlus/blob/101a0704ff253791be704bc2ece97295d2a13281/src/Wallet/WalletDB/Sqlite/Tables/SlateContextTable.cpp#L31
         pass
 
     def addTransaction(self):
