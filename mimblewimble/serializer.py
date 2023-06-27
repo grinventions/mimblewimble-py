@@ -24,6 +24,14 @@ class Serializer:
     def write(self, b: bytes):
         self.raw.write(b)
 
+    def readString(self, n, encoding='ascii'):
+        as_bytes = self.read(n)
+        return as_bytes.decode(encoding)
+
+    def writeString(self, value: str, encoding='ascii'):
+        as_bytes = value.encode(encoding)
+        self.write(as_bytes)
+
     def getvalue(self):
         return self.raw.getvalue()
 

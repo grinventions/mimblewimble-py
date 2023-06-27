@@ -4,7 +4,6 @@ import os
 from typing import Union
 
 from bip32 import BIP32
-from bip_utils import Bech32Encoder, Bech32Decoder
 from hashlib import blake2b, pbkdf2_hmac, sha512
 
 from nacl import bindings
@@ -22,6 +21,8 @@ from mimblewimble.crypto.bulletproof import EBulletproofType
 from mimblewimble.crypto.bulletproof import ProofMessage
 from mimblewimble.crypto.bulletproof import RewoundProof
 from mimblewimble.crypto.bulletproof import Bulletproof
+
+from mimblewimble.models.slatepack.address import SlatepackAddress
 
 
 class KeyChain:
@@ -86,26 +87,15 @@ class KeyChain:
 
     def deriveSlatepackAddress(self, path: str, testnet=False):
         pk = self.deriveED25519PublicKey(path)
-
-        # compute the slatepack address
-        network = 'grin'
-        if testnet:
-            network = 'tgrin'
-        slatepack_address = Bech32Encoder.Encode(network, pk)
-
-        return slatepack_address
+        slatepack_address = SlatepackAddress(pk)
+        return slatepack_address.toBech32(testnet=testnet)
 
     @classmethod
     def slatepackAddressToED25519PublicKey(
             self, address: str, testnet=False) -> bytes:
-        # compute the slatepack address
-        network = 'grin'
-        if testnet:
-            network = 'tgrin'
-
-        public_key = Bech32Decoder.Decode(network, address)
-        return public_key
-
+        slatepack_address = SlatepackAddress.fromBech32(
+            address, testnet=testnet)
+        return slatepack_address.toED25519()
 
     def rewindRangeProof(
             self,
