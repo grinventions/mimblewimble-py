@@ -16,13 +16,15 @@ from mimblewimble.crypto.secret_key import SecretKey
 from mimblewimble.crypto.public_keys import PublicKeys
 from mimblewimble.crypto.rangeproof import RangeProof
 from mimblewimble.crypto.pedersen import Pedersen
-
+  
 from mimblewimble.crypto.bulletproof import EBulletproofType
 from mimblewimble.crypto.bulletproof import ProofMessage
 from mimblewimble.crypto.bulletproof import RewoundProof
 from mimblewimble.crypto.bulletproof import Bulletproof
 
 from mimblewimble.models.slatepack.address import SlatepackAddress
+
+from mimblewimble.helpers.encryption import ageED25519Encrypt, ageED25519Decrypt
 
 
 class KeyChain:
@@ -84,6 +86,18 @@ class KeyChain:
             public_key_bytes = KeyChain.slatepackAddressToED25519PublicKey(public_key)
         recovered = bindings.crypto_sign_open(signature, public_key_bytes)
         return recovered == message
+
+    def ageEncrypt(self, plaintext: bytes, path: str):
+        ed25519pk = self.deriveED25519PublicKey(path)
+        return ageED25519Encrypt(plaintext, ed25519pk)
+
+    def ageDecrypt(
+            self,
+            ciphertext: bytes,
+            path: str, derived_secret: bytes, fingerprint=None):
+        ed25519sk = self.deriveED25519SecretKey(path)
+        return ageED25519Decrypt(
+            ciphertext, ed25519sk, derived_secret, fingerprint=fingerprint)
 
     def deriveSlatepackAddress(self, path: str, testnet=False):
         pk = self.deriveED25519PublicKey(path)
