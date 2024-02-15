@@ -3,4 +3,3 @@ secp256k1-zkp-mw
 bip32
 bip_utils
 pynacl
-python-elementstx

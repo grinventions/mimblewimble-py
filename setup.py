@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='mimblewimble',
-    version='0.2.0',
+    version='0.3.0',
     packages=['mimblewimble'],
     license='MIT',
     description = 'A toolset for processing Grin Mimblewimble data structures',
@@ -10,7 +10,12 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     author = 'Marek Narozniak',
     author_email = 'marek.yggdrasil@gmail.com',
-    install_requires=['siphash-cffi', 'secp256k1-zkp-mw'],
+    install_requires=[
+        'siphash-cffi',
+        'secp256k1-zkp-mw',
+        'bip_utils',
+        'bip32',
+        'pynacl'],
     url = 'https://github.com/grinventions/mimblewimble-py',
     classifiers=[
         "Programming Language :: Python :: 3",
