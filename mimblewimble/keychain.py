@@ -23,6 +23,8 @@ from mimblewimble.crypto.bulletproof import ProofMessage
 from mimblewimble.crypto.bulletproof import RewoundProof
 from mimblewimble.crypto.bulletproof import Bulletproof
 
+from mimblewimble.helpers.tor import TorAddress
+
 
 class KeyChain:
     def __init__(self, master_key: bytes, bulletproof_nonce: SecretKey):
@@ -95,6 +97,10 @@ class KeyChain:
 
         return slatepack_address
 
+    def deriveOnionAddress(self, path: str):
+        pk = self.deriveED25519PublicKey(path)
+        return KeyChain.slatepackAddressToOnion(pk)
+
     @classmethod
     def slatepackAddressToED25519PublicKey(
             self, address: str, testnet=False) -> bytes:
@@ -105,6 +111,16 @@ class KeyChain:
 
         public_key = Bech32Decoder.Decode(network, address)
         return public_key
+
+    @classmethod
+    def slatepackAddressToOnion(self, public_key: Union[bytes, str]):
+        public_key_bytes = public_key
+        if isinstance(public_key, str):
+            public_key_bytes = KeyChain.slatepackAddressToED25519PublicKey(public_key)
+
+        # derive the onion address
+        tor = TorAddress(public_key_bytes)
+        return tor.toOnion(version=3)
 
 
     def rewindRangeProof(
