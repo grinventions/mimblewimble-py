@@ -5,4 +5,3 @@ bip32
 bip_utils
 cryptography
 pynacl
-python-elementstx

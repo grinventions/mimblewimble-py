@@ -16,7 +16,7 @@ from mimblewimble.crypto.secret_key import SecretKey
 from mimblewimble.crypto.public_keys import PublicKeys
 from mimblewimble.crypto.rangeproof import RangeProof
 from mimblewimble.crypto.pedersen import Pedersen
-  
+
 from mimblewimble.crypto.bulletproof import EBulletproofType
 from mimblewimble.crypto.bulletproof import ProofMessage
 from mimblewimble.crypto.bulletproof import RewoundProof
@@ -104,12 +104,24 @@ class KeyChain:
         slatepack_address = SlatepackAddress(pk)
         return slatepack_address.toBech32(testnet=testnet)
 
+    def deriveOnionAddress(self, path: str):
+        pk = self.deriveED25519PublicKey(path)
+        return KeyChain.slatepackAddressToOnion(pk)
+
     @classmethod
     def slatepackAddressToED25519PublicKey(
             self, address: str, testnet=False) -> bytes:
         slatepack_address = SlatepackAddress.fromBech32(
             address, testnet=testnet)
         return slatepack_address.toED25519()
+
+    @classmethod
+    def slatepackAddressToOnion(self, public_key: Union[bytes, str]):
+        slatepack_address = SlatepackAddress(public_key)
+        if isinstance(public_key, str):
+            slatepack_address = SlatepackAddress.fromBech32(
+                public_key)
+        return slatepack_address.toOnion(version=3)
 
     def rewindRangeProof(
             self,

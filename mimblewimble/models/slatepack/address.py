@@ -5,6 +5,7 @@ import hashlib
 from bip_utils import Bech32Encoder, Bech32Decoder
 
 from mimblewimble.serializer import Serializer
+from mimblewimble.helpers.tor import TorAddress
 
 
 class SlatepackAddress:
@@ -28,19 +29,10 @@ class SlatepackAddress:
 
     # https://gitweb.torproject.org/torspec.git/tree/rend-spec-v3.txt#n2013
     # base32(PUBKEY | CHECKSUM | VERSION) + ".onion"
-    def toTOR(self):
-        public_key = self.toED25519()
-        version = b'\x03'
-
-        # check sum
-        checksum_preimage  = '.onion checksum'.encode()
-        checksum_preimage += public_key
-        checksum_preimage += version
-        checksum = hashlib.sha3_256(checksum_preimage).digest()[0:2]
-
-        # encode first 10 bytes
-        address = base64.b32encode(public_key + checksum + version).decode()
-        return address.lower()
+    def toOnion(self, version=3):
+        public_key_bytes = self.toED25519()
+        tor = TorAddress(public_key_bytes)
+        return tor.toOnion(version=version)
 
     def toNostr(self):
         pass # TODO
