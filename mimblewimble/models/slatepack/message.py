@@ -17,17 +17,19 @@ class SlatepackMessage:
             self,
             version: SlatepackVersion,
             metadata: SlatepackMetadata,
-            emode: EMode):
+            emode: EMode,
+            payload: bytes):
         self.version = version
         self.metadata = metadata
         self.emode = emode
-        self.payload = None # TODO, bytes type
+        self.payload = payload
 
-    def serialize(self, serializer: Serializer):
-        pass
+    def serialize(self):
+        serializer = Serializer()
+        self.version.serialize(serializer)
 
     def deserialize(self, serializer: Serializer):
-        pass
+        version = int.from_bytes(serializer.read(1), 'big')
 
     # TODO uses recipients pub keys for encryption
     def encryptPayload(self, recipients: List[SlatepackAddress]):
@@ -42,5 +44,17 @@ class SlatepackMessage:
     def __str__(self):
         return ''
 
-    def toJSON(self):
-        pass
+    def toJSON(self, testnet=Fasle):
+        slatepack = {
+            'slatepack': [self.version.major, self.version.minor],
+            'mode': int(self.emode)
+        }
+        version =
+        if self.emode == EMode.PLAINTEXT:
+            slatepack['sender'] = '0'
+            if self.metadata.sender is not None:
+                slatepack['sender'] = self.metadata.sender.toBech32(testnet=testnet)
+            slatepack['payload'] = self.payload.hex()
+            return slatepack
+        slatepack['payload'] = '' # TODO
+        return slatepack
