@@ -43,3 +43,6 @@ class Serializer:
         value = self.raw.read()
         self.raw.seek(self.pnt)
         return value
+
+    def getStream(self):
+        return self.raw

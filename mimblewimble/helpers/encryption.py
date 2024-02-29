@@ -1,6 +1,8 @@
 import os
 
+from typing import List
 from hashlib import sha256
+from io import BytesIO
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -10,8 +12,13 @@ from age.stream import stream_decrypt, stream_encrypt
 from age.keys.ed25519 import Ed25519PrivateKey as ageEd25519PrivateKey
 from age.keys.ed25519 import Ed25519PublicKey as ageEd25519PublicKey
 
+from age.keys.agekey import AgePublicKey
+
 from age.algorithms.ssh_ed25519 import ssh_ed25519_decrypt_file_key
 from age.algorithms.ssh_ed25519 import ssh_ed25519_encrypt_file_key
+
+from age.file import Decryptor as ageStreamDecrypt
+from age.file import Encryptor as ageStreamEncrypt
 
 from hashlib import pbkdf2_hmac
 from Crypto.Cipher import ChaCha20_Poly1305
@@ -74,3 +81,20 @@ def ageED25519Decrypt(
         fingerprint = ageED25519fingerprint(pk_part)
     return ssh_ed25519_decrypt_file_key(
         ed25519_private_key, fingerprint, derived_secret, ciphertext)
+
+
+def ageX25519Encrypt(plaintext: bytes, keys: List[AgePublicKey]):
+    # prepare the output buffer and encrypt
+    buffer_out = BytesIO()
+    with ageStreamEncrypt(keys, buffer_out) as encryptor:
+        encryptor.write(plaintext)
+
+    # return the content of the output buffer
+    buffer_out.seek(0)
+    return buffer_out.read()
+
+
+def ageX25519Decrypt(ciphertext: bytes, sk: bytes):
+    # x25519_decrypt_file_key(private_key, derived_secret, encrypted_file_key)
+    # TODO
+    pass

@@ -4,6 +4,12 @@ import hashlib
 
 from bip_utils import Bech32Encoder, Bech32Decoder
 
+from nacl.bindings import crypto_sign_ed25519_pk_to_curve25519
+
+from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
+
+from age.keys.agekey import AgePublicKey
+
 from mimblewimble.serializer import Serializer
 from mimblewimble.helpers.tor import TorAddress
 
@@ -16,7 +22,12 @@ class SlatepackAddress:
         return self.ed25519_pk
 
     def toX25519(self):
-        pass # TODO
+        x25519_pk = crypto_sign_ed25519_pk_to_curve25519(self.ed25519_pk)
+        return X25519PublicKey.from_public_bytes(x25519_pk)
+
+    def toAge(self):
+        x25519_pk = self.toX25519()
+        return AgePublicKey(x25519_pk)
 
     def toBech32(self, testnet=False):
         public_key = self.toED25519()
