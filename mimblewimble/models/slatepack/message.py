@@ -1,3 +1,5 @@
+import base58
+
 from enum import IntEnum
 from typing import List
 
@@ -8,6 +10,57 @@ from mimblewimble.helpers.encryption import ageX25519Encrypt, ageX25519Decrypt
 from mimblewimble.models.slatepack.address import SlatepackAddress
 from mimblewimble.models.slatepack.metadata import SlatepackVersion
 from mimblewimble.models.slatepack.metadata import SlatepackMetadata
+
+
+SLATEPACK_HEADER = 'BEGINSLATEPACK'
+SLATEPACK_FOOTER = 'ENDSLATEPACK'
+SLATEPACK_WORD_LENGTH = 15
+SLATEPACK_WORDS_PER_LINE = 200
+
+
+def slatepack_spacing(data: str, word_length=None):
+    if word_length is None:
+        word_length = SLATEPACK_WORD_LENGTH
+    chunks = [
+        data[i:i+word_length] for i in range(
+            0, len(data), word_length)
+    ]
+    chunks[-1] = chunks[-1] + '.'
+    return chunks
+
+
+def slatepack_pack(
+        data: bytes,
+        word_length=None,
+        words_per_line=None,
+        string_encoding='ascii') -> str:
+    encoded = base58.b58encode(data).decode(string_encoding)
+    words = [SLATEPACK_HEADER + '.']
+    words += slatepack_spacing(encoded, word_length=word_length)
+    words += [SLATEPACK_FOOTER + '.']
+    packed = ''
+    line = []
+    if words_per_line is None:
+        words_per_line = SLATEPACK_WORDS_PER_LINE
+    for word in words:
+        if len(line) >= words_per_line:
+            packed += ' '.join(line)
+            packed += '\n'
+            line = []
+        line.append(word)
+    if len(line) >= 0:
+        packed += ' '.join(line)
+    packed += '\n'
+    return packed
+
+
+def slatepack_unpack(data: str) -> bytes:
+    processed = data.replace(SLATEPACK_HEADER, '')
+    processed = processed.replace(SLATEPACK_FOOTER, '')
+    processed = processed.replace('.', '')
+    processed = processed.replace(' ', '')
+    processed = processed.replace('\n', '')
+    return base58.b58decode(processed)
 
 
 class EMode(IntEnum):
@@ -26,6 +79,18 @@ class SlatepackMessage:
         self.metadata = metadata
         self.emode = emode
         self.payload = payload
+
+    def pack(self):
+        pass
+
+    @classmethod
+    def unpack(self, packed: str):
+        unpacked = slatepack_unpack(packed)
+        return SlatepackMessage.deserialize(unpacked)
+
+    @classmethod
+    def unpack_encrypted(self, packed) -> bytes:
+        return slatepack_unpack(packed)
 
     def serialize(self):
         serializer = Serializer()
@@ -60,11 +125,29 @@ class SlatepackMessage:
 
         return serializer.readall()
 
-    # TODO accepts key as argument
-    def decryptPayload(self):
-        # TODO
-        ageED25519Decrypt(ciphertext, ed25519sk, derived_secret)
-        pass
+    def decryptPayload(self, payload, key):
+        return ageX25519Decrypt(payload, key)
+
+    def decrypt(self, serializer: Serializer):
+        version = SlatepackVersion.deserialize(serializer)
+        emode = EMode(int.from_bytes(serializer.read(1), 'big'))
+
+        opt_flags = serializer.read(2)
+        opt_fields_len = int.from_bytes(serializer.read(4), 'big')
+
+        metadata = SlatepackMetadata()
+        if opt_flags & 0x01 == 0x01:
+            sender = SlatepackAddress.deserialize(serializer)
+            metadata = SlatepackMetadata(sender=sender)
+
+        payload_size = int.from_bytes(serializer.read(8), 'big')
+        payload = serializer.read(payload_size)
+
+        if emode == EMode.ENCRYPTED:
+            decrypted_payload = self.decryptPayload(payload, key)
+            return SlatepackMessage(version, metadata, emode, decrypted_payload)
+
+        return SlatepackMessage(version, metadata, emode, payload)
 
     def __str__(self):
         return ''

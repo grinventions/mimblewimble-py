@@ -11,6 +11,8 @@ setuptools.setup(
     author = 'Marek Narozniak',
     author_email = 'marek.yggdrasil@gmail.com',
     install_requires=[
+        'age',
+        'base58',
         'siphash-cffi',
         'secp256k1-zkp-mw',
         'bip_utils',

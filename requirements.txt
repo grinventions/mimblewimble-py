@@ -1,4 +1,5 @@
 age
+base58
 siphash-cffi
 secp256k1-zkp-mw
 bip32
