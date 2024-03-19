@@ -36,7 +36,7 @@ test_data = [
     )
 ]
 
-def test_slatepacks():
+def test_slatepack_address():
     seed = bytes.fromhex(
         '09e626b6322a9459ed1dd6bbfcacda2e4d3558d7a1631576ff104e04fb387710')
     keychain = KeyChain.fromSeed(seed)

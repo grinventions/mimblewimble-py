@@ -4,7 +4,6 @@ import os
 from typing import Union
 
 from bip32 import BIP32
-from bip_utils import Bech32Encoder, Bech32Decoder
 from hashlib import blake2b, pbkdf2_hmac, sha512
 
 from nacl import bindings
@@ -23,7 +22,9 @@ from mimblewimble.crypto.bulletproof import ProofMessage
 from mimblewimble.crypto.bulletproof import RewoundProof
 from mimblewimble.crypto.bulletproof import Bulletproof
 
-from mimblewimble.helpers.tor import TorAddress
+from mimblewimble.models.slatepack.address import SlatepackAddress
+
+from mimblewimble.helpers.encryption import ageED25519Encrypt, ageED25519Decrypt
 
 
 class KeyChain:
@@ -86,16 +87,22 @@ class KeyChain:
         recovered = bindings.crypto_sign_open(signature, public_key_bytes)
         return recovered == message
 
+    def ageEncrypt(self, plaintext: bytes, path: str):
+        ed25519pk = self.deriveED25519PublicKey(path)
+        return ageED25519Encrypt(plaintext, ed25519pk)
+
+    def ageDecrypt(
+            self,
+            ciphertext: bytes,
+            path: str, derived_secret: bytes, fingerprint=None):
+        ed25519sk = self.deriveED25519SecretKey(path)
+        return ageED25519Decrypt(
+            ciphertext, ed25519sk, derived_secret, fingerprint=fingerprint)
+
     def deriveSlatepackAddress(self, path: str, testnet=False):
         pk = self.deriveED25519PublicKey(path)
-
-        # compute the slatepack address
-        network = 'grin'
-        if testnet:
-            network = 'tgrin'
-        slatepack_address = Bech32Encoder.Encode(network, pk)
-
-        return slatepack_address
+        slatepack_address = SlatepackAddress(pk)
+        return slatepack_address.toBech32(testnet=testnet)
 
     def deriveOnionAddress(self, path: str):
         pk = self.deriveED25519PublicKey(path)
@@ -104,24 +111,17 @@ class KeyChain:
     @classmethod
     def slatepackAddressToED25519PublicKey(
             self, address: str, testnet=False) -> bytes:
-        # compute the slatepack address
-        network = 'grin'
-        if testnet:
-            network = 'tgrin'
-
-        public_key = Bech32Decoder.Decode(network, address)
-        return public_key
+        slatepack_address = SlatepackAddress.fromBech32(
+            address, testnet=testnet)
+        return slatepack_address.toED25519()
 
     @classmethod
     def slatepackAddressToOnion(self, public_key: Union[bytes, str]):
-        public_key_bytes = public_key
+        slatepack_address = SlatepackAddress(public_key)
         if isinstance(public_key, str):
-            public_key_bytes = KeyChain.slatepackAddressToED25519PublicKey(public_key)
-
-        # derive the onion address
-        tor = TorAddress(public_key_bytes)
-        return tor.toOnion(version=3)
-
+            slatepack_address = SlatepackAddress.fromBech32(
+                public_key)
+        return slatepack_address.toOnion(version=3)
 
     def rewindRangeProof(
             self,
