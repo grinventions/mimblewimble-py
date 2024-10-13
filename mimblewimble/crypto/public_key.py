@@ -1,4 +1,4 @@
-from io import BytesIO
+from mimblewimble.serializer import Serializer
 
 
 class PublicKey:
@@ -23,12 +23,13 @@ class PublicKey:
 
     # serialization / deserialization
 
-    def serialize(self, serializer):
+    def serialize(self, serializer: Serializer):
         serializer.write(self.compressed_key)
 
     @classmethod
-    def deserialize(self, byteBuffer: BytesIO, NUM_BYTES=33):
-        return PublicKey(byteBuffer.read(NUM_BYTES))
+    def deserialize(self, serializer: Serializer, NUM_BYTES=33):
+        compressed_key = serializer.read(NUM_BYTES)
+        return PublicKey(compressed_key)
 
     @classmethod
     def fromHex(self, _hex: str):
