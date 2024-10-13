@@ -30,6 +30,8 @@ from mimblewimble.models.transaction import BlindingFactor
 from mimblewimble.models.transaction import TransactionOutput
 from mimblewimble.models.transaction import TransactionKernel
 from mimblewimble.models.fee import Fee
+
+from mimblewimble.models.slatepack.address import SlatepackAddress
 from mimblewimble.models.slatepack.message import SlatepackMessage, EMode
 
 from mimblewimble.entity import OutputDataEntity
@@ -265,6 +267,10 @@ class Wallet:
         # prepare sender and receiver address for the payment proof
         keychain = KeyChain.fromSeed(self.master_seed)
         sender_address_bytes = keychain.deriveED25519PublicKey(path)
+        receiver_address_bytes = None
+        if receiver_address is not None:
+            receiver = SlatepackAddress.fromBech32(receiver_address)
+            receiver_address_bytes = receiver.toED25519()
 
         # build send slate
         slate_builder = SendSlateBuilder(self.master_seed)
@@ -275,6 +281,7 @@ class Wallet:
             inputs,
             change_outputs,
             sender_address=sender_address_bytes,
+            receiver_address=receiver_address_bytes,
             testnet=testnet)
         return slate, secret_key, secret_nonce
 

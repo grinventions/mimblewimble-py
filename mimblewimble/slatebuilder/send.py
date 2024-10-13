@@ -36,7 +36,8 @@ class SendSlateBuilder:
             inputs: List[OutputDataEntity],
             change_outputs: List[OutputDataEntity],
             slate_version=0, testnet=False,
-            sender_address=None) -> Tuple[
+            sender_address=None,
+            receiver_address=None) -> Tuple[
                 Slate, SecretKey, SecretKey]:
         # select random transaction offset,
         # and calculate secret key used in kernel signature
@@ -47,7 +48,9 @@ class SendSlateBuilder:
         signature = SlateSignature(public_key, public_nonce)
 
         # payment proof
-        payment_proof = SlatePaymentProof(sender_address, None)
+        payment_proof = None
+        if None not in [sender_address, receiver_address]:
+            payment_proof = SlatePaymentProof(sender_address, receiver_address)
 
         # add values to Slate for passing to other participants:
         # UUID, inputs, change_outputs, fee, amount, lock_height, kSG, xSG, oS

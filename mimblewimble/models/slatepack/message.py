@@ -84,8 +84,21 @@ class SlatepackMessage:
         self.emode = emode
         self.payload = payload
 
-    def pack(self):
-        pass
+    def pack(self, word_length=None, words_per_line=None, string_encoding='ascii'):
+        preimage = self.serialize()
+
+        hashed = hashlib.sha256(preimage).digest()
+        hashed = hashlib.sha256(hashed).digest()
+        checksum = hashed[0:4]
+
+        s = checksum + preimage
+
+        packed = slatepack_pack(
+            s,
+            word_length=word_length,
+            words_per_line=words_per_line,
+            string_encoding=string_encoding)
+        return packed
 
     @classmethod
     def unpack(self, packed: str):
@@ -109,15 +122,29 @@ class SlatepackMessage:
     def serialize(self):
         serializer = Serializer()
 
+        self.version.serialize(serializer)
         serializer.write(int(self.emode).to_bytes(1, 'big'))
 
         opt_flags = 0x00
-        if self.emode == EMode.PLAINTEXT and self.sender is not None:
+        if self.emode == EMode.PLAINTEXT and self.metadata.sender is not None:
             opt_flags |= 0x01
+
+        if self.emode == EMode.PLAINTEXT and len(self.metadata.recipients) > 0:
+            opt_flags |= 0x02
+
         serializer.write(opt_flags.to_bytes(2, 'big'))
+
+        opt_fields_len = 0 # what should it be?
+        serializer.write(opt_fields_len.to_bytes(4, 'big'))
 
         if opt_flags & 0x01 == 0x01:
             self.metadata.sender.serialize(serializer)
+
+        if opt_flags & 0x02 == 0x02:
+            num_recipients = len(self.metadata.recipients)
+            serializer.write(num_recipients.to_bytes(2, 'big'))
+            for recipient in self.metadata.recipients:
+                recipient.serialize(serializer)
 
         serializer.write(self.payload)
 
@@ -134,11 +161,20 @@ class SlatepackMessage:
         opt_flags = int.from_bytes(serializer.read(2), 'big')
         opt_fields_len = int.from_bytes(serializer.read(4), 'big')
 
-        metadata = SlatepackMetadata()
+        sender = None
+        recipients = []
+
         if opt_flags & 0x01 == 0x01:
             sender = SlatepackAddress.deserialize(serializer)
+
+        if opt_flags & 0x02 == 0x02:
             recipients = []
-            metadata = SlatepackMetadata(sender, recipients)
+            num_recipients = int.from_bytes(serializer.read(2), 'big')
+            for i in range(num_recipients):
+                recipient = SlatepackAddress.deserialize(serializer)
+                recipients.append(recipient)
+
+        metadata = SlatepackMetadata(sender=sender, recipients=recipients)
 
         payload_size = int.from_bytes(serializer.read(8), 'big')
         payload = serializer.read(payload_size)

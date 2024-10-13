@@ -1,5 +1,3 @@
-
-
 from mimblewimble.models.slatepack.message import SlatepackMessage, EMode
 from mimblewimble.wallet import Wallet
 

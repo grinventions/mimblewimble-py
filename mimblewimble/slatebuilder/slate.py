@@ -365,12 +365,12 @@ class Slate:
         serializer.write(self.version.to_bytes(2, 'big'))
         serializer.write(self.block_version.to_bytes(2, 'big'))
 
-        serializer.write(UUID('urn:uuid:{0}'.format(self.slate_id)).bytes)
-
+        slate_id = UUID('urn:uuid:{0}'.format(self.slate_id))
+        serializer.write(slate_id.bytes)
         serializer.write(int(self.stage).to_bytes(1, 'big'))
 
         if self.offset is not None:
-            serializer.write(self.offset)
+            serializer.write(self.offset.serialize())
         else:
             serializer.write(int(0).to_bytes(32, 'big'))
 
@@ -457,9 +457,10 @@ class Slate:
         stage_int = int.from_bytes(serializer.read(1), 'big')
         stage = ESlateStage(stage_int)
 
-        transaction_offset = serializer.read(32)
-        if int.from_bytes(transaction_offset, 'big') == 0:
-            transaction_offset = None
+        transaction_offset_bytes = serializer.read(32)
+        transaction_offset = None
+        if int.from_bytes(transaction_offset_bytes, 'big') != 0:
+            transaction_offset = BlindingFactor(transaction_offset_bytes)
 
         field_status_byte = int.from_bytes(serializer.read(1), 'big')
         field_status = OptionalFieldStatus.fromByte(field_status_byte)
