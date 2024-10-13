@@ -30,8 +30,8 @@ class SlatepackVersion:
 class SlatepackMetadata:
     def __init__(
             self,
-            recipients: Optional[List[SlatepackAddress]] = [],
-            sender: Optional[SlatepackAddress] = None):
+            sender: Optional[SlatepackAddress] = None,
+            recipients: Optional[List[SlatepackAddress]] = []):
         self.sender = sender
         self.recipients = recipients
 
@@ -56,10 +56,10 @@ class SlatepackMetadata:
         inner_buffer = Serializer()
         inner_buffer.write(serializer.read(size))
 
-        opt_flags = inner_buffer.read(2)
+        opt_flags = int.from_bytes(inner_buffer.read(2), 'big')
 
         sender = None
-        if opt_flas & 0x01 == 0x01:
+        if opt_flags & 0x01 == 0x01:
             sender = SlatepackAddress.deserialize(inner_buffer)
 
         recipients = []

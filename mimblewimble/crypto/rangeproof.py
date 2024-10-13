@@ -30,7 +30,8 @@ class RangeProof:
         proofSize = int.from_bytes(serializer.read(8), 'big')
         if proofSize > MAX_PROOF_SIZE:
             raise ValueError('Proof of size {0} exceeds the maximum'.format(str(len(proofSize))))
-        return RangeProof(serializer.read(proofSize))
+        proof_bytes = serializer.read(proofSize)
+        return RangeProof(proof_bytes)
 
     def hex(self):
         serializer = BytesIO()

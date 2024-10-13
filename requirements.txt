@@ -6,3 +6,4 @@ bip32
 bip_utils
 cryptography
 pynacl
+pyrage

@@ -1,4 +1,7 @@
+import os
+
 from typing import List, Tuple
+from uuid import UUID
 
 from mimblewimble.entity import OutputDataEntity
 
@@ -48,16 +51,24 @@ class SendSlateBuilder:
 
         # add values to Slate for passing to other participants:
         # UUID, inputs, change_outputs, fee, amount, lock_height, kSG, xSG, oS
+
+        slate_id_bytes = os.urandom(16)
+        slate_id = str(UUID(bytes=slate_id_bytes))
+
+        stage = ESlateStage.STANDARD_SENT
+
         block_version = Consensus.getHeaderVersion(block_height)
         slate = Slate(
+            slate_id,
             slate_version,
             block_version,
             amount,
             Fee.fromInt(fee),
             payment_proof,
             EKernelFeatures.DEFAULT_KERNEL,
-            transaction_offset, signatures=[signature])
-        slate.setStage(ESlateStage.STANDARD_SENT)
+            transaction_offset,
+            signatures=[signature],
+            stage=stage)
         for inp in inputs:
             slate.appendInput(
                 inp.getFeatures(),

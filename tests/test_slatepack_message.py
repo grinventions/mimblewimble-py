@@ -26,4 +26,11 @@ def test_slatepack_message():
     slatepack_message = SlatepackMessage(
         version, metadata, emode, payload)
 
-    encrypted = slatepack_message.encrypt()
+    assert slatepack_message.is_encrypted()
+    assert slatepack_message.toJSON() == {
+        'slatepack': [0, 0],
+        'mode': 1,
+        'payload': 'dROgyvxKh+zvAUTDypP59aLko83BQ5kwKVJcBgroCQQ='
+    }
+
+

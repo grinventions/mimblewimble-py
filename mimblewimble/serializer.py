@@ -13,8 +13,11 @@ class Serializer:
         self.protocol = protocol
         self.raw = BytesIO()
 
-    def resetPointer():
-        self.pnt = 0
+    def resetPointer(self, n=None):
+        if n is None:
+            self.pnt = 0
+        else:
+            self.pnt = n
 
     def read(self, n):
         self.raw.seek(self.pnt)
@@ -23,6 +26,25 @@ class Serializer:
 
     def write(self, b: bytes):
         self.raw.write(b)
+
+    def readline(self, clean_newline=False):
+        self.raw.seek(self.pnt)
+        line = self.raw.readline()
+        self.pnt = self.raw.tell()
+        if clean_newline:
+            if line[-1] == ord('\n'):
+                return line[0:-1]
+        return line
+
+    def readlines(self):
+        lines = []
+        line = self.readline()
+        while line != b'':
+            lines.append(line)
+            line = self.readline()
+        if line != b'':
+            lines.append(line)
+        return lines
 
     def readString(self, n, encoding='ascii'):
         as_bytes = self.read(n)
@@ -38,6 +60,12 @@ class Serializer:
     def getProtocol(self):
         return self.protocol
 
+    def readremaining(self):
+        self.raw.seek(self.pnt)
+        value = self.raw.read()
+        self.pnt = self.raw.tell()
+        return value
+
     def readall(self):
         self.raw.seek(0)
         value = self.raw.read()
@@ -46,3 +74,6 @@ class Serializer:
 
     def getStream(self):
         return self.raw
+
+    def __len__(self):
+        return self.raw.getbuffer().nbytes

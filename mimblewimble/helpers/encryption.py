@@ -7,18 +7,9 @@ from io import BytesIO
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-from age.stream import stream_decrypt, stream_encrypt
-
-from age.keys.ed25519 import Ed25519PrivateKey as ageEd25519PrivateKey
-from age.keys.ed25519 import Ed25519PublicKey as ageEd25519PublicKey
-
-from age.keys.agekey import AgePublicKey
-
-from age.algorithms.ssh_ed25519 import ssh_ed25519_decrypt_file_key
-from age.algorithms.ssh_ed25519 import ssh_ed25519_encrypt_file_key
-
-from age.file import Decryptor as ageStreamDecrypt
-from age.file import Encryptor as ageStreamEncrypt
+from pyrage import decrypt as age_decrypt
+from pyrage import encrypt as age_encrypt
+from pyrage import x25519 as age_x25519
 
 from hashlib import pbkdf2_hmac
 from Crypto.Cipher import ChaCha20_Poly1305
@@ -48,53 +39,21 @@ def decrypt(
     return plaintext
 
 
-def ageED25519pk(ed25519pk: bytes):
-    pk = Ed25519PublicKey.from_public_bytes(ed25519pk)
-    return ageEd25519PublicKey(pk)
+def ageX25519Encrypt(
+        plaintext: bytes,
+        _recipients: List[str]):
+    recipients = [
+        x25519.Recipient.from_str(r) for r in _recipients]
+    return age_encrypt(plaintext, recipients)
 
 
-def ageED25519fingerprint(ed25519pk: bytes):
-    ed25519_public_key = ageED25519pk(ed25519pk)
-    ed25519_public_key_bin = ed25519_public_key.binary_encoding()
-    return sha256(ed25519_public_key_bin).digest()[:4]
+def ageX25519Decrypt(
+        ciphertext: bytes, age_secret_key: str):
+    receiver = age_x25519.Identity.from_str(
+        age_secret_key)
+    return age_decrypt(ciphertext, [receiver])
 
 
-def ageED25519sk(ed25519sk: bytes):
-    sk = Ed25519PrivateKey.from_private_bytes(ed25519sk)
-    return ageEd25519PrivateKey(sk)
 
 
-def ageED25519Encrypt(plaintext: bytes, ed25519pk: bytes):
-    ed25519_public_key = ageED25519pk(ed25519pk)
-    return ssh_ed25519_encrypt_file_key(
-        ed25519_public_key, plaintext)
 
-
-def ageED25519Decrypt(
-        ciphertext: bytes,
-        ed25519sk: bytes,
-        derived_secret: bytes, fingerprint=None):
-    sk_part = ed25519sk[:32]
-    pk_part = ed25519sk[32:]
-    ed25519_private_key = ageED25519sk(sk_part)
-    if fingerprint is None:
-        fingerprint = ageED25519fingerprint(pk_part)
-    return ssh_ed25519_decrypt_file_key(
-        ed25519_private_key, fingerprint, derived_secret, ciphertext)
-
-
-def ageX25519Encrypt(plaintext: bytes, keys: List[AgePublicKey]):
-    # prepare the output buffer and encrypt
-    buffer_out = BytesIO()
-    with ageStreamEncrypt(keys, buffer_out) as encryptor:
-        encryptor.write(plaintext)
-
-    # return the content of the output buffer
-    buffer_out.seek(0)
-    return buffer_out.read()
-
-
-def ageX25519Decrypt(ciphertext: bytes, sk: bytes):
-    # x25519_decrypt_file_key(private_key, derived_secret, encrypted_file_key)
-    # TODO
-    pass

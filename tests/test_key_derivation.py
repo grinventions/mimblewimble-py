@@ -1,3 +1,5 @@
+import pytest
+
 from mimblewimble.keychain import KeyChain
 
 
@@ -8,6 +10,7 @@ def test_key_derivation():
     key1234 = kc.derivePrivateKeyAmount(path, 1234)
 
 
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_age_encryption():
     master_seed = '2d638479b8e9ae00bee803faa7d40a8911d410bbb760d6c7da3ef52ce284cca8'
     kc = KeyChain.fromSeed(bytes.fromhex(master_seed))

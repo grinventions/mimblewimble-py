@@ -4,6 +4,8 @@ import os
 from typing import Union
 
 from bip32 import BIP32
+from bip_utils import Bech32Encoder
+
 from hashlib import blake2b, pbkdf2_hmac, sha512
 
 from nacl import bindings
@@ -24,7 +26,7 @@ from mimblewimble.crypto.bulletproof import Bulletproof
 
 from mimblewimble.models.slatepack.address import SlatepackAddress
 
-from mimblewimble.helpers.encryption import ageED25519Encrypt, ageED25519Decrypt
+from mimblewimble.helpers.encryption import ageX25519Decrypt
 
 
 class KeyChain:
@@ -69,6 +71,33 @@ class KeyChain:
         pk, sk = bindings.crypto_sign_seed_keypair(seed_blake)
         return pk
 
+    def deriveX25519PublicKey(self, path: str):
+        ed25519_pk = self.deriveED25519PublicKey(path=path)
+
+        x25519_pk = bindings.crypto_sign_ed25519_pk_to_curve25519(ed25519_pk)
+
+        return x25519_pk
+
+    def deriveX25519SecretKey(self, path: str):
+        # get the seed
+        # seed_blake = self.deriveED25519Seed(path)
+
+        # get the ed25519 public key and public key from it
+        # ed25519_pk, ed25519_sk = bindings.crypto_sign_seed_keypair(seed_blake)
+
+        ed25519_sk = self.deriveED25519SecretKey(path=path)
+
+        # construct the x25519 secret key
+        x25519_sk = bindings.crypto_sign_ed25519_sk_to_curve25519(ed25519_sk)
+
+        return x25519_sk
+
+    def deriveAgeSecretKey(self, path: str):
+        x25519_sk = self.deriveX25519SecretKey(path)
+
+        age_secret_key = Bech32Encoder.Encode('age-secret-key-', x25519_sk)
+        return age_secret_key.upper()
+
     def signED25519(self, message: bytes, path: str) -> bytes:
         sk = self.deriveED25519SecretKey(path)
         signature = bindings.crypto_sign(message, sk)
@@ -83,21 +112,19 @@ class KeyChain:
             message: bytes) -> bool:
         public_key_bytes = public_key
         if isinstance(public_key, str):
-            public_key_bytes = KeyChain.slatepackAddressToED25519PublicKey(public_key)
+            public_key_bytes = KeyChain.slatepackAddressToED25519PublicKey(
+                public_key)
         recovered = bindings.crypto_sign_open(signature, public_key_bytes)
         return recovered == message
-
-    def ageEncrypt(self, plaintext: bytes, path: str):
-        ed25519pk = self.deriveED25519PublicKey(path)
-        return ageED25519Encrypt(plaintext, ed25519pk)
 
     def ageDecrypt(
             self,
             ciphertext: bytes,
-            path: str, derived_secret: bytes, fingerprint=None):
-        ed25519sk = self.deriveED25519SecretKey(path)
-        return ageED25519Decrypt(
-            ciphertext, ed25519sk, derived_secret, fingerprint=fingerprint)
+            path: str):
+        age_secret_key = self.deriveAgeSecretKey(path)
+
+        return ageX25519Decrypt(
+            ciphertext, age_secret_key)
 
     def deriveSlatepackAddress(self, path: str, testnet=False):
         pk = self.deriveED25519PublicKey(path)

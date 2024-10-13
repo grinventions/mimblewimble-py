@@ -30,6 +30,7 @@ from mimblewimble.models.transaction import BlindingFactor
 from mimblewimble.models.transaction import TransactionOutput
 from mimblewimble.models.transaction import TransactionKernel
 from mimblewimble.models.fee import Fee
+from mimblewimble.models.slatepack.message import SlatepackMessage, EMode
 
 from mimblewimble.entity import OutputDataEntity
 from mimblewimble.helpers.fee import calculateFee
@@ -38,6 +39,9 @@ from mimblewimble.slatebuilder import Slate
 from mimblewimble.slatebuilder import SendSlateBuilder
 from mimblewimble.slatebuilder import ReceiveSlateBuilder
 from mimblewimble.slatebuilder import FinalizeSlateBuilder
+
+# temp
+from age.keys.agekey import AgePrivateKey, AgePublicKey
 
 
 class Wallet:
@@ -353,6 +357,25 @@ class Wallet:
             sender_address_bytes,
             testnet=testnet)
         return finalized_slate
+
+
+    def ageDecrypt(self, ciphertext: bytes, path='m/0/1/0'):
+        keychain = KeyChain.fromSeed(self.master_seed)
+        return keychain.ageDecrypt(ciphertext, path)
+
+
+    def decryptSlatepack(self, armored_slatepack: str, path='m/0/1/0'):
+        slatepack_message = SlatepackMessage.unarmor(armored_slatepack)
+        if not slatepack_message.is_encrypted():
+            # TODO raise a warning it was not encrypted
+            return slatepack_message
+
+        keychain = KeyChain.fromSeed(self.master_seed)
+        age_secret_key = keychain.deriveAgeSecretKey(path)
+
+        slatepack_message.decryptPayload(age_secret_key)
+
+        return slatepack_message
 
 
     @classmethod

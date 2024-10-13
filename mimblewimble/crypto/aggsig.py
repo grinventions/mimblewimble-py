@@ -20,6 +20,7 @@ from secp256k1_zkp_mw import secp256k1_ec_pubkey_parse
 from secp256k1_zkp_mw import secp256k1_schnorrsig_parse
 from secp256k1_zkp_mw import secp256k1_schnorrsig_verify_batch
 
+from secp256k1_zkp_mw import secp256k1_ecdsa_signature_parse_der
 from secp256k1_zkp_mw import secp256k1_ecdsa_signature_parse_compact
 from secp256k1_zkp_mw import secp256k1_ecdsa_signature_serialize_compact
 
@@ -140,7 +141,9 @@ class AggSig:
         return parsed_signatures
 
     def toCompact(self, signature: Signature):
-        assert signature.isCompact()
-        compact_signature = secp256k1_ecdsa_signature_serialize_compact(
+        assert not signature.isCompact()
+        parsed_signature = secp256k1_ecdsa_signature_parse_der(
             self.ctx, signature.getSignatureBytes())
+        compact_signature = secp256k1_ecdsa_signature_serialize_compact(
+            self.ctx, parsed_signature)
         return Signature(compact_signature, compact=True)
