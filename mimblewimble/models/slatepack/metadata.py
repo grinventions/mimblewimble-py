@@ -36,18 +36,27 @@ class SlatepackMetadata:
         self.recipients = recipients
 
     def serialize(self, serializer: Serializer):
+        inner_buffer = Serializer()
+
         opt_flags = 0x00
         if self.sender is not None:
             opt_flags |= 0x01
         if len(self.recipients) == 0:
             opt_flags |= 0x02
-        serializer.write(opt_flags.to_bytes(2, 'big'))
+        inner_buffer.write(opt_flags.to_bytes(2, 'big'))
+
+        if opt_flags & 0x01 == 0x01:
+            self.sender.serialize(inner_buffer)
 
         num_recipients = len(self.recipients)
         if num_recipients > 0:
-            serializer.write(num_recipients.to_bytes(2, 'big'))
+            inner_buffer.write(num_recipients.to_bytes(2, 'big'))
             for recipient in self.recipients:
-                recipient.serialize(serializer)
+                recipient.serialize(inner_buffer)
+
+        inner_buffer_length = len(inner_buffer)
+        serializer.write(inner_buffer_length.to_bytes(4, 'big'))
+        serializer.write(inner_buffer.readall())
 
     @classmethod
     def deserialize(self, serializer: Serializer):
@@ -57,7 +66,6 @@ class SlatepackMetadata:
         inner_buffer.write(serializer.read(size))
 
         opt_flags = int.from_bytes(inner_buffer.read(2), 'big')
-
         sender = None
         if opt_flags & 0x01 == 0x01:
             sender = SlatepackAddress.deserialize(inner_buffer)

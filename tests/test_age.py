@@ -7,12 +7,14 @@ from io import BytesIO
 from age.file import Decryptor as ageStreamDecrypt
 from age.keys.agekey import AgePrivateKey
 
+from pyrage import x25519 as age_x25519
+
 from bip_utils import Bech32Encoder
 
 from mimblewimble.serializer import Serializer
 from mimblewimble.crypto.age import AgeMessage
 
-from mimblewimble.helpers.encryption import ageX25519Decrypt
+from mimblewimble.helpers.encryption import ageX25519Encrypt, ageX25519Decrypt
 
 from mimblewimble.models.slatepack.address import SlatepackAddress
 from mimblewimble.models.slatepack.metadata import SlatepackVersion
@@ -270,3 +272,57 @@ def test_age_recipient_stanza():
 
 
     # TODO now we need to prove that the decrypted payload is correct
+
+def test_pyrage_encryption():
+    # Generate key pair
+    identity = age_x25519.Identity.generate()
+    print(str(identity))
+    public_key = identity.to_public()
+    print(public_key)
+    plaintext = b"Hello, this is a test message!"
+
+    # Test encryption and decryption with public key string
+    recipients = [str(public_key)]
+    ciphertext = ageX25519Encrypt(plaintext, recipients)
+    decrypted = ageX25519Decrypt(ciphertext, str(identity))
+    assert decrypted == plaintext, "Decryption failed for string public key"
+
+    # Test empty plaintext
+    plaintext = b""
+    ciphertext = ageX25519Encrypt(plaintext, recipients)
+    decrypted = ageX25519Decrypt(ciphertext, str(identity))
+    assert decrypted == plaintext, "Decryption failed for empty plaintext"
+
+def test_pyrage_case():
+    secret_key = 'AGE-SECRET-KEY-16XFRV8AFSREQ6JGZ6JK3JW4X0DRVS9ENUPWRZDDEQ6024LG0GFTQ45M3J4'
+    public_key = 'age1ax2qd3283yh0hr0d7zw04qjk7s2782qwgmpu7d9yju5rwqjymehsz8wjce'
+    plaintext = b"Hello, this is a test message!"
+
+    # Test encryption and decryption with public key string
+    recipients = [str(public_key)]
+    ciphertext = ageX25519Encrypt(plaintext, recipients)
+    decrypted = ageX25519Decrypt(ciphertext, secret_key)
+    assert decrypted == plaintext, "Decryption failed for string public key"
+
+def test_age_both_ways():
+    plaintext = b'This is a test message for age encryption and decryption.'
+    age_secret_key = 'AGE-SECRET-KEY-1WZWET7A3CSR8YM446MGH2U3FNHTJ6G05856GL5X52X3WNTR9NA7S8W0C5H'
+    recipients = ['age1f2yv3z4hx6rfdmect7uecjwyzfyuscrtnet6v0eydypugy2f93gsuwac7u']
+
+    ciphertext = ageX25519Encrypt(plaintext, recipients)
+    decrypted = ageX25519Decrypt(ciphertext, age_secret_key)
+
+    assert decrypted == plaintext
+
+def test_case_age_slatepacks():
+    from mimblewimble.codecs import Base64Codec
+    plaintext_b64 = 'AAAAAQSoF2K4xG0yKGSeKkvuXvUBTgZuwD6dhM/VUX04TUgqYNFxwotIqy+aeXupx8Mj5aoGAAAABvwjrAAAAAAAEzFUgAEAAhBwmMJIBoHTujsWq5xpbKkuWrCt+Q8Se2NTsTmOvK/7A9E/jeAC1nYNZR/NIp4hQfKmX+ExI71rXYigtUSJiWUjAwACAAEIW6FwSC3S89EdFe/CmR/XAYM5fMsIq14lWNv2V8VctWEBAAk9SY7XjQ8ntIT2UbZhxVnzXGVAdbxhx5d8GvlIxiAEDQAAAAAAAAKjLOo97MRxVi/LR/5eME/JzZaStaUi7OAdiKdHelMING3i8++Srdtlr0u0ZBFqzTokiVJx+mWEKkTThpRjFvGg8QoFybLu1tZF/2X9y3U7hZP47rEM5R0ui/83meyemkmhKfaRlruIsE1EHmrB9zETsFtO5WkJnmjiBkba/tANHx24Wu3LQwEzIQv8ilfAANy8eOR+s+unDEwfsIWFsKcfQ7rOCc4CWDG6507rtJhnLLcvbeMchPBFqnvGolVXnDN7/FVj6oF3ChQ7gojYSdRO06Pl9zaWMo2fu+kmTIoWNp+iNdpRZO9NteHJDkW2W6jFzOVnvfLWbhaERGBxJvFEyvYojydVGUJoVwMJ1x1XH6UqHC2uBBe8Fe9Eg4zcgfTIkEdl5V14B4L5qrIT9veK1sNL01V7ckyNqOJaA2YliPU0toa1LSauK7mG/AtUixqXbKGYLSetLOOXBOx4NGl/gbhpAK7WCmNkuUtc9yxhdADZJDyC4F/KylaYzxxkA3pbpf84BqkyrQOr7V5Z6pg+2VK3qrNVF06jf8w4tCMJbxtEEPlZy3TLKZ6z3ulzP6TGpZcLCzK/XkqJFIxv2M/he+XHrtB3wUK0VzMbs2S9d9agoSAMBF8GFrT80b2gH1SXc+ifPH3xBjmIbiGOcS91KW3HKrJdW4pUy3qhlpjWgc1J0OA9Ap7TYsuxa09coyZxie16I+KHrJe9+Ld3CMB2GwRa/vT85T2ag4OpYGz3/WG+0UWoDiUe1klPmdTVBaYGQJ4ZlvPtZ64AfXaBKdvx3ScqoUdvji0dHWoIv9RxSiYFHlgWsp9Y6+vgX2jm5ByIF6q+oY0t8E5KH21seItUBqBhstCtcMQuU3NfjeTlkW3LU17QMiWGJMrM+jFViYOMQ0jhUR9dY8DaceaQ2Jg3XO6ibTuo0WYR/Wf6OHytnekKizQDULPYhfmI/Tr/Vk4c8XpwiBSY8h7C4DONF3xceU+13AA='
+    plaintext = Base64Codec.decode(plaintext_b64)
+    # plaintext = b'This is a test message for age encryption and decryption.'
+    age_secret_key = 'AGE-SECRET-KEY-1QPRVDN2X7RZ03AZUP3MQL5TWXVMWPVJQNVSZAQ58XHDJE6CL64HSW2XHVP'
+    recipients = ['age1mrdqwkrdkj4hldcv7q94evatqe5reedc045vddlwd3742verj3cqfcxhr5']
+
+    ciphertext = ageX25519Encrypt(plaintext, recipients)
+    decrypted = ageX25519Decrypt(ciphertext, age_secret_key)
+
+    assert decrypted == plaintext

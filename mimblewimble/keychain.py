@@ -100,8 +100,11 @@ class KeyChain:
 
     def signED25519(self, message: bytes, path: str) -> bytes:
         sk = self.deriveED25519SecretKey(path)
-        signature = bindings.crypto_sign(message, sk)
+        signature_message = bindings.crypto_sign(message, sk)
         del sk
+        # first 64 bytes is signature, then message, this is just how nacl works
+        # but grin only needs signature
+        signature = signature_message[0:64]
         return signature
 
     @classmethod
@@ -114,7 +117,8 @@ class KeyChain:
         if isinstance(public_key, str):
             public_key_bytes = KeyChain.slatepackAddressToED25519PublicKey(
                 public_key)
-        recovered = bindings.crypto_sign_open(signature, public_key_bytes)
+        signature_message = signature + message
+        recovered = bindings.crypto_sign_open(signature_message, public_key_bytes)
         return recovered == message
 
     def ageDecrypt(

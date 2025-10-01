@@ -82,6 +82,9 @@ class SlatepackMessage:
         self.version = version
         self.metadata = metadata
         self.emode = emode
+
+        # if encrypted, payload contains all slate info
+        # if decrypted, the version and metadata are ommitted
         self.payload = payload
 
     def pack(self, word_length=None, words_per_line=None, string_encoding='ascii'):
@@ -146,6 +149,10 @@ class SlatepackMessage:
             for recipient in self.metadata.recipients:
                 recipient.serialize(serializer)
 
+        payload_size_int = len(self.payload)
+        payload_size_bin = payload_size_int.to_bytes(8, 'big') # TODO that was missing
+        serializer.write(payload_size_bin)
+
         serializer.write(self.payload)
 
         return serializer.readall()
@@ -158,12 +165,13 @@ class SlatepackMessage:
         version = SlatepackVersion.deserialize(serializer)
         emode = EMode(int.from_bytes(serializer.read(1), 'big'))
 
-        opt_flags = int.from_bytes(serializer.read(2), 'big')
+        opt_flags_bin = serializer.read(2)
+        opt_flags = int.from_bytes(opt_flags_bin, 'big')
+
         opt_fields_len = int.from_bytes(serializer.read(4), 'big')
 
         sender = None
         recipients = []
-
         if opt_flags & 0x01 == 0x01:
             sender = SlatepackAddress.deserialize(serializer)
 
@@ -220,7 +228,33 @@ class SlatepackMessage:
         keys = [
             recipient.toAge() for recipient in recipients
         ]
-        self.payload = ageX25519Encrypt(self.payload, keys)
+
+        serializer = Serializer()
+
+        '''
+        opt_flags = 0x01
+        if len(self.metadata.recipients) > 0:
+            opt_flags |= 0x02
+        serializer.write(opt_flags.to_bytes(2, 'big'))
+        self.sender.serialize(serializer)
+        if len(self.metadata.recipients) > 0:
+            num_recipients = len(self.metadata.recipients)
+            serializer.write(num_recipients.to_bytes(2, 'big'))
+            for recipient in self.metadata.recipients:
+                recipient.serialize(serializer)
+        '''
+        self.metadata.serialize(serializer)
+        serializer.write(self.payload)
+
+        '''
+        self.metadata.serialize(s)
+        s.write(self.payload)
+        # serialized = self.payload
+        '''
+
+        serialized = serializer.readall()
+
+        self.payload = ageX25519Encrypt(serialized, keys)
         self.emode = EMode.ENCRYPTED
 
     def decryptPayload(self, age_secret_key: str):

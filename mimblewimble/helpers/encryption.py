@@ -11,6 +11,8 @@ from pyrage import decrypt as age_decrypt
 from pyrage import encrypt as age_encrypt
 from pyrage import x25519 as age_x25519
 
+from age.keys.agekey import AgePublicKey
+
 from hashlib import pbkdf2_hmac
 from Crypto.Cipher import ChaCha20_Poly1305
 
@@ -42,8 +44,15 @@ def decrypt(
 def ageX25519Encrypt(
         plaintext: bytes,
         _recipients: List[str]):
+    recipients = []
+    for r in _recipients:
+        if isinstance(r, AgePublicKey):
+            as_str = r.public_string()
+        else:
+            as_str = r
+        recipients.append(as_str)
     recipients = [
-        x25519.Recipient.from_str(r) for r in _recipients]
+        age_x25519.Recipient.from_str(r) for r in recipients]
     return age_encrypt(plaintext, recipients)
 
 
@@ -52,8 +61,4 @@ def ageX25519Decrypt(
     receiver = age_x25519.Identity.from_str(
         age_secret_key)
     return age_decrypt(ciphertext, [receiver])
-
-
-
-
 

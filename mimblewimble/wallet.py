@@ -370,6 +370,9 @@ class Wallet:
         keychain = KeyChain.fromSeed(self.master_seed)
         return keychain.ageDecrypt(ciphertext, path)
 
+    def deriveAgeSecretKey(self, path='m/0/1/0'):
+        keychain = KeyChain.fromSeed(self.master_seed)
+        return keychain.deriveAgeSecretKey(path)
 
     def decryptSlatepack(self, armored_slatepack: str, path='m/0/1/0'):
         slatepack_message = SlatepackMessage.unarmor(armored_slatepack)
