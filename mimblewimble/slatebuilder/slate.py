@@ -246,7 +246,7 @@ class Slate:
             fee: Fee,
             proof_opt: Union[SlatePaymentProof, None],
             kernel_features: EKernelFeatures,
-            transaction_offest: BlindingFactor,
+            transaction_offset: BlindingFactor,
             signatures=[],
             commitments=[],
             lock_height=0,
@@ -264,7 +264,7 @@ class Slate:
         self.kernel_features_args = kernel_features_args,
         self.signatures = signatures
         self.stage = stage
-        self.offset = transaction_offest
+        self.offset = transaction_offset
         self.lock_height = lock_height
         self.commitments = commitments
         self.num_participants = num_participants

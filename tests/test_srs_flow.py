@@ -1,7 +1,16 @@
 from hashlib import sha256
 import time
+from typing import List
+
+import pytest
+
+from tests.utils import MockNode
+
+from mimblewimble.entity import OutputDataEntity
+from mimblewimble.models.transaction import EOutputStatus
 
 from mimblewimble.wallet import Wallet
+from mimblewimble.wallet import WalletStorageInMemory, PersistentWallet, NodeAccess
 
 from mimblewimble.models.slatepack.address import SlatepackAddress
 from mimblewimble.models.slatepack.metadata import SlatepackVersion
@@ -87,3 +96,35 @@ def test_srs_flow_slatepacks():
         received_receive_slate, secret_key, secret_nonce, path=alice_path)
     # this is the final slate that can be broadcasted to nodes
 
+def test_srs_flow_slatepacks_persistent():
+    mock_node = MockNode()
+
+    # prepare wallets
+    alice_path = 'm/0/1/0'
+    alice_wallet = PersistentWallet(
+        Wallet.initialize(), WalletStorageInMemory(), mock_node)
+
+    bob_path = 'm/0/1/0'
+    bob_wallet = PersistentWallet(
+        Wallet.initialize(), WalletStorageInMemory(), mock_node)
+
+    # transaction setup
+    fee_base = 7000000
+
+    # Alice needs some coinbase to send to Bob
+    coinbase_amount = 60000000000
+    coinbase_transaction = alice_wallet.createCoinbase(
+        coinbase_amount, path=alice_path)
+
+    # submit the coinbase transaction to the node
+    mock_node.push_transaction(coinbase_transaction)
+
+    # prepare S1 send slatepack, but Alice has no confirmed funds yet
+    with pytest.raises(Exception, match='Insufficient funds'):
+        alice_wallet.send(
+            30000000000,
+            bob_wallet.getSlatepackAddress(),
+            fee_base=fee_base)
+
+    # mine a block to confirm Alice's coinbase
+    mock_node.mine()

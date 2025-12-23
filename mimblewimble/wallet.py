@@ -1,7 +1,8 @@
 import hmac
 import os
 
-from typing import Tuple, List
+from typing import Tuple, List, Optional, Dict
+from uuid import UUID
 
 from nacl import bindings
 
@@ -27,7 +28,10 @@ from mimblewimble.models.transaction import EOutputStatus
 from mimblewimble.models.transaction import EOutputFeatures
 from mimblewimble.models.transaction import EKernelFeatures
 from mimblewimble.models.transaction import BlindingFactor
+from mimblewimble.models.transaction import TransactionInput
 from mimblewimble.models.transaction import TransactionOutput
+from mimblewimble.models.transaction import TransactionBody
+from mimblewimble.models.transaction import Transaction
 from mimblewimble.models.transaction import TransactionKernel
 from mimblewimble.models.fee import Fee
 
@@ -365,7 +369,6 @@ class Wallet:
             testnet=testnet)
         return finalized_slate
 
-
     def ageDecrypt(self, ciphertext: bytes, path='m/0/1/0'):
         keychain = KeyChain.fromSeed(self.master_seed)
         return keychain.ageDecrypt(ciphertext, path)
@@ -419,3 +422,260 @@ class Wallet:
         if passphrase is not None:
             w.unshieldWallet(passphrase, nonce=nonce, salt=salt)
         return w
+
+class WalletStorage:
+    # Outputs
+    def get_all_outputs(self) -> List[OutputDataEntity]:
+        raise NotImplementedError
+
+    def get_outputs_by_status(self, status: EOutputStatus) -> List[OutputDataEntity]:
+        raise NotImplementedError
+
+    def add_output(self, output: OutputDataEntity, kernel: Optional[TransactionKernel] = None):
+        """Add new output (e.g., receive or coinbase). Kernel optional for coinbase/confirmed."""
+        raise NotImplementedError
+
+    def update_output(self, output: OutputDataEntity):
+        """Update status, height, etc. (e.g., lock, spend, confirm, mature)."""
+        raise NotImplementedError
+
+    def mark_output_spent(self, commitment: bytes):
+        """Helper for refresh: mark as spent."""
+        raise NotImplementedError
+
+    # Transactions / Slates
+    def save_slate_context(
+        self,
+        slate_id: UUID,
+        slate,
+        secret_key: Optional[bytes] = None,
+        secret_nonce: Optional[bytes] = None,
+        kernel: Optional[TransactionKernel] = None
+    ):
+        """Save in-progress or confirmed slate + blinding secrets."""
+        raise NotImplementedError
+
+    def get_slate_context(self, slate_id: UUID) -> Optional[Dict]:
+        """Return dict with slate, secrets, kernel."""
+        raise NotImplementedError
+
+    def get_tx_kernel(self, slate_id: UUID) -> Optional[TransactionKernel]:
+        """Get kernel for confirmed tx."""
+        raise NotImplementedError
+
+    def delete_slate_context(self, slate_id: UUID):
+        """Cleanup after cancel or full confirm."""
+        raise NotImplementedError
+
+    # Misc
+    def commit(self):
+        """Flush changes (useful for DB impl)."""
+        pass
+
+class WalletStorageInMemory(WalletStorage):
+    def __init__(self):
+        self.outputs: List[OutputDataEntity] = []  # All outputs (active + spent)
+        self.txs: Dict[UUID, Dict] = {}  # slate_id -> context
+
+    # Outputs
+    def get_all_outputs(self) -> List[OutputDataEntity]:
+        return self.outputs[:]
+
+    def get_outputs_by_status(self, status: EOutputStatus) -> List[OutputDataEntity]:
+        return [o for o in self.outputs if o.status == status]
+
+    def add_output(self, output: OutputDataEntity, kernel: Optional[TransactionKernel] = None):
+        # For coinbase: set status=IMMATURE, link kernel if needed
+        self.outputs.append(output)
+        if kernel and output.is_coinbase:  # assume flag or check features
+            # Optional: store kernel separately or in output
+            pass
+
+    def update_output(self, updated_output: OutputDataEntity):
+        for i, o in enumerate(self.outputs):
+            if o.commitment == updated_output.commitment:  # assume unique commitment
+                self.outputs[i] = updated_output
+                return
+        raise ValueError("Output not found")
+
+    def mark_output_spent(self, commitment: bytes):
+        for o in self.outputs:
+            if o.commitment == commitment:
+                o.status = EOutputStatus.SPENT
+                return
+
+    # Slates / Txs
+    def save_slate_context(
+        self,
+        slate_id: UUID,
+        slate,
+        secret_key=None,
+        secret_nonce=None,
+        kernel=None
+    ):
+        self.txs[slate_id] = {
+            'slate': slate,
+            'secret_key': secret_key,
+            'secret_nonce': secret_nonce,
+            'kernel': kernel  # None for in-progress, set on finalize/post
+        }
+
+    def get_slate_context(self, slate_id: UUID) -> Optional[Dict]:
+        return self.txs.get(slate_id)
+
+    def get_tx_kernel(self, slate_id: UUID) -> Optional[TransactionKernel]:
+        ctx = self.txs.get(slate_id)
+        return ctx['kernel'] if ctx else None
+
+    def delete_slate_context(self, slate_id: UUID):
+        self.txs.pop(slate_id, None)
+
+class NodeAccess:
+    def get_current_block_height(self):
+        raise NotImplementedError
+
+    # methods consistent with RFC
+    # https://docs.grin.mw/grin-rfcs/text/0007-node-api-v2/
+    def get_outputs(self, outputs: List[OutputDataEntity]):
+        raise NotImplementedError
+
+    def get_kernel(self, excess: bytes) -> TransactionKernel:
+        """Check if kernel exists, return kernel info + height if found."""
+        raise NotImplementedError
+
+    def push_transaction(self, transaction: Transaction):
+        raise NotImplementedError
+
+class PersistentWallet:
+    def __init__(self, wallet: Wallet, storage: WalletStorage, node=None):
+        self._wallet = wallet
+        self._storage = storage
+
+        if node is not None:
+            self._node = node
+        else:
+            # TODO initialize the default local API node
+            pass
+
+    def post_transaction(self, finalized_slate: SlatepackMessage):
+        self._node.post_transaction(finalized_slate)
+
+    def shieldWallet(self, passphrase: str, salt=None, nonce=None):
+        self._wallet.shieldWallet(passphrase, salt=salt, nonce=nonce)
+
+    def unshieldWallet(self, passphrase: str, salt=None, nonce=None):
+        self._wallet.unshieldWallet(passphrase, salt=salt, nonce=nonce)
+
+    def createCoinbase(self, amount, path='m/0/1/0'):
+        kernel, output = self._wallet.createCoinbase(amount, path=path)
+
+        offset = BlindingFactor(bytes([0x00 for j in range(32)]))
+
+        inputs = [
+            TransactionInput(
+                EKernelFeatures.COINBASE_KERNEL,
+                output.getCommitment()
+            )
+        ]
+        outputs = [output]
+        kernels = [kernel]
+        transaction_body = TransactionBody(
+            inputs, outputs, kernels
+        )
+
+        coinbase_transaction = Transaction(
+            offset,
+            transaction_body
+        )
+        return coinbase_transaction
+
+    def send(
+            self,
+            amount: int,
+            receiver: SlatepackAddress,
+            path='m/0/1/0',
+            num_change_outputs=1,
+            fee_base=0,
+            block_height=None):
+        if block_height is None:
+            block_height = self._node.get_current_block_height()
+
+        spendable_outputs = self._storage.get_outputs_by_status(EOutputStatus.SPENDABLE)
+        inputs = []
+        total_amount = 0
+        for output in spendable_outputs:
+            if total_amount >= amount + fee_base:
+                break
+            inputs.append(output)
+            total_amount += output.getAmount()
+        if total_amount < amount + fee_base:
+            raise Exception('Insufficient funds')
+
+        send_slate, secret_key, secret_nonce = self._wallet.send(
+            inputs,
+            num_change_outputs,
+            amount,
+            fee_base,
+            block_height,
+            path=path,
+            receiver_address=receiver)
+        self._storage.save_tx(
+            send_slate, secret_key=secret_key, secret_nonce=secret_nonce)
+        return send_slate
+
+    def receive(
+            self,
+            send_slate: SlatepackMessage,
+            path='m/0/1/0'):
+        if send_slate.is_encrypted():
+            s1 = self._wallet.decryptSlatepack(
+                send_slate, path=path)
+        else:
+            s1 = send_slate
+
+        slate = s1.getSlate()
+        receive_slate = self._wallet.receive(
+            slate,
+            path=path)
+        self._storage.save_tx(receive_slate)
+        return receive_slate
+
+    def invoice(self):
+        raise Exception('unimplemented')
+
+    def pay(self):
+        raise Exception('unimplemented')
+
+    def finalize(
+            self,
+            final_slate: SlatepackMessage,
+            path='m/0/1/0',
+            testnet=False):
+        if final_slate.is_encrypted():
+            s2 = self._wallet.decryptSlatepack(
+                final_slate, path=path)
+        else:
+            s2 = final_slate
+
+        slate = s2.getSlate()
+        secret_key, secret_nonce = self._storage.get_tx_secrets(slate)
+        finalized_slate = self._wallet.finalize(
+            slate,
+            secret_key,
+            secret_nonce,
+            path=path,
+            testnet=testnet)
+        self._storage.save_tx(finalized_slate)
+        return finalized_slate
+
+    def ageDecrypt(self, ciphertext: bytes, path='m/0/1/0'):
+        return self._wallet.ageDecrypt(ciphertext, path=path)
+
+    def ageEncrypt(self, plaintext: bytes, receiver_address: str):
+        keychain = KeyChain.fromSeed(self._wallet.master_seed)
+        age_public_key = keychain.deriveAgePublicKeyFromSlatepackAddress(
+            receiver_address)
+        return keychain.ageEncrypt(plaintext, age_public_key)
+
+    def getSlatepackAddress(self, path='m/0/1/0', testnet=False):
+        return self._wallet.getSlatepackAddress(path=path, testnet=testnet)
