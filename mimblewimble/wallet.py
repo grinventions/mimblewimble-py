@@ -14,6 +14,7 @@ from hashlib import blake2b, pbkdf2_hmac, sha512
 from bip32 import BIP32
 from bip_utils import Bech32Encoder
 
+from mimblewimble.models.slatepack.metadata import SlatepackVersion, SlatepackMetadata
 from mimblewimble.serializer import Serializer
 from mimblewimble.mnemonic import Mnemonic
 from mimblewimble.keychain import KeyChain
@@ -487,21 +488,23 @@ class WalletStorageInMemory(WalletStorage):
     def add_output(self, output: OutputDataEntity, kernel: Optional[TransactionKernel] = None):
         # For coinbase: set status=IMMATURE, link kernel if needed
         self.outputs.append(output)
-        if kernel and output.is_coinbase:  # assume flag or check features
-            # Optional: store kernel separately or in output
-            pass
+
+        # TODO
+        #if kernel and output.is_coinbase:  # assume flag or check features
+        #    # Optional: store kernel separately or in output
+        #    pass
 
     def update_output(self, updated_output: OutputDataEntity):
         for i, o in enumerate(self.outputs):
-            if o.commitment == updated_output.commitment:  # assume unique commitment
+            if o.output.commitment == updated_output.output.commitment:  # assume unique commitment
                 self.outputs[i] = updated_output
                 return
         raise ValueError("Output not found")
 
     def mark_output_spent(self, commitment: bytes):
         for o in self.outputs:
-            if o.commitment == commitment:
-                o.status = EOutputStatus.SPENT
+            if o.output.commitment == commitment:
+                o.output.status = EOutputStatus.SPENT
                 return
 
     # Slates / Txs
@@ -513,6 +516,7 @@ class WalletStorageInMemory(WalletStorage):
         secret_nonce=None,
         kernel=None
     ):
+        print("Saving slate context for", slate_id)
         self.txs[slate_id] = {
             'slate': slate,
             'secret_key': secret_key,
@@ -557,6 +561,31 @@ class PersistentWallet:
             # TODO initialize the default local API node
             pass
 
+    def refresh(self):
+        # get all outputs awaiting confirmation
+        outputs = self._storage.get_outputs_by_status(EOutputStatus.NO_CONFIRMATIONS)
+        print("Refreshing", len(outputs), "outputs")
+        if len(outputs) == 0:
+            return
+
+        # query node for their status
+        result = self._node.get_outputs(
+            [output.output.getCommitment().getBytes() for output in outputs])
+        print("Node returned", len(result), "outputs")
+
+        # update outputs in storage
+        for commitment_bytes, output_info in result.items():
+            for output in outputs:
+                if output.output.getCommitment().getBytes() == commitment_bytes:
+                    # update output status based on node info
+                    if output_info['spent']:
+                        output.status = EOutputStatus.SPENT
+                    else:
+                        output.status = EOutputStatus.SPENDABLE
+                    output.block_height = output_info['height']
+                    output.mmr_index = output_info['mmr_index']
+                    break
+
     def post_transaction(self, finalized_slate: SlatepackMessage):
         self._node.post_transaction(finalized_slate)
 
@@ -587,6 +616,10 @@ class PersistentWallet:
             offset,
             transaction_body
         )
+
+        # TODO add to storage transactions + output
+        self._storage.add_output(output, kernel=kernel)
+
         return coinbase_transaction
 
     def send(
@@ -596,11 +629,13 @@ class PersistentWallet:
             path='m/0/1/0',
             num_change_outputs=1,
             fee_base=0,
-            block_height=None):
+            block_height=None,
+            encrypt=True):
         if block_height is None:
             block_height = self._node.get_current_block_height()
 
         spendable_outputs = self._storage.get_outputs_by_status(EOutputStatus.SPENDABLE)
+        print("Spendable outputs:", len(spendable_outputs))
         inputs = []
         total_amount = 0
         for output in spendable_outputs:
@@ -619,9 +654,33 @@ class PersistentWallet:
             block_height,
             path=path,
             receiver_address=receiver)
-        self._storage.save_tx(
-            send_slate, secret_key=secret_key, secret_nonce=secret_nonce)
-        return send_slate
+
+        self._storage.save_slate_context(
+            send_slate.slate_id,
+            send_slate,
+            secret_key=secret_key,
+            secret_nonce=secret_nonce)
+
+        # prepare s1 slatepack
+        print("Preparing slatepack message for sending")
+        sender_address = self.getSlatepackAddress(path=path)
+        print("Sender address:", type(sender_address))
+        version = SlatepackVersion(0, 0)
+        metadata = SlatepackMetadata(
+            sender=SlatepackAddress.fromBech32(sender_address))
+        emode = EMode.PLAINTEXT
+        send_slatepack_message = SlatepackMessage(
+            version, metadata, emode, send_slate.serialize())
+        print("Slatepack message prepared")
+
+        if encrypt:
+            print("Encrypting slatepack for", receiver)
+            send_slatepack_message.encryptPayload(
+                [SlatepackAddress.fromBech32(receiver)])
+            return send_slatepack_message.pack()
+
+        print("Returning unencrypted slatepack message")
+        return send_slatepack_message
 
     def receive(
             self,

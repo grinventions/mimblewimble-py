@@ -128,3 +128,12 @@ def test_srs_flow_slatepacks_persistent():
 
     # mine a block to confirm Alice's coinbase
     mock_node.mine()
+
+    # now Alice needs to refresh her wallet to detect confirmed funds
+    alice_wallet.refresh()
+
+    # now Alice can prepare S1 send slatepack
+    s1_slatepack = alice_wallet.send(
+        30000000000,
+        bob_wallet.getSlatepackAddress(),
+        fee_base=fee_base)
