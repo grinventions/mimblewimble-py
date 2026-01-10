@@ -1,7 +1,7 @@
 import hmac
 import os
 
-from typing import Tuple, List, Optional, Dict
+from typing import Tuple, List, Optional, Dict, Union
 from uuid import UUID
 
 from nacl import bindings
@@ -378,8 +378,12 @@ class Wallet:
         keychain = KeyChain.fromSeed(self.master_seed)
         return keychain.deriveAgeSecretKey(path)
 
-    def decryptSlatepack(self, armored_slatepack: str, path='m/0/1/0'):
-        slatepack_message = SlatepackMessage.unarmor(armored_slatepack)
+    def decryptSlatepack(self, armored_slatepack_: Union[str, SlatepackMessage], path='m/0/1/0'):
+        if isinstance(armored_slatepack_, str):
+            slatepack_message = SlatepackMessage.unarmor(armored_slatepack_)
+        else:
+            slatepack_message = armored_slatepack_
+
         if not slatepack_message.is_encrypted():
             # TODO raise a warning it was not encrypted
             return slatepack_message
@@ -677,7 +681,7 @@ class PersistentWallet:
             print("Encrypting slatepack for", receiver)
             send_slatepack_message.encryptPayload(
                 [SlatepackAddress.fromBech32(receiver)])
-            return send_slatepack_message.pack()
+            return send_slatepack_message
 
         print("Returning unencrypted slatepack message")
         return send_slatepack_message
@@ -685,7 +689,8 @@ class PersistentWallet:
     def receive(
             self,
             send_slate: SlatepackMessage,
-            path='m/0/1/0'):
+            path='m/0/1/0',
+            encrypt=True):
         if send_slate.is_encrypted():
             s1 = self._wallet.decryptSlatepack(
                 send_slate, path=path)
@@ -696,8 +701,29 @@ class PersistentWallet:
         receive_slate = self._wallet.receive(
             slate,
             path=path)
-        self._storage.save_tx(receive_slate)
-        return receive_slate
+
+        self._storage.save_slate_context(
+            receive_slate.slate_id,
+            receive_slate
+        )
+
+        receive_slate_payload = receive_slate.serialize()
+        sender_address = self.getSlatepackAddress(path=path)
+        version = SlatepackVersion(0, 0)
+        metadata = SlatepackMetadata(
+            sender=SlatepackAddress.fromBech32(sender_address))
+        emode = EMode.PLAINTEXT
+        receive_slatepack_message = SlatepackMessage(
+            version, metadata, emode, receive_slate_payload)
+
+        if encrypt:
+            if not send_slate.metadata.sender:
+                raise Exception('Cannot encrypt receive slatepack: original sender address missing')
+            original_sender_address = send_slate.metadata.sender  # original sender address
+            receive_slatepack_message.encryptPayload(
+                [original_sender_address])
+
+        return receive_slatepack_message
 
     def invoice(self):
         raise Exception('unimplemented')
@@ -717,15 +743,74 @@ class PersistentWallet:
             s2 = final_slate
 
         slate = s2.getSlate()
-        secret_key, secret_nonce = self._storage.get_tx_secrets(slate)
+        slate_context = self._storage.get_slate_context(slate.slate_id)
+        secret_key = slate_context['secret_key']
+        secret_nonce = slate_context['secret_nonce']
+        kernel = slate_context['kernel']
         finalized_slate = self._wallet.finalize(
             slate,
             secret_key,
             secret_nonce,
             path=path,
             testnet=testnet)
-        self._storage.save_tx(finalized_slate)
+        print(f"Finalized slate dir: {dir(finalized_slate)}")
+        for commitment in finalized_slate.commitments:
+            print()
+            print(f"commitment: {dir(commitment)}")
+            print(commitment.features)
+            print(type(commitment))
+            print(commitment.range_proof)
+
+        self._storage.save_slate_context(
+            finalized_slate.slate_id,
+            finalized_slate,
+            kernel=kernel,
+            secret_key=secret_key,
+            secret_nonce=secret_nonce
+        )
+
         return finalized_slate
+
+    def push_finalized_slatepack(self, finalized_slate: Slate):
+        print(type(finalized_slate))
+        print(dir(finalized_slate))
+
+        inputs = []
+        outputs = []
+        kernels = []
+        for commitment in finalized_slate.commitments:
+            if commitment.range_proof:
+                # this is output
+                output = TransactionOutput(
+                    EOutputFeatures.DEFAULT,
+                    commitment.commitment,
+                    commitment.range_proof)
+                outputs.append(output)
+            else:
+                input = TransactionInput(
+                    EOutputFeatures.DEFAULT,
+                    commitment.commitment)
+                inputs.append(input)
+
+        kernel = TransactionKernel(
+            EKernelFeatures.DEFAULT_KERNEL,
+            Fee(0, finalized_slate.fee),
+            finalized_slate.lock_height,
+            finalized_slate.getKernelCommitment(),
+            finalized_slate.getSignature(0) # 0 ? TODO
+        )
+        kernels.append(kernel)
+
+        transaction_body = TransactionBody(
+            inputs, outputs, kernels
+        )
+
+        transaction = Transaction(
+            finalized_slate.offset,
+            transaction_body
+        )
+
+        self._node.push_transaction(transaction)
 
     def ageDecrypt(self, ciphertext: bytes, path='m/0/1/0'):
         return self._wallet.ageDecrypt(ciphertext, path=path)
