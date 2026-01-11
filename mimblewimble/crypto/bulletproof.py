@@ -204,10 +204,12 @@ class Bulletproof:
         parsed_commitments = Pedersen.convertCommitments(self.ctx, [commitment])
         commit = parsed_commitments[0]
 
-        value, blind, message_bytes = secp256k1_bulletproof_rangeproof_rewind(
+        rewinding_result = secp256k1_bulletproof_rangeproof_rewind(
             self.ctx, rangeproof.getProofBytes(), 0, commit,
             secp256k1_generator_const_h, nonce.getBytes(), None)
-
+        if rewinding_result is None:
+            raise ValueError('Bulletproof invalid')
+        value, blind, message_bytes = rewinding_result
         blinding_factor = BlindingFactor(blind)
         message = ProofMessage(message_bytes)
 

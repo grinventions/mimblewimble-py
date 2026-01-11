@@ -111,6 +111,20 @@ def test_srs_flow_slatepacks_persistent():
     # transaction setup
     fee_base = 7000000
 
+    # check balance, every wallet is empty
+    assert alice_wallet.balance().toJSON() == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 0,
+        'total': 0
+    }
+    assert bob_wallet.balance().toJSON() == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 0,
+        'total': 0
+    }
+
     # Alice needs some coinbase to send to Bob
     coinbase_amount = 60000000000
     coinbase_transaction = alice_wallet.createCoinbase(
@@ -132,20 +146,24 @@ def test_srs_flow_slatepacks_persistent():
     # now Alice needs to refresh her wallet to detect confirmed funds
     alice_wallet.refresh()
 
+    # Alice should have her confirmed coinbase balance now
+    assert alice_wallet.balance().toJSON() == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 60000000000,
+        'total': 60000000000
+    }
+
     # now Alice can prepare S1 send slatepack
     s1_slatepack_message = alice_wallet.send(
         30000000000,
         bob_wallet.getSlatepackAddress(),
         fee_base=fee_base)
-    # print('type(s1_slatepack_message):', type(s1_slatepack_message))
     s1_slatepack_text = s1_slatepack_message.pack() # this text gets sent to Bob
 
-    # print("s1_slatepack_text:", s1_slatepack_text)
-    # print('type(s1_slatepack_text):', type(s1_slatepack_text))
     # now Bob receives S1 slatepack
     s1_slatepack_message_received = SlatepackMessage.unarmor(s1_slatepack_text)
     assert s1_slatepack_message_received.is_encrypted()
-    # print('type(s1_slatepack_message_received):', type(s1_slatepack_message_received))
     s2_slatepack_message = bob_wallet.receive(s1_slatepack_message_received, path=bob_path)
     s2_slatepack_text = s2_slatepack_message.pack()  # this text gets sent back to Alice
 
@@ -154,14 +172,30 @@ def test_srs_flow_slatepacks_persistent():
     assert s2_slatepack_message_received.is_encrypted()
     finalized_slate = alice_wallet.finalize(
         s2_slatepack_message_received, path=alice_path)
-    print('type(finalized_slatepack_message):', type(finalized_slate))
 
-    # Alice sends transaction to node TODO
-    # alice_wallet.push_finalized_slatepack(finalized_slate)
+    # Alice sends transaction to node
+    alice_wallet.push_finalized_slatepack(finalized_slate)
 
     # mine a block to confirm the transaction
-    # mock_node.mine()
+    mock_node.mine()
 
     # they both check their wallets
-    # alice_wallet.refresh()
-    # bob_wallet.refresh()
+    alice_wallet.refresh()
+    bob_wallet.refresh()
+
+    # check their balances
+    alice_balance = alice_wallet.balance().toJSON()
+    assert alice_balance == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 89678000000,
+        'total': 89678000000
+    }
+
+    bob_balance = bob_wallet.balance().toJSON()
+    assert bob_balance == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 30000000000,
+        'total': 30000000000
+    }

@@ -1,6 +1,9 @@
 from typing import Dict, List, Optional
+
+from mimblewimble.entity import OutputDataEntity
 from mimblewimble.wallet import NodeAccess
-from mimblewimble.models.transaction import Transaction
+from mimblewimble.models.transaction import Transaction, TransactionOutput
+
 
 class MockNode(NodeAccess):
     def __init__(self, initial_height: int = 100000):
@@ -29,7 +32,6 @@ class MockNode(NodeAccess):
         Simulate /v2/foreign/get_outputs
         Returns info for each commitment if it's on chain.
         """
-        print("MockNode.get_outputs called with commitments:", [c.hex() for c in commitments])
         result = {}
         for commit in commitments:
             if commit in self.chain_outputs:
@@ -79,17 +81,18 @@ class MockNode(NodeAccess):
 
                 # add output commitments to chain_outputs
                 for output in tx.body.outputs:
-                    commit = output.output.getCommitment().getBytes()
+                    if isinstance(output, OutputDataEntity):
+                        commit = output.output.getCommitment().getBytes()
+                    if isinstance(output, TransactionOutput):
+                        commit = output.getCommitment().getBytes()
                     self.chain_outputs[commit] = (self.block_height, False)
+
 
                 # add kernel excesses to chain_kernels
                 for kernel in tx.body.kernels:
                     self.chain_kernels[kernel.getExcessCommitment().getBytes()] = self.block_height
 
         self.mempool.clear()
-        print("MockNode mined", blocks, "blocks. New height:", self.block_height)
-        print("Current chain outputs:", [c.hex() for c in self.chain_outputs.keys()])
-        print("Current chain kernels:", [k.hex() for k in self.chain_kernels.keys()])
 
     def _include_transaction(self, tx: Transaction, height: int):
         """
@@ -97,7 +100,10 @@ class MockNode(NodeAccess):
         """
         # Register outputs
         for output in tx.body.outputs:
-            commit = output.output.getCommitment().getBytes()  # assume method or attr
+            if isinstance(output, OutputDataEntity):
+                commit = output.output.getCommitment().getBytes()
+            if isinstance(output, TransactionOutput):
+                commit = output.getCommitment().getBytes()  # assume method or attr
             self.chain_outputs[commit] = (height, False)  # not spent yet
 
         # Register kernel

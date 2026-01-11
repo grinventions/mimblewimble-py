@@ -47,10 +47,6 @@ from mimblewimble.slatebuilder import SendSlateBuilder
 from mimblewimble.slatebuilder import ReceiveSlateBuilder
 from mimblewimble.slatebuilder import FinalizeSlateBuilder
 
-# temp
-from age.keys.agekey import AgePrivateKey, AgePublicKey
-
-
 class Wallet:
     def __init__(self, encrypted_seed=None, salt=None, nonce=None, master_seed=None, tag=None):
         self.encrypted_seed = encrypted_seed
@@ -520,7 +516,6 @@ class WalletStorageInMemory(WalletStorage):
         secret_nonce=None,
         kernel=None
     ):
-        print("Saving slate context for", slate_id)
         self.txs[slate_id] = {
             'slate': slate,
             'secret_key': secret_key,
@@ -554,6 +549,21 @@ class NodeAccess:
     def push_transaction(self, transaction: Transaction):
         raise NotImplementedError
 
+class WalletBalance:
+    def __init__(self, awaiting_finalization, awaiting_confirmation, spendable):
+        self.awaiting_finalization = awaiting_finalization
+        self.awaiting_confirmation = awaiting_confirmation
+        self.spendable = spendable
+        self.total = awaiting_finalization + awaiting_confirmation + spendable
+
+    def toJSON(self):
+        return {
+            'awaiting_finalization': self.awaiting_finalization,
+            'awaiting_confirmation': self.awaiting_confirmation,
+            'spendable': self.spendable,
+            'total': self.total
+        }
+
 class PersistentWallet:
     def __init__(self, wallet: Wallet, storage: WalletStorage, node=None):
         self._wallet = wallet
@@ -568,14 +578,18 @@ class PersistentWallet:
     def refresh(self):
         # get all outputs awaiting confirmation
         outputs = self._storage.get_outputs_by_status(EOutputStatus.NO_CONFIRMATIONS)
-        print("Refreshing", len(outputs), "outputs")
         if len(outputs) == 0:
             return
 
         # query node for their status
-        result = self._node.get_outputs(
-            [output.output.getCommitment().getBytes() for output in outputs])
-        print("Node returned", len(result), "outputs")
+        commitments = []
+        for output in outputs:
+            if isinstance(output, OutputDataEntity):
+                commit = output.output.getCommitment().getBytes()
+            if isinstance(output, TransactionOutput):
+                commit = output.getCommitment().getBytes()
+            commitments.append(commit)
+        result = self._node.get_outputs(commitments)
 
         # update outputs in storage
         for commitment_bytes, output_info in result.items():
@@ -626,6 +640,43 @@ class PersistentWallet:
 
         return coinbase_transaction
 
+    def identify_own_outputs_from_slate(self, slate, path='m/0/1/0'):
+        slate_context = self._storage.get_slate_context(slate.slate_id)
+        kernel = slate_context['kernel']
+
+        keychain = KeyChain.fromSeed(self._wallet.master_seed)
+        for commitment in slate.commitments:
+            if commitment.range_proof:
+                # now we know this commitment is an output
+                range_proof = commitment.range_proof
+                # we will check if this output belongs to this wallet
+                # this way we will know if we should store it
+                try:
+                    rewind_proof = keychain.rewindRangeProof(
+                        commitment.commitment,
+                        range_proof,
+                        EBulletproofType.ENHANCED) # ORIGINAL
+                except Exception as e:
+                    # this is not our output, skip
+                    continue
+
+                # this output belongs to this wallet
+                # we should add it to the storage
+                transaction_output = TransactionOutput(
+                    EOutputFeatures.DEFAULT,
+                    commitment.commitment,
+                    range_proof)
+
+                # build the output data entity
+                output_data_entity = OutputDataEntity(
+                    path,
+                    rewind_proof.blinding_factor,
+                    transaction_output,
+                    rewind_proof.amount,
+                    EOutputStatus.NO_CONFIRMATIONS)
+
+                self._storage.add_output(output_data_entity, kernel=kernel)
+
     def send(
             self,
             amount: int,
@@ -639,7 +690,6 @@ class PersistentWallet:
             block_height = self._node.get_current_block_height()
 
         spendable_outputs = self._storage.get_outputs_by_status(EOutputStatus.SPENDABLE)
-        print("Spendable outputs:", len(spendable_outputs))
         inputs = []
         total_amount = 0
         for output in spendable_outputs:
@@ -666,24 +716,19 @@ class PersistentWallet:
             secret_nonce=secret_nonce)
 
         # prepare s1 slatepack
-        print("Preparing slatepack message for sending")
         sender_address = self.getSlatepackAddress(path=path)
-        print("Sender address:", type(sender_address))
         version = SlatepackVersion(0, 0)
         metadata = SlatepackMetadata(
             sender=SlatepackAddress.fromBech32(sender_address))
         emode = EMode.PLAINTEXT
         send_slatepack_message = SlatepackMessage(
             version, metadata, emode, send_slate.serialize())
-        print("Slatepack message prepared")
 
         if encrypt:
-            print("Encrypting slatepack for", receiver)
             send_slatepack_message.encryptPayload(
                 [SlatepackAddress.fromBech32(receiver)])
             return send_slatepack_message
 
-        print("Returning unencrypted slatepack message")
         return send_slatepack_message
 
     def receive(
@@ -706,6 +751,7 @@ class PersistentWallet:
             receive_slate.slate_id,
             receive_slate
         )
+        self.identify_own_outputs_from_slate(receive_slate, path=path)
 
         receive_slate_payload = receive_slate.serialize()
         sender_address = self.getSlatepackAddress(path=path)
@@ -753,13 +799,6 @@ class PersistentWallet:
             secret_nonce,
             path=path,
             testnet=testnet)
-        print(f"Finalized slate dir: {dir(finalized_slate)}")
-        for commitment in finalized_slate.commitments:
-            print()
-            print(f"commitment: {dir(commitment)}")
-            print(commitment.features)
-            print(type(commitment))
-            print(commitment.range_proof)
 
         self._storage.save_slate_context(
             finalized_slate.slate_id,
@@ -768,13 +807,11 @@ class PersistentWallet:
             secret_key=secret_key,
             secret_nonce=secret_nonce
         )
+        self.identify_own_outputs_from_slate(finalized_slate, path=path)
 
         return finalized_slate
 
     def push_finalized_slatepack(self, finalized_slate: Slate):
-        print(type(finalized_slate))
-        print(dir(finalized_slate))
-
         inputs = []
         outputs = []
         kernels = []
@@ -811,6 +848,26 @@ class PersistentWallet:
         )
 
         self._node.push_transaction(transaction)
+
+    def balance(self):
+        awaiting_finalization = 0
+        awaiting_confirmation = 0
+        spendable = 0
+
+        outputs = self._storage.get_all_outputs()
+        for output in outputs:
+            if output.status == EOutputStatus.NO_CONFIRMATIONS:
+                awaiting_confirmation += output.getAmount()
+            elif output.status == EOutputStatus.LOCKED:
+                awaiting_finalization += output.getAmount()
+            elif output.status == EOutputStatus.SPENDABLE:
+                spendable += output.getAmount()
+
+        return WalletBalance(
+            awaiting_finalization,
+            awaiting_confirmation,
+            spendable
+        )
 
     def ageDecrypt(self, ciphertext: bytes, path='m/0/1/0'):
         return self._wallet.ageDecrypt(ciphertext, path=path)
