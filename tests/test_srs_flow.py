@@ -1,7 +1,16 @@
 from hashlib import sha256
 import time
+from typing import List
+
+import pytest
+
+from tests.utils import MockNode
+
+from mimblewimble.entity import OutputDataEntity
+from mimblewimble.models.transaction import EOutputStatus
 
 from mimblewimble.wallet import Wallet
+from mimblewimble.wallet import WalletStorageInMemory, PersistentWallet, NodeAccess
 
 from mimblewimble.models.slatepack.address import SlatepackAddress
 from mimblewimble.models.slatepack.metadata import SlatepackVersion
@@ -87,3 +96,106 @@ def test_srs_flow_slatepacks():
         received_receive_slate, secret_key, secret_nonce, path=alice_path)
     # this is the final slate that can be broadcasted to nodes
 
+def test_srs_flow_slatepacks_persistent():
+    mock_node = MockNode()
+
+    # prepare wallets
+    alice_path = 'm/0/1/0'
+    alice_wallet = PersistentWallet(
+        Wallet.initialize(), WalletStorageInMemory(), mock_node)
+
+    bob_path = 'm/0/1/0'
+    bob_wallet = PersistentWallet(
+        Wallet.initialize(), WalletStorageInMemory(), mock_node)
+
+    # transaction setup
+    fee_base = 7000000
+
+    # check balance, every wallet is empty
+    assert alice_wallet.balance().toJSON() == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 0,
+        'total': 0
+    }
+    assert bob_wallet.balance().toJSON() == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 0,
+        'total': 0
+    }
+
+    # Alice needs some coinbase to send to Bob
+    coinbase_amount = 60000000000
+    coinbase_transaction = alice_wallet.createCoinbase(
+        coinbase_amount, path=alice_path)
+
+    # submit the coinbase transaction to the node
+    mock_node.push_transaction(coinbase_transaction)
+
+    # prepare S1 send slatepack, but Alice has no confirmed funds yet
+    with pytest.raises(Exception, match='Insufficient funds'):
+        alice_wallet.send(
+            30000000000,
+            bob_wallet.getSlatepackAddress(),
+            fee_base=fee_base)
+
+    # mine a block to confirm Alice's coinbase
+    mock_node.mine()
+
+    # now Alice needs to refresh her wallet to detect confirmed funds
+    alice_wallet.refresh()
+
+    # Alice should have her confirmed coinbase balance now
+    assert alice_wallet.balance().toJSON() == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 60000000000,
+        'total': 60000000000
+    }
+
+    # now Alice can prepare S1 send slatepack
+    s1_slatepack_message = alice_wallet.send(
+        30000000000,
+        bob_wallet.getSlatepackAddress(),
+        fee_base=fee_base)
+    s1_slatepack_text = s1_slatepack_message.pack() # this text gets sent to Bob
+
+    # now Bob receives S1 slatepack
+    s1_slatepack_message_received = SlatepackMessage.unarmor(s1_slatepack_text)
+    assert s1_slatepack_message_received.is_encrypted()
+    s2_slatepack_message = bob_wallet.receive(s1_slatepack_message_received, path=bob_path)
+    s2_slatepack_text = s2_slatepack_message.pack()  # this text gets sent back to Alice
+
+    # now Alice receives S2 slatepack
+    s2_slatepack_message_received = SlatepackMessage.unarmor(s2_slatepack_text)
+    assert s2_slatepack_message_received.is_encrypted()
+    finalized_slate = alice_wallet.finalize(
+        s2_slatepack_message_received, path=alice_path)
+
+    # Alice sends transaction to node
+    alice_wallet.push_finalized_slatepack(finalized_slate)
+
+    # mine a block to confirm the transaction
+    mock_node.mine()
+
+    # they both check their wallets
+    alice_wallet.refresh()
+    bob_wallet.refresh()
+
+    # check their balances
+    alice_balance = alice_wallet.balance().toJSON()
+    assert alice_balance == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 89678000000,
+        'total': 89678000000
+    }
+
+    bob_balance = bob_wallet.balance().toJSON()
+    assert bob_balance == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 30000000000,
+        'total': 30000000000
+    }
