@@ -188,8 +188,8 @@ def test_srs_flow_slatepacks_persistent():
     assert alice_balance == {
         'awaiting_finalization': 0,
         'awaiting_confirmation': 0,
-        'spendable': 89678000000,
-        'total': 89678000000
+        'spendable': 29678000000,
+        'total': 29678000000
     }
 
     bob_balance = bob_wallet.balance().toJSON()

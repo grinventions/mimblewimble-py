@@ -1,4 +1,9 @@
+import pytest
+
+from tests.utils import MockNode
+
 from mimblewimble.wallet import Wallet
+from mimblewimble.wallet import WalletStorageInMemory, PersistentWallet, NodeAccess
 
 from mimblewimble.models.slatepack.address import SlatepackAddress
 from mimblewimble.models.slatepack.metadata import SlatepackVersion
@@ -87,3 +92,111 @@ def test_rsr_flow_slatepacks():
     finalized_slate = bob_wallet.finalize(
         received_pay_slate, path=bob_path)
     # this is the final slate that can be broadcasted to nodes
+
+
+def test_rsr_flow_slatepacks_persistent():
+    mock_node = MockNode()
+
+    # prepare wallets
+    alice_path = 'm/0/1/0'
+    alice_wallet = PersistentWallet(
+        Wallet.initialize(), WalletStorageInMemory(), mock_node)
+
+    bob_path = 'm/0/1/0'
+    bob_wallet = PersistentWallet(
+        Wallet.initialize(), WalletStorageInMemory(), mock_node)
+
+    # transaction setup
+    fee_base = 7000000
+
+    # check balance, every wallet is empty
+    assert alice_wallet.balance().toJSON() == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 0,
+        'total': 0
+    }
+    assert bob_wallet.balance().toJSON() == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 0,
+        'total': 0
+    }
+
+    # Bob prepares invoice transaction
+    r1_slatepack_message = bob_wallet.invoice(
+        30000000000,
+        path=bob_path,
+        receiver=alice_wallet.getSlatepackAddress())
+    r1_slatepack_text = r1_slatepack_message.pack()  # this text gets sent back to Bob
+
+    # now Alice receives R1 slatepack
+    r1_slatepack_message_received = SlatepackMessage.unarmor(r1_slatepack_text)
+    assert r1_slatepack_message_received.is_encrypted()
+
+    # Alice attempts to pay the invoice, but has no funds yet
+    with pytest.raises(Exception, match='Insufficient funds'):
+        alice_wallet.pay(
+            r1_slatepack_message, path=alice_path, fee_base=fee_base)
+
+    # Alice needs some coinbase to pay Bob's invoice
+    coinbase_amount = 60000000000
+    coinbase_transaction = alice_wallet.createCoinbase(
+        coinbase_amount, path=alice_path)
+
+    # submit the coinbase transaction to the node
+    mock_node.push_transaction(coinbase_transaction)
+
+    # mine a block to confirm Alice's coinbase
+    mock_node.mine()
+
+    # now Alice needs to refresh her wallet to detect confirmed funds
+    alice_wallet.refresh()
+
+    # Alice should have her confirmed coinbase balance now
+    assert alice_wallet.balance().toJSON() == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 60000000000,
+        'total': 60000000000
+    }
+
+    # Alice pays the invoice
+    r2_slatepack_message = alice_wallet.pay(
+        r1_slatepack_message, path=alice_path, fee_base=fee_base)
+    r2_slatepack_text = r2_slatepack_message.pack()  # this text gets sent back to Bob
+
+    # now Bob receives R2 slatepack
+    r2_slatepack_message_received = SlatepackMessage.unarmor(r2_slatepack_text)
+    assert r2_slatepack_message_received.is_encrypted()
+
+    # Bob finalizes the transaction
+    finalized_slate = bob_wallet.finalize(
+        r2_slatepack_message, path=bob_path)
+
+    # Bob sends transaction to node
+    bob_wallet.push_finalized_slatepack(finalized_slate)
+
+    # mine a block to confirm the transaction
+    mock_node.mine()
+
+    # they both check their wallets
+    alice_wallet.refresh()
+    bob_wallet.refresh()
+
+    # check their balances
+    alice_balance = alice_wallet.balance().toJSON()
+    assert alice_balance == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 29678000000,
+        'total': 29678000000,
+    }
+
+    bob_balance = bob_wallet.balance().toJSON()
+    assert bob_balance == {
+        'awaiting_finalization': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 30000000000,
+        'total': 30000000000
+    }
