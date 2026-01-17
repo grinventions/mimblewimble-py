@@ -19,9 +19,6 @@ class FinalizeSlateBuilder:
     def finalize(
             self,
             receive_slate: Slate,
-            secret_key: SecretKey,
-            secret_nonce: SecretKey,
-            sender_address: bytes,
             testnet=False):
         # renaming the slate object
         finalized_slate = receive_slate
@@ -44,6 +41,13 @@ class FinalizeSlateBuilder:
         signature.setSignature(partial_signature)
         finalized_slate.setSignature(0, signature)
 
+        # done!
+        return finalized_slate
+
+    def verifyPaymentProof(
+            self,
+            finalized_slate: Slate,
+            sender_address: bytes):
         # reproduce the payment proof message
         # (amount | kernel commitment | sender address)
         amount = finalized_slate.getAmount()
@@ -68,5 +72,3 @@ class FinalizeSlateBuilder:
             print(e)
             raise ValueError('Invalid payment proof')
 
-        # done!
-        return finalized_slate

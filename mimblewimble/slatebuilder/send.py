@@ -35,7 +35,8 @@ class SendSlateBuilder:
             block_height: int,
             inputs: List[OutputDataEntity],
             change_outputs: List[OutputDataEntity],
-            slate_version=0, testnet=False,
+            slate_version=0,
+            testnet=False,
             sender_address=None,
             receiver_address=None) -> Tuple[
                 Slate, SecretKey, SecretKey]:
@@ -66,10 +67,10 @@ class SendSlateBuilder:
             slate_version,
             block_version,
             amount,
-            Fee.fromInt(fee),
-            payment_proof,
             EKernelFeatures.DEFAULT_KERNEL,
-            transaction_offset,
+            fee=Fee.fromInt(fee),
+            transaction_offset=transaction_offset,
+            proof_opt=payment_proof,
             signatures=[signature],
             stage=stage)
         for inp in inputs:

@@ -42,10 +42,13 @@ from mimblewimble.models.slatepack.message import SlatepackMessage, EMode
 from mimblewimble.entity import OutputDataEntity
 from mimblewimble.helpers.fee import calculateFee
 
-from mimblewimble.slatebuilder import Slate
+from mimblewimble.slatebuilder import Slate, ESlateStage
 from mimblewimble.slatebuilder import SendSlateBuilder
 from mimblewimble.slatebuilder import ReceiveSlateBuilder
 from mimblewimble.slatebuilder import FinalizeSlateBuilder
+from mimblewimble.slatebuilder.invoice import InvoiceSlateBuilder
+from mimblewimble.slatebuilder.pay import PaySlateBuilder
+
 
 class Wallet:
     def __init__(self, encrypted_seed=None, salt=None, nonce=None, master_seed=None, tag=None):
@@ -336,13 +339,77 @@ class Wallet:
         return receive_slate
 
 
-    def invoice(self):
-        raise Exception('unimplemented')
+    def invoice(self,
+            amount: int,
+            wallet_tx_id=None,
+            path: str = "m/0/1/0",
+            block_height=0) -> Tuple[Slate, SecretKey, SecretKey]:
+        output = self.createBlindedOutput(
+            amount,
+            EBulletproofType.ENHANCED,
+            path=path,
+            wallet_tx_id=wallet_tx_id)
+        slate_builder = InvoiceSlateBuilder(self.master_seed)
+        slate, secret_key, secret_nonce = slate_builder.build(
+            amount,
+            output,
+            block_height=block_height,
+            slate_version=0)
+
+        return slate, secret_key, secret_nonce
 
 
-    def pay(self):
-        raise Exception('unimplemented')
+    def pay(
+            self,
+            invoice_slate: Slate,
+            inputs: List[OutputDataEntity],
+            num_change_outputs: int,
+            fee_base: int,
+            path='m/0/1/0',
+            wallet_tx_id=None,
+            testnet=False
+    ) -> Tuple[Slate, SecretKey, SecretKey]:
 
+        # the total number of outputs and number of kernels
+        num_total_outputs = 1 + num_change_outputs
+        num_kernels = 1
+
+        # calculate fee
+        fee = calculateFee(fee_base, len(inputs), num_total_outputs, num_kernels)
+
+        # compute the total input
+        input_total = 0
+        for input_entry in inputs:
+            input_total += input_entry.getAmount()
+
+        # extract amount
+        amount = invoice_slate.getAmount()
+
+        # compute the change amount and prepare the change outputs
+        # each with own blinding factor xC
+        change_amount = input_total - (amount + fee)
+        change_outputs = []
+        for i in range(num_change_outputs):
+            coin_amount = int(change_amount / num_change_outputs)
+            if i == 0:
+                coin_amount += change_amount % num_change_outputs
+            change_outputs.append(
+                self.createBlindedOutput(
+                    coin_amount,
+                    EBulletproofType.ENHANCED,
+                    path=path,
+                    wallet_tx_id=wallet_tx_id
+                )
+            )
+
+        # build the paid slate
+        slate_builder = PaySlateBuilder(self.master_seed)
+        slate, secret_key, secret_nonce = slate_builder.build(
+            invoice_slate,
+            fee,
+            inputs,
+            change_outputs)
+        return slate, secret_key, secret_nonce
 
     def finalize(
             self,
@@ -354,16 +421,21 @@ class Wallet:
             testnet=False):
         # prepare the original sender address for the payment proof validation
         keychain = KeyChain.fromSeed(self.master_seed)
-        sender_address_bytes = keychain.deriveED25519PublicKey(path)
+
+        check_payment_proof = receive_slate.stage == ESlateStage.STANDARD_RECEIVED
 
         # build the receive slate
         slate_builder = FinalizeSlateBuilder(self.master_seed)
         finalized_slate = slate_builder.finalize(
             receive_slate,
-            secret_key,
-            secret_nonce,
-            sender_address_bytes,
             testnet=testnet)
+
+        if check_payment_proof:
+            sender_address_bytes = keychain.deriveED25519PublicKey(path)
+            slate_builder.verifyPaymentProof(
+                finalized_slate,
+                sender_address_bytes)
+
         return finalized_slate
 
     def ageDecrypt(self, ciphertext: bytes, path='m/0/1/0'):
