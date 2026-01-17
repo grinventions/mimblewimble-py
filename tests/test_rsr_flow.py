@@ -85,5 +85,5 @@ def test_rsr_flow_slatepacks():
     # now Bob has decrypted slate that Alice sent him
     # he is ready to finalize the transaction
     finalized_slate = bob_wallet.finalize(
-        received_pay_slate, bob_secret_key, bob_secret_nonce, path=bob_path)
+        received_pay_slate, path=bob_path)
     # this is the final slate that can be broadcasted to nodes

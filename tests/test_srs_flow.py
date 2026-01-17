@@ -38,7 +38,7 @@ def test_srs_flow_slatepacks():
     block_height = 99999
 
     # prepare send transaction
-    send_slate, secret_key, secret_nonce = alice_wallet.send(
+    send_slate, alice_secret_key, alice_secret_nonce = alice_wallet.send(
         [output], num_change_outputs, amount, fee_base, block_height,
         path=alice_path, receiver_address=bob_address)
     send_slate_payload = send_slate.serialize()
@@ -67,7 +67,7 @@ def test_srs_flow_slatepacks():
 
     # now Bob has decrypted slate that Alice sent him
     # he is preparing his own slate
-    receive_slate = bob_wallet.receive(received_send_slate)
+    receive_slate, bob_secret_key, bob_secret_nonce = bob_wallet.receive(received_send_slate)
     receive_slate_payload = receive_slate.serialize()
 
     # prepare slatepack_S2 for Alice
@@ -93,7 +93,7 @@ def test_srs_flow_slatepacks():
     # now Alice has decrypted slate that Bob sent her
     # she is ready to finalize the transaction
     finalized_slate = alice_wallet.finalize(
-        received_receive_slate, secret_key, secret_nonce, path=alice_path)
+        received_receive_slate, path=alice_path)
     # this is the final slate that can be broadcasted to nodes
 
 def test_srs_flow_slatepacks_persistent():

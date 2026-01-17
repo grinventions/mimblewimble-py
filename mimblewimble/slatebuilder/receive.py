@@ -62,7 +62,7 @@ class ReceiveSlateBuilder:
             output.getRangeProof())
 
         # done!
-        return receive_slate
+        return receive_slate, secret_key, secret_nonce
 
 
 

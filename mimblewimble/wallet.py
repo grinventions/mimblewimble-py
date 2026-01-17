@@ -303,7 +303,7 @@ class Wallet:
             wallet_tx_id=wallet_tx_id)
         # build the receive slate
         slate_builder = ReceiveSlateBuilder(self.master_seed)
-        receive_slate = slate_builder.addReceiverData(
+        receive_slate, secret_key, secret_nonce = slate_builder.addReceiverData(
             send_slate,
             output,
             testnet=testnet)
@@ -336,7 +336,7 @@ class Wallet:
             receive_slate.proof_opt.setReceiverSignature(receiver_signature)
 
         # done!
-        return receive_slate
+        return receive_slate, secret_key, secret_nonce
 
 
     def invoice(self,
@@ -414,8 +414,6 @@ class Wallet:
     def finalize(
             self,
             receive_slate: Slate,
-            secret_key: SecretKey,
-            secret_nonce: SecretKey,
             path='m/0/1/0',
             wallet_tx_id=None,
             testnet=False):
@@ -815,13 +813,15 @@ class PersistentWallet:
             s1 = send_slate
 
         slate = s1.getSlate()
-        receive_slate = self._wallet.receive(
+        receive_slate, secret_key, secret_nonce = self._wallet.receive(
             slate,
             path=path)
 
         self._storage.save_slate_context(
             receive_slate.slate_id,
-            receive_slate
+            receive_slate,
+            secret_key=secret_key,
+            secret_nonce=secret_nonce
         )
         self.identify_own_outputs_from_slate(receive_slate, path=path)
 
@@ -867,8 +867,6 @@ class PersistentWallet:
         kernel = slate_context['kernel']
         finalized_slate = self._wallet.finalize(
             slate,
-            secret_key,
-            secret_nonce,
             path=path,
             testnet=testnet)
 
