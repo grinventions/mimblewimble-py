@@ -106,6 +106,10 @@ class BlindingFactor:
     def fromHex(self, hex: str):
         return BlindingFactor(bytes.fromHex(hex))
 
+    @classmethod
+    def zero(self):
+        return BlindingFactor(b'\x00' * 32)
+
     def format(self):
         return 'BlindingFactor{' + self.hex() + '}'
 

@@ -42,10 +42,13 @@ from mimblewimble.models.slatepack.message import SlatepackMessage, EMode
 from mimblewimble.entity import OutputDataEntity
 from mimblewimble.helpers.fee import calculateFee
 
-from mimblewimble.slatebuilder import Slate
+from mimblewimble.slatebuilder import Slate, ESlateStage
 from mimblewimble.slatebuilder import SendSlateBuilder
 from mimblewimble.slatebuilder import ReceiveSlateBuilder
 from mimblewimble.slatebuilder import FinalizeSlateBuilder
+from mimblewimble.slatebuilder.invoice import InvoiceSlateBuilder
+from mimblewimble.slatebuilder.pay import PaySlateBuilder
+
 
 class Wallet:
     def __init__(self, encrypted_seed=None, salt=None, nonce=None, master_seed=None, tag=None):
@@ -300,7 +303,7 @@ class Wallet:
             wallet_tx_id=wallet_tx_id)
         # build the receive slate
         slate_builder = ReceiveSlateBuilder(self.master_seed)
-        receive_slate = slate_builder.addReceiverData(
+        receive_slate, secret_key, secret_nonce = slate_builder.addReceiverData(
             send_slate,
             output,
             testnet=testnet)
@@ -333,37 +336,104 @@ class Wallet:
             receive_slate.proof_opt.setReceiverSignature(receiver_signature)
 
         # done!
-        return receive_slate
+        return receive_slate, secret_key, secret_nonce
 
 
-    def invoice(self):
-        raise Exception('unimplemented')
+    def invoice(self,
+            amount: int,
+            wallet_tx_id=None,
+            path: str = "m/0/1/0",
+            block_height=0) -> Tuple[Slate, SecretKey, SecretKey]:
+        output = self.createBlindedOutput(
+            amount,
+            EBulletproofType.ENHANCED,
+            path=path,
+            wallet_tx_id=wallet_tx_id)
+        slate_builder = InvoiceSlateBuilder(self.master_seed)
+        slate, secret_key, secret_nonce = slate_builder.build(
+            amount,
+            output,
+            block_height=block_height,
+            slate_version=0)
+
+        return slate, secret_key, secret_nonce
 
 
-    def pay(self):
-        raise Exception('unimplemented')
+    def pay(
+            self,
+            invoice_slate: Slate,
+            inputs: List[OutputDataEntity],
+            num_change_outputs: int,
+            fee_base: int,
+            path='m/0/1/0',
+            wallet_tx_id=None,
+            testnet=False
+    ) -> Tuple[Slate, SecretKey, SecretKey]:
 
+        # the total number of outputs and number of kernels
+        num_total_outputs = 1 + num_change_outputs
+        num_kernels = 1
+
+        # calculate fee
+        fee = calculateFee(fee_base, len(inputs), num_total_outputs, num_kernels)
+
+        # compute the total input
+        input_total = 0
+        for input_entry in inputs:
+            input_total += input_entry.getAmount()
+
+        # extract amount
+        amount = invoice_slate.getAmount()
+
+        # compute the change amount and prepare the change outputs
+        # each with own blinding factor xC
+        change_amount = input_total - (amount + fee)
+        change_outputs = []
+        for i in range(num_change_outputs):
+            coin_amount = int(change_amount / num_change_outputs)
+            if i == 0:
+                coin_amount += change_amount % num_change_outputs
+            change_outputs.append(
+                self.createBlindedOutput(
+                    coin_amount,
+                    EBulletproofType.ENHANCED,
+                    path=path,
+                    wallet_tx_id=wallet_tx_id
+                )
+            )
+
+        # build the paid slate
+        slate_builder = PaySlateBuilder(self.master_seed)
+        slate, secret_key, secret_nonce = slate_builder.build(
+            invoice_slate,
+            fee,
+            inputs,
+            change_outputs)
+        return slate, secret_key, secret_nonce
 
     def finalize(
             self,
             receive_slate: Slate,
-            secret_key: SecretKey,
-            secret_nonce: SecretKey,
             path='m/0/1/0',
             wallet_tx_id=None,
             testnet=False):
         # prepare the original sender address for the payment proof validation
         keychain = KeyChain.fromSeed(self.master_seed)
-        sender_address_bytes = keychain.deriveED25519PublicKey(path)
+
+        check_payment_proof = receive_slate.stage == ESlateStage.STANDARD_RECEIVED
 
         # build the receive slate
         slate_builder = FinalizeSlateBuilder(self.master_seed)
         finalized_slate = slate_builder.finalize(
             receive_slate,
-            secret_key,
-            secret_nonce,
-            sender_address_bytes,
             testnet=testnet)
+
+        if check_payment_proof:
+            sender_address_bytes = keychain.deriveED25519PublicKey(path)
+            slate_builder.verifyPaymentProof(
+                finalized_slate,
+                sender_address_bytes)
+
         return finalized_slate
 
     def ageDecrypt(self, ciphertext: bytes, path='m/0/1/0'):
@@ -432,6 +502,9 @@ class WalletStorage:
     def get_outputs_by_status(self, status: EOutputStatus) -> List[OutputDataEntity]:
         raise NotImplementedError
 
+    def is_output_known(self, commitment: bytes) -> bool:
+        raise NotImplementedError
+
     def add_output(self, output: OutputDataEntity, kernel: Optional[TransactionKernel] = None):
         """Add new output (e.g., receive or coinbase). Kernel optional for coinbase/confirmed."""
         raise NotImplementedError
@@ -484,6 +557,12 @@ class WalletStorageInMemory(WalletStorage):
 
     def get_outputs_by_status(self, status: EOutputStatus) -> List[OutputDataEntity]:
         return [o for o in self.outputs if o.status == status]
+
+    def is_output_known(self, commitment: bytes) -> bool:
+        for o in self.outputs:
+            if o.output.commitment.getBytes() == commitment:
+                return True
+        return False
 
     def add_output(self, output: OutputDataEntity, kernel: Optional[TransactionKernel] = None):
         # For coinbase: set status=IMMATURE, link kernel if needed
@@ -577,7 +656,8 @@ class PersistentWallet:
 
     def refresh(self):
         # get all outputs awaiting confirmation
-        outputs = self._storage.get_outputs_by_status(EOutputStatus.NO_CONFIRMATIONS)
+        # outputs = self._storage.get_outputs_by_status(EOutputStatus.NO_CONFIRMATIONS)
+        outputs = self._storage.get_all_outputs() # TODO make it more efficient
         if len(outputs) == 0:
             return
 
@@ -640,7 +720,8 @@ class PersistentWallet:
 
         return coinbase_transaction
 
-    def identify_own_outputs_from_slate(self, slate, path='m/0/1/0'):
+    def identify_own_outputs_from_slate(
+            self, slate, path='m/0/1/0', new_status=EOutputStatus.NO_CONFIRMATIONS):
         slate_context = self._storage.get_slate_context(slate.slate_id)
         kernel = slate_context['kernel']
 
@@ -673,9 +754,12 @@ class PersistentWallet:
                     rewind_proof.blinding_factor,
                     transaction_output,
                     rewind_proof.amount,
-                    EOutputStatus.NO_CONFIRMATIONS)
+                    new_status)
 
-                self._storage.add_output(output_data_entity, kernel=kernel)
+                if not self._storage.is_output_known(commitment.commitment.getBytes()):
+                    self._storage.add_output(output_data_entity, kernel=kernel)
+                else:
+                    self._storage.update_output(output_data_entity)
 
     def send(
             self,
@@ -714,6 +798,8 @@ class PersistentWallet:
             send_slate,
             secret_key=secret_key,
             secret_nonce=secret_nonce)
+        # TODO implement locking inputs which are being spent
+        # TODO but for change outputs keep NO_CONFIRMATIONS
 
         # prepare s1 slatepack
         sender_address = self.getSlatepackAddress(path=path)
@@ -743,16 +829,19 @@ class PersistentWallet:
             s1 = send_slate
 
         slate = s1.getSlate()
-        receive_slate = self._wallet.receive(
+        receive_slate, secret_key, secret_nonce = self._wallet.receive(
             slate,
             path=path)
 
         self._storage.save_slate_context(
             receive_slate.slate_id,
-            receive_slate
+            receive_slate,
+            secret_key=secret_key,
+            secret_nonce=secret_nonce
         )
         self.identify_own_outputs_from_slate(receive_slate, path=path)
 
+        # prepare s2 slatepack
         receive_slate_payload = receive_slate.serialize()
         sender_address = self.getSlatepackAddress(path=path)
         version = SlatepackVersion(0, 0)
@@ -771,11 +860,103 @@ class PersistentWallet:
 
         return receive_slatepack_message
 
-    def invoice(self):
-        raise Exception('unimplemented')
+    def invoice(
+            self,
+            amount: int,
+            receiver: SlatepackAddress,
+            block_height=None,
+            path='m/0/1/0', encrypt=True):
+        if block_height is None:
+            block_height = self._node.get_current_block_height()
 
-    def pay(self):
-        raise Exception('unimplemented')
+        invoice_slate, secret_key, secret_nonce = self._wallet.invoice(
+            amount,
+            path=path,
+            block_height=block_height)
+
+        self._storage.save_slate_context(
+            invoice_slate.slate_id,
+            invoice_slate,
+            secret_key=secret_key,
+            secret_nonce=secret_nonce)
+        self.identify_own_outputs_from_slate(invoice_slate, path=path)
+
+        # prepare r1 slatepack
+        sender_address = self.getSlatepackAddress(path=path)
+        version = SlatepackVersion(0, 0)
+        metadata = SlatepackMetadata(
+            sender=SlatepackAddress.fromBech32(sender_address))
+        emode = EMode.PLAINTEXT
+        invoice_slatepack_message = SlatepackMessage(
+            version, metadata, emode, invoice_slate.serialize())
+
+        if encrypt:
+            invoice_slatepack_message.encryptPayload(
+                [SlatepackAddress.fromBech32(receiver)])
+            return invoice_slatepack_message
+
+        return invoice_slatepack_message
+
+    def pay(
+            self,
+            invoice_slate: SlatepackMessage,
+            path='m/0/1/0',
+            num_change_outputs=1,
+            fee_base=0,
+            encrypt=True
+    ):
+        if invoice_slate.is_encrypted():
+            r1 = self._wallet.decryptSlatepack(
+                invoice_slate, path=path)
+        else:
+            r1 = invoice_slate
+
+        slate = r1.getSlate()
+        requested_amount = slate.getAmount()
+
+        spendable_outputs = self._storage.get_outputs_by_status(EOutputStatus.SPENDABLE)
+        inputs = []
+        total_amount = 0
+        for output in spendable_outputs:
+            if total_amount >= requested_amount + fee_base:
+                break
+            inputs.append(output)
+            total_amount += output.getAmount()
+        if total_amount < requested_amount + fee_base:
+            raise Exception('Insufficient funds')
+
+        pay_slate, secret_key, secret_nonce = self._wallet.pay(
+            slate,
+            inputs,
+            num_change_outputs,
+            fee_base,
+            path=path)
+
+        self._storage.save_slate_context(
+            pay_slate.slate_id,
+            pay_slate,
+            secret_key=secret_key,
+            secret_nonce=secret_nonce)
+        self.identify_own_outputs_from_slate(pay_slate, path=path)
+
+        # prepare r2 slatepack
+        receive_slate_payload = pay_slate.serialize()
+        sender_address = self.getSlatepackAddress(path=path)
+        version = SlatepackVersion(0, 0)
+        metadata = SlatepackMetadata(
+            sender=SlatepackAddress.fromBech32(sender_address))
+        emode = EMode.PLAINTEXT
+        pay_slatepack_message = SlatepackMessage(
+            version, metadata, emode, receive_slate_payload)
+
+        if encrypt:
+            if not invoice_slate.metadata.sender:
+                raise Exception('Cannot encrypt receive slatepack: original sender address missing')
+            original_sender_address = invoice_slate.metadata.sender  # original sender address
+            pay_slatepack_message.encryptPayload(
+                [original_sender_address])
+
+        return pay_slatepack_message
 
     def finalize(
             self,
@@ -795,8 +976,6 @@ class PersistentWallet:
         kernel = slate_context['kernel']
         finalized_slate = self._wallet.finalize(
             slate,
-            secret_key,
-            secret_nonce,
             path=path,
             testnet=testnet)
 

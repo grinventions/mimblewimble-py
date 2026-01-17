@@ -243,10 +243,10 @@ class Slate:
             version: int,
             block_version: int,
             amount: int,
-            fee: Fee,
-            proof_opt: Union[SlatePaymentProof, None],
             kernel_features: EKernelFeatures,
-            transaction_offset: BlindingFactor,
+            fee: Fee | None = None,
+            proof_opt: SlatePaymentProof | None = None,
+            transaction_offset: BlindingFactor | None = None,
             signatures=[],
             commitments=[],
             lock_height=0,
@@ -287,6 +287,9 @@ class Slate:
         if i < 0 or i > len(self.signatures):
             raise Exception('Signature index our of bounds')
         self.signatures[i] = signature
+
+    def addSignature(self, signature: SlateSignature):
+        self.signatures.append(signature)
 
 
     def getKernelFeatures(self) -> EKernelFeatures:
@@ -522,10 +525,10 @@ class Slate:
             version,
             block_version,
             amount,
-            fee,
-            proof_opt,
             kernel_features,
-            transaction_offset,
+            fee=fee,
+            proof_opt=proof_opt,
+            transaction_offset=transaction_offset,
             signatures=signatures,
             commitments=commitments,
             lock_height=lock_height_opt,

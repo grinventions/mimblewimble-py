@@ -2,7 +2,7 @@ from typing import Dict, List, Optional
 
 from mimblewimble.entity import OutputDataEntity
 from mimblewimble.wallet import NodeAccess
-from mimblewimble.models.transaction import Transaction, TransactionOutput
+from mimblewimble.models.transaction import Transaction, TransactionOutput, EKernelFeatures
 
 
 class MockNode(NodeAccess):
@@ -77,7 +77,16 @@ class MockNode(NodeAccess):
             # Mine all pending txs into this block
             for tx in self.mempool[:]:  # copy because we remove
                 self._include_transaction(tx, self.block_height)
+                # print('including tx', tx.body.kernels[0].getExcessCommitment().getBytes().hex())
                 self.mempool.remove(tx)
+
+                # mark inputs as spent if not a coinbase
+                for input in tx.body.inputs:
+                    commit = input.getCommitment().getBytes()
+                    if commit in self.chain_outputs:
+                        # print('spending', commit.hex())
+                        height, _ = self.chain_outputs[commit]
+                        self.chain_outputs[commit] = (height, True)
 
                 # add output commitments to chain_outputs
                 for output in tx.body.outputs:
@@ -93,6 +102,25 @@ class MockNode(NodeAccess):
                     self.chain_kernels[kernel.getExcessCommitment().getBytes()] = self.block_height
 
         self.mempool.clear()
+
+        # print all unspent inputs on chain
+        commits_unpsent = []
+        commits_spent = []
+        for commit, (height, spent) in self.chain_outputs.items():
+            if not spent:
+                commits_unpsent.append((commit, height))
+            else:
+                commits_spent.append((commit, height))
+
+        '''
+        print('unspent on chain:')
+        for commit, height in commits_unpsent:
+            print(commit.hex(), 'at height', height)
+        print('spent on chain:')
+        for commit, height in commits_spent:
+            print(commit.hex(), 'at height', height)
+        print()
+        '''
 
     def _include_transaction(self, tx: Transaction, height: int):
         """
