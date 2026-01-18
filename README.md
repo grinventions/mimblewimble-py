@@ -221,7 +221,7 @@ num_change_outputs = 1
 amount = 30000000000
 fee_base = 7000000
 block_height = 99999
-send_slate, secret_key, secret_nonce = alice_wallet.send(
+send_slate, alice_secret_key, alice_secret_nonce, change_outputs = alice_wallet.send(
     [output], num_change_outputs, amount, fee_base, block_height,
     path=alice_path, receiver_address=bob_address)
 
@@ -230,7 +230,7 @@ print('send slate from Alice')
 print(send_slate.toJSON())
 
 # build the receive slate using Bob's wallet
-receive_slate = bob_wallet.receive(send_slate)
+receive_slate, bob_secret_key, bob_secret_nonce = bob_wallet.receive(send_slate)
 
 print()
 print('receive slate from Bob')
@@ -238,7 +238,7 @@ print(receive_slate.toJSON())
 
 # finalize the receive slate using Alice's wallet
 finalized_slate = alice_wallet.finalize(
-    receive_slate, secret_key, secret_nonce, path=alice_path)
+    receive_slate, path=alice_path)
 
 print()
 print('finalized slate that Alice has')

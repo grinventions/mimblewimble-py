@@ -59,7 +59,7 @@ def test_rsr_flow_slatepacks():
 
     # now Alice has decrypted slate that Bob sent her
     # she is preparing her own slate
-    pay_slate, alice_secret_key, alice_secret_nonce = alice_wallet.pay(
+    pay_slate, alice_secret_key, alice_secret_nonce, change_outputs = alice_wallet.pay(
         received_invoice_slate,
         [output],
         num_change_outputs,
@@ -111,13 +111,13 @@ def test_rsr_flow_slatepacks_persistent():
 
     # check balance, every wallet is empty
     assert alice_wallet.balance().toJSON() == {
-        'awaiting_finalization': 0,
+        'locked': 0,
         'awaiting_confirmation': 0,
         'spendable': 0,
         'total': 0
     }
     assert bob_wallet.balance().toJSON() == {
-        'awaiting_finalization': 0,
+        'locked': 0,
         'awaiting_confirmation': 0,
         'spendable': 0,
         'total': 0
@@ -155,7 +155,7 @@ def test_rsr_flow_slatepacks_persistent():
 
     # Alice should have her confirmed coinbase balance now
     assert alice_wallet.balance().toJSON() == {
-        'awaiting_finalization': 0,
+        'locked': 0,
         'awaiting_confirmation': 0,
         'spendable': 60000000000,
         'total': 60000000000
@@ -166,9 +166,32 @@ def test_rsr_flow_slatepacks_persistent():
         r1_slatepack_message, path=alice_path, fee_base=fee_base)
     r2_slatepack_text = r2_slatepack_message.pack()  # this text gets sent back to Bob
 
+    # extract slate from R2 slatepack to check fee
+    # we use Bob's wallet as Alice encrypted the slatepack for Bob
+    # unlike in SRS, in RSR flow the fee gets decided at Pay step (second step)
+    slate_fee = bob_wallet.decryptSlatepack(r2_slatepack_message).getSlate().getFee().getFee()
+    assert slate_fee == 322000000
+
     # now Bob receives R2 slatepack
     r2_slatepack_message_received = SlatepackMessage.unarmor(r2_slatepack_text)
     assert r2_slatepack_message_received.is_encrypted()
+
+    # they both check their wallets to see locked output amounts
+    alice_balance = alice_wallet.balance().toJSON()
+    assert alice_balance == {
+        'locked': 60000000000,
+        'awaiting_confirmation': 30000000000 - slate_fee,
+        'spendable': 0,
+        'total': 30000000000 - slate_fee,
+    }
+
+    bob_balance = bob_wallet.balance().toJSON()
+    assert bob_balance == {
+        'locked': 0,
+        'awaiting_confirmation': 30000000000,
+        'spendable': 0,
+        'total': 30000000000
+    }
 
     # Bob finalizes the transaction
     finalized_slate = bob_wallet.finalize(
@@ -187,15 +210,15 @@ def test_rsr_flow_slatepacks_persistent():
     # check their balances
     alice_balance = alice_wallet.balance().toJSON()
     assert alice_balance == {
-        'awaiting_finalization': 0,
+        'locked': 0,
         'awaiting_confirmation': 0,
-        'spendable': 29678000000,
-        'total': 29678000000,
+        'spendable': 30000000000 - slate_fee,
+        'total': 30000000000 - slate_fee,
     }
 
     bob_balance = bob_wallet.balance().toJSON()
     assert bob_balance == {
-        'awaiting_finalization': 0,
+        'locked': 0,
         'awaiting_confirmation': 0,
         'spendable': 30000000000,
         'total': 30000000000

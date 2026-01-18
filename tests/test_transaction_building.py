@@ -37,7 +37,7 @@ def test_srs_flow():
     block_height = 99999
 
     # send
-    send_slate, alice_secret_key, alice_secret_nonce = alice_wallet.send(
+    send_slate, alice_secret_key, alice_secret_nonce, change_outputs = alice_wallet.send(
         [output], num_change_outputs, amount, fee_base, block_height,
         path=alice_path, receiver_address=bob_address)
 
