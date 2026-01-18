@@ -235,7 +235,7 @@ class Wallet:
             receiver_address=None,
             path='m/0/1/0',
             wallet_tx_id=None,
-            testnet=False) -> Tuple[Slate, SecretKey, SecretKey]:
+            testnet=False) -> Tuple[Slate, SecretKey, SecretKey, List[OutputDataEntity]]:
         # if entire balance is sent, no change outputs
         if send_entire_balance:
             change_outputs = 0
@@ -287,7 +287,7 @@ class Wallet:
             sender_address=sender_address_bytes,
             receiver_address=receiver_address_bytes,
             testnet=testnet)
-        return slate, secret_key, secret_nonce
+        return slate, secret_key, secret_nonce, change_outputs
 
 
     def receive(
@@ -368,7 +368,7 @@ class Wallet:
             path='m/0/1/0',
             wallet_tx_id=None,
             testnet=False
-    ) -> Tuple[Slate, SecretKey, SecretKey]:
+    ) -> Tuple[Slate, SecretKey, SecretKey, List[OutputDataEntity]]:
 
         # the total number of outputs and number of kernels
         num_total_outputs = 1 + num_change_outputs
@@ -409,7 +409,7 @@ class Wallet:
             fee,
             inputs,
             change_outputs)
-        return slate, secret_key, secret_nonce
+        return slate, secret_key, secret_nonce, change_outputs
 
     def finalize(
             self,
@@ -520,10 +520,10 @@ class WalletStorage:
     # Transactions / Slates
     def save_slate_context(
         self,
-        slate_id: UUID,
+        slate_id: UUID | str,
         slate,
-        secret_key: Optional[bytes] = None,
-        secret_nonce: Optional[bytes] = None,
+        secret_key: Optional[bytes | SecretKey] = None,
+        secret_nonce: Optional[bytes | SecretKey] = None,
         kernel: Optional[TransactionKernel] = None
     ):
         """Save in-progress or confirmed slate + blinding secrets."""
@@ -629,15 +629,15 @@ class NodeAccess:
         raise NotImplementedError
 
 class WalletBalance:
-    def __init__(self, awaiting_finalization, awaiting_confirmation, spendable):
-        self.awaiting_finalization = awaiting_finalization
+    def __init__(self, locked, awaiting_confirmation, spendable):
+        self.locked = locked
         self.awaiting_confirmation = awaiting_confirmation
         self.spendable = spendable
-        self.total = awaiting_finalization + awaiting_confirmation + spendable
+        self.total = awaiting_confirmation + spendable
 
     def toJSON(self):
         return {
-            'awaiting_finalization': self.awaiting_finalization,
+            'locked': self.locked,
             'awaiting_confirmation': self.awaiting_confirmation,
             'spendable': self.spendable,
             'total': self.total
@@ -784,7 +784,7 @@ class PersistentWallet:
         if total_amount < amount + fee_base:
             raise Exception('Insufficient funds')
 
-        send_slate, secret_key, secret_nonce = self._wallet.send(
+        send_slate, secret_key, secret_nonce, change_outputs = self._wallet.send(
             inputs,
             num_change_outputs,
             amount,
@@ -798,8 +798,16 @@ class PersistentWallet:
             send_slate,
             secret_key=secret_key,
             secret_nonce=secret_nonce)
-        # TODO implement locking inputs which are being spent
-        # TODO but for change outputs keep NO_CONFIRMATIONS
+
+        # mark inputs as being locked/spent
+        for input in inputs:
+            input.status = EOutputStatus.LOCKED
+            self._storage.update_output(input)
+
+        # mark change outputs as NO_CONFIRMATIONS
+        for output in change_outputs:
+            output.status = EOutputStatus.NO_CONFIRMATIONS
+            self._storage.add_output(output)
 
         # prepare s1 slatepack
         sender_address = self.getSlatepackAddress(path=path)
@@ -925,7 +933,7 @@ class PersistentWallet:
         if total_amount < requested_amount + fee_base:
             raise Exception('Insufficient funds')
 
-        pay_slate, secret_key, secret_nonce = self._wallet.pay(
+        pay_slate, secret_key, secret_nonce, change_outputs = self._wallet.pay(
             slate,
             inputs,
             num_change_outputs,
@@ -937,7 +945,17 @@ class PersistentWallet:
             pay_slate,
             secret_key=secret_key,
             secret_nonce=secret_nonce)
-        self.identify_own_outputs_from_slate(pay_slate, path=path)
+
+        # mark inputs as being locked/spent
+        for input in inputs:
+            input.status = EOutputStatus.LOCKED
+            self._storage.update_output(input)
+
+        # mark change outputs as NO_CONFIRMATIONS
+        for output in change_outputs:
+            output.status = EOutputStatus.NO_CONFIRMATIONS
+            self._storage.add_output(output)
+        # self.identify_own_outputs_from_slate(pay_slate, path=path)
 
         # prepare r2 slatepack
         receive_slate_payload = pay_slate.serialize()
@@ -1029,7 +1047,7 @@ class PersistentWallet:
         self._node.push_transaction(transaction)
 
     def balance(self):
-        awaiting_finalization = 0
+        locked = 0
         awaiting_confirmation = 0
         spendable = 0
 
@@ -1038,15 +1056,18 @@ class PersistentWallet:
             if output.status == EOutputStatus.NO_CONFIRMATIONS:
                 awaiting_confirmation += output.getAmount()
             elif output.status == EOutputStatus.LOCKED:
-                awaiting_finalization += output.getAmount()
+                locked += output.getAmount()
             elif output.status == EOutputStatus.SPENDABLE:
                 spendable += output.getAmount()
 
         return WalletBalance(
-            awaiting_finalization,
+            locked,
             awaiting_confirmation,
             spendable
         )
+
+    def decryptSlatepack(self, armored_slatepack_: Union[str, SlatepackMessage], path='m/0/1/0'):
+        return self._wallet.decryptSlatepack(armored_slatepack_, path=path)
 
     def ageDecrypt(self, ciphertext: bytes, path='m/0/1/0'):
         return self._wallet.ageDecrypt(ciphertext, path=path)
