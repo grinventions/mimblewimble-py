@@ -19,6 +19,12 @@ setuptools.setup(
         'pynacl',
         'pyrage'],
     url = 'https://github.com/grinventions/mimblewimble-py',
+    extras_require={
+        'dev': [
+            'pytest>=7.0',
+            'pytest-asyncio>=0.24'
+        ],
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 2",

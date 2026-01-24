@@ -6,6 +6,32 @@
 
 We are building the first Python-based implementation of the Mimblewimble protocol for the [grin cryptocurrency](https://grin.mw/). At the moment it is at the most early stage of development. Heavily based on the [grin++ wallet](https://github.com/GrinPlusPlus/GrinPlusPlus).
 
+## Installation
+
+### Using requirements.txt
+
+Basic usage
+```commandline
+pip install -r requirements.txt
+```
+
+Development
+```commandline
+pip install -r requirements-dev.txt
+```
+
+### Using setup.py
+
+Basic usage
+```commandline
+pip install -e .
+```
+
+Development
+```commandline
+pip install -e ".[dev]"  
+```
+
 ## Usage
 
 ### Generating wallets
