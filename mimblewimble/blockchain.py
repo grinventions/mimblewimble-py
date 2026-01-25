@@ -267,8 +267,7 @@ class BlockHeader:
         }
 
     @classmethod
-    def fromJSON(jsonString: str):
-        O = json.loads(jsonString)
+    def fromDict(self, O: dict):
         return BlockHeader(O['version'],
                            O['height'],
                            O['timestamp'],
@@ -283,6 +282,11 @@ class BlockHeader:
                            O['scalingDifficulty'],
                            O['nonce'],
                            ProofOfWork.deserialize(O['proofOfWork']))
+
+    @classmethod
+    def fromJSON(self, jsonString: str):
+        O = json.loads(jsonString)
+        return BlockHeader.fromDict(O)
 
     def getPreProofOfWork(self, serializer):
         serializer = BytesIO()
