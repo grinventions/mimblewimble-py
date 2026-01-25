@@ -45,28 +45,28 @@ class Consensus:
 
     @classmethod
     def hours(self, num_hours):
-        return num_hours*hour_height
+        return num_hours*Consensus.hour_height
 
     # A day is 1440 blocks
     day_height = 24*hour_height
 
     @classmethod
     def days(self, num_days):
-        return num_days*day_height
+        return num_days*Consensus.day_height
 
     # A week is 10,080 blocks
     week_height = 7*day_height
 
     @classmethod
     def weeks(self, num_weeks):
-        return num_weeks*week_height
+        return num_weeks*Consensus.week_height
 
     # A year is 524,160 blocks
     year_height = 52*week_height
 
     @classmethod
     def years(self, num_years):
-        return num_years*year_height
+        return num_years*Consensus.year_height
 
     # Number of blocks before a coinbase matures and can be spent
     # set to nominal number of block in one day (1440 with 1-minute blocks)
@@ -76,14 +76,14 @@ class Consensus:
     def getMaxCoinbaseHeight(blockHeight, automated_testing=False):
         if automated_testing:
             return math.max(blockHeight, 25)-20
-        return math.max(blockHeight, coinbase_maturity)-coinbase_maturity
+        return math.max(blockHeight, Consensus.coinbase_maturity)-Consensus.coinbase_maturity
 
     # Default number of blocks in the past when cross-block cut-through will start happening
     cut_through_horizon = week_height
 
     @classmethod
     def getHorizonHeight(block_height):
-        return math.max(block_height, cut_through_horizon) - cut_through_horizon
+        return math.max(block_height, Consensus.cut_through_horizon) - Consensus.cut_through_horizon
 
     # Default number of blocks in the past to determine the height where we request a txhashset
     state_sync_threshold = 2*day_height
@@ -112,7 +112,7 @@ class Consensus:
     # Refuse blocks more than 12 block intervals in the future.
     @classmethod
     def getMaxBlockTime(current_time):
-        return currentTime + default_future_time_limit_sec
+        return Consensus.currentTime + Consensus.default_future_time_limit_sec
 
     # Difficulty adjustment half life (actually, 60s * number of 0s-blocks to raise diff by factor e) is 4 hours
     wtema_half_life = 4*3600
@@ -151,16 +151,16 @@ class Consensus:
     # Must be made dependent on height to phase out smaller size over the years
     @classmethod
     def graphWeight(self, height, edge_bits):
-        expiry_height = int(year_height)
+        expiry_height = int(Consensus.year_height)
         xpr_edge_bits = int(edge_bits)
         if edge_bits == 31 and height >= expiry_height:
-            xpr_edge_bits -= math.min(xpr_edge_bits, 1+(height-expiry_height)/week_height)
-        return 2 << (edge_bits-base_edge_bits)*xpr_edge_bits
+            xpr_edge_bits -= math.min(xpr_edge_bits, 1+(height-expiry_height)/Consensus.week_height)
+        return 2 << (edge_bits-Consensus.base_edge_bits)*xpr_edge_bits
 
     # Initial mining secondary scale
     @classmethod
     def initialGraphWeight(self):
-        return graphWeight(0, second_pow_edge_bits)
+        return Consensus.graphWeight(0, Consensus.second_pow_edge_bits)
 
     # Move value linearly toward a goal
     @classmethod
@@ -176,21 +176,21 @@ class Consensus:
     # Starts at 90% losing a percent approximately every week. Represented as an integer between 0 and 100.
     @classmethod
     def secondaryPOWRatio(self, height):
-        return 90-math.min(90, (height/(2*year_height/90)))
+        return 90-math.min(90, (height/(2*Consensus.year_height/90)))
 
     @classmethod
     def scalingDifficulty(self, edgeBits):
         # TODO find a pure python way to ensure "2" is of uint64_t type
-        return 2 << (edgeBits-base_edge_bits)*edgeBits
+        return 2 << (edgeBits-Consensus.base_edge_bits)*edgeBits
 
-    # minimum solution difficulty after HardFork4 when PoW becomes primary only Cuckatoo32+
+    # minimum solution difficulty after HardFork4 when pow becomes primary only Cuckatoo32+
     # TODO find a pure python way to ensure "2" is of uint64_t type
     c32_graph_weight = 2 << (32-base_edge_bits)*32
 
     def min_wtema_graph_weight(self, testnet=False):
         if testnet:
-            return self.GraphWeight(0, second_pow_edge_bits)
-        return c32_graph_weight
+            return self.GraphWeight(0, Consensus.second_pow_edge_bits)
+        return Consensus.c32_graph_weight
 
     # Fork every 6 months.
     hard_fork_interval = year_height / 2

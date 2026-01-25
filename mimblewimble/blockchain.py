@@ -140,7 +140,7 @@ class BlockHeader:
     def getNonce(self):
         return self.nonce
 
-    # PoW
+    # pow
 
     def getProofOfWork(self):
         return self.proofOfWork
