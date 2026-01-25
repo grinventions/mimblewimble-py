@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='mimblewimble',
-    version='0.8.0',
+    version='0.9.0',
     packages=['mimblewimble'],
     license='MIT',
     description = 'A toolset for processing Grin Mimblewimble data structures',
