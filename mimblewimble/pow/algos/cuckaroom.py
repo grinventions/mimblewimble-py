@@ -1,89 +1,79 @@
-from mimblewimble.pow.common import SipHashKeys, sipblock
+from mimblewimble.pow.common import siphash_block, SipHashKeys
+from mimblewimble.pow.common import PROOFSIZE, EDGE_MASK, NODE_MASK
+from mimblewimble.pow.common import EPoWStatus
 
 from typing import List
 
-EDGEBITS       = 29
-NEDGES         = 1 << EDGEBITS
-EDGEMASK       = NEDGES - 1
-NNODES         = NEDGES
-NODEMASK       = NNODES - 1
+def verify_cuckaroom(proof: List[int], sip_keys: SipHashKeys) -> int:
+    xor_all = 0
+    fr = [0] * PROOFSIZE   # from nodes
+    to = [0] * PROOFSIZE   # to nodes
 
-# Most common values in recent Cuckaroom implementations
-PROOFSIZE       = 42         # number of edges in cycle
-EDGE_BLOCK_BITS = 12         # very typical value
-EDGE_BLOCK_SIZE = 1 << EDGE_BLOCK_BITS
-EDGE_BLOCK_MASK = EDGE_BLOCK_SIZE - 1
+    # 1. Basic checks + extract oriented edges
+    for i in range(PROOFSIZE):
+        nonce = proof[i]
 
-# error codes
-POW_OK            = 0
-POW_TOO_BIG       = 1
-POW_TOO_SMALL     = 2
-POW_NON_MATCHING  = 3
-POW_BRANCH        = 4
-POW_DEAD_END      = 5
-POW_SHORT_CYCLE   = 6
+        if nonce > EDGE_MASK:
+            return EPoWStatus.POW_TOO_BIG
 
-POW_ERROR_MESSAGES = {
-    POW_OK:           "POW_OK",
-    POW_TOO_BIG:      "edge > EDGEMASK",
-    POW_TOO_SMALL:    "edges not strictly increasing",
-    POW_NON_MATCHING: "xor of u's != xor of v's",
-    POW_BRANCH:       "branch (cycle with repeated node)",
-    POW_DEAD_END:     "no matching outgoing edge found",
-    POW_SHORT_CYCLE:  "cycle shorter than PROOFSIZE",
-}
+        if i > 0 and nonce <= proof[i-1]:
+            return EPoWStatus.POW_TOO_BIG
 
-def cuckaroom_sipblock(keys: SipHashKeys, edge: int, buf: List[int]) -> int:
-    edge0 = edge & ~EDGE_BLOCK_MASK
-    for i in range(EDGE_BLOCK_SIZE):
-        buf[i], _ = sipblock(keys, edge0 + i)
-    for i in range(EDGE_BLOCK_MASK, 0, -1):
-        buf[i - 1] ^= buf[i]
-    return buf[edge & EDGE_BLOCK_MASK]
+        edge = siphash_block(sip_keys, nonce, 21, xor_all=True)
+        u = edge & NODE_MASK
+        v = (edge >> 32) & NODE_MASK
 
-def verify_cuckaroom(edges: List[int], keys: SipHashKeys) -> int:
-    xorfrom = 0
-    xorto = 0
-    sips = [0] * EDGE_BLOCK_SIZE
-    from_node = [0] * PROOFSIZE
-    to_node = [0] * PROOFSIZE
+        fr[i] = u
+        to[i] = v
+        xor_all ^= u ^ v
+
+    if xor_all != 0:
+        return EPoWStatus.POW_NON_MATCHING
+
+    # 2. Cycle detection (Grin-style reverse walk)
+    MASK = 63
+
+    head = [PROOFSIZE] * (MASK + 1)
+    prev = [0] * PROOFSIZE
     visited = [False] * PROOFSIZE
 
-    for n in range(PROOFSIZE):
-        if edges[n] > EDGEMASK:
-            return POW_TOO_BIG
-        if n > 0 and edges[n] <= edges[n - 1]:
-            return POW_TOO_SMALL
+    # Build reverse index (from-nodes)
+    for i in range(PROOFSIZE):
+        bits = fr[i] & MASK
+        prev[i] = head[bits]
+        head[bits] = i
 
-        edge = cuckaroom_sipblock(keys, edges[n], sips)
-        from_node[n] = edge & EDGEMASK
-        to_node[n] = (edge >> 32) & EDGEMASK
-        xorfrom ^= from_node[n]
-        xorto ^= to_node[n]
-        visited[n] = False
+    steps = 0
+    current = 0
 
-    if xorfrom != xorto:
-        return POW_NON_MATCHING
-
-    n = 0
-    i = 0
     while True:
-        if visited[i]:
-            return POW_BRANCH
-        visited[i] = True
+        if visited[current]:
+            return EPoWStatus.POW_BRANCH
 
-        nexti = 0
-        while nexti < PROOFSIZE and from_node[nexti] != to_node[i]:
-            nexti += 1
-        if nexti == PROOFSIZE:
-            return POW_DEAD_END
+        visited[current] = True
+        target = to[current]
+        bits = target & MASK
+        k = head[bits]
+        found = False
 
-        i = nexti
-        n += 1
-        if i == 0:
+        while k != PROOFSIZE:
+            if fr[k] == target:
+                current = k
+                found = True
+                break
+            k = prev[k]
+
+        if not found:
+            return EPoWStatus.POW_DEAD_END
+
+        steps += 1
+        if current == 0:
             break
 
-    return POW_OK if n == PROOFSIZE else POW_SHORT_CYCLE
+    if steps != PROOFSIZE:
+        return EPoWStatus.POW_SHORT_CYCLE
+
+    return EPoWStatus.POW_OK
 
 def cuckaroom_validate(
     proof_nonces: List[int],          # list of 42 edge indices (nonces)
@@ -92,15 +82,14 @@ def cuckaroom_validate(
     """
     Returns (True, "OK") or (False, error message)
     """
-
-    if len(proof_nonces) != PROOFSIZE:
-        return False, f"Invalid proof size: expected {PROOFSIZE}, got {len(proof_nonces)}"
+    if len(proof_nonces) < PROOFSIZE:
+        return False, EPoWStatus.POW_TOO_SMALL
+    if len(proof_nonces) > PROOFSIZE:
+        return False, EPoWStatus.POW_TOO_BIG
 
     keys = SipHashKeys(pre_pow_hash)
     result = verify_cuckaroom(proof_nonces, keys)
 
-    if result == POW_OK:
-        return True, "POW_OK"
-
-    msg = POW_ERROR_MESSAGES.get(result, f"Unknown error code {result}")
-    return False, msg
+    if result == EPoWStatus.POW_OK:
+        return True, result
+    return False, result

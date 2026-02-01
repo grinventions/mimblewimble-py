@@ -1,154 +1,89 @@
 from typing import List
 
-from mimblewimble.pow.common import SipHashKeys, SipHashState
+from mimblewimble.pow.common import siphash_block
+from mimblewimble.pow.common import SipHashKeys
+from mimblewimble.pow.common import PROOFSIZE, EDGE_MASK, EDGEBITS
+from mimblewimble.pow.common import EPoWStatus
 
-# ────────────────────────────────────────────────
-# Constants
-# ────────────────────────────────────────────────
+NNODES    = 1 << EDGEBITS # ← Cuckarooz: monopartite
+NEDGES    = 1 << EDGEBITS
+EDGE_MASK = NEDGES - 1
+NODE_MASK = NNODES - 1
 
-EDGEBITS        = 29
-NEDGES          = 1 << EDGEBITS
-EDGEMASK        = NEDGES - 1
+def verify_cuckarooz(proof: List[int], sip_keys: SipHashKeys) -> int:
+    uvs = [0] * (2 * PROOFSIZE)          # flattened: u0,v0, u1,v1, ...
+    xor_all = 0
 
-# ← most important difference from cuckaroom
-NNODES          = 2 * NEDGES
-NODEMASK        = NNODES - 1
+    # 1. Basic checks + extract endpoints
+    for i in range(PROOFSIZE):
+        nonce = proof[i]
 
-PROOFSIZE       = 42
-EDGE_BLOCK_BITS = 12
-EDGE_BLOCK_SIZE = 1 << EDGE_BLOCK_BITS
-EDGE_BLOCK_MASK = EDGE_BLOCK_SIZE - 1
+        if nonce > EDGE_MASK:
+            return EPoWStatus.POW_TOO_BIG
 
-# ────────────────────────────────────────────────
-# Error codes
-# ────────────────────────────────────────────────
+        if i > 0 and nonce <= proof[i-1]:
+            return EPoWStatus.POW_NOT_ASCENDING
 
-POW_OK            = 0
-POW_TOO_BIG       = 1
-POW_TOO_SMALL     = 2
-POW_NON_MATCHING  = 3
-POW_BRANCH        = 4
-POW_DEAD_END      = 5
-POW_SHORT_CYCLE   = 6
+        edge = siphash_block(sip_keys, nonce, 21, xor_all=True)
+        u = edge & NODE_MASK
+        v = (edge >> 32) & NODE_MASK
 
-POW_ERROR_MESSAGES = {
-    POW_OK:           "POW_OK",
-    POW_TOO_BIG:      "edge > EDGEMASK",
-    POW_TOO_SMALL:    "edges not strictly increasing",
-    POW_NON_MATCHING: "xor of all endpoints != 0",
-    POW_BRANCH:       "branch (multiple matches for same endpoint)",
-    POW_DEAD_END:     "no matching endpoint found",
-    POW_SHORT_CYCLE:  "cycle shorter than PROOFSIZE",
-}
+        uvs[2 * i]     = u
+        uvs[2 * i + 1] = v
+        xor_all ^= u ^ v
 
-# ────────────────────────────────────────────────
-# Helper functions
-# ────────────────────────────────────────────────
+    if xor_all != 0:
+        return EPoWStatus.POW_NON_MATCHING
 
-def cuckarooz_sipblock(keys: SipHashKeys, edge: int, buf: List[int]) -> int:
-    """
-    Fills buf with EDGE_BLOCK_SIZE siphash outputs
-    Returns siphash output for the requested edge
-    """
-    edge0 = edge & ~EDGE_BLOCK_MASK          # round down to block start
+    # 2. Cycle detection – Grin-style linked-list walk (undirected)
+    MASK = 63   # 2⁶-1 — sufficient for 42 edges
 
-    shs = SipHashState(keys)
+    head = [2 * PROOFSIZE] * (MASK + 1)
+    prev = [0] * (2 * PROOFSIZE)
 
-    # Fill buffer with consecutive siphash outputs
-    for i in range(EDGE_BLOCK_SIZE):
-        shs.hash24(edge0 + i)
-        buf[i] = shs.xor_lanes()
+    # Build reverse linked lists over **all** endpoints
+    for n in range(2 * PROOFSIZE):
+        bits = uvs[n] & MASK
+        prev[n] = head[bits]
+        head[bits] = n
 
-    # Backward XOR chain (differential form)
-    for i in range(EDGE_BLOCK_MASK, 0, -1):
-        buf[i-1] ^= buf[i]
+    # Close the lists into circular chains
+    for n in range(2 * PROOFSIZE):
+        bits = uvs[n] & MASK
+        if prev[n] == 2 * PROOFSIZE:
+            prev[n] = head[bits]
 
-    # Return the exact siphash value for this edge
-    idx_in_block = edge & EDGE_BLOCK_MASK
-    return buf[idx_in_block]
-
-
-def verify_cuckarooz(edges: List[int], keys: SipHashKeys) -> int:
-    """
-    Verifies Cuckarooz proof
-    Returns one of POW_xxx constants
-    """
-
-    if len(edges) != PROOFSIZE:
-        return POW_TOO_SMALL   # actually wrong size, but we reuse constant
-
-    # ─── Step 1: basic checks + collect u,v endpoints ─────────────────────
-
-    xoruv = 0
-    uv = [0] * (2 * PROOFSIZE)          # list of all 84 endpoints
-    sips = [0] * EDGE_BLOCK_SIZE        # reusable buffer
-
-    prev_edge = -1
-
-    for n in range(PROOFSIZE):
-        edge = edges[n]
-
-        if edge > EDGEMASK:
-            return POW_TOO_BIG
-
-        if n > 0 and edge <= prev_edge:
-            return POW_TOO_SMALL
-
-        prev_edge = edge
-
-        sip = cuckarooz_sipblock(keys, edge, sips)
-
-        u = sip & NODEMASK
-        v = (sip >> 32) & NODEMASK
-
-        uv[2 * n]     = u
-        uv[2 * n + 1] = v
-
-        xoruv ^= u
-        xoruv ^= v
-
-    if xoruv != 0:
-        return POW_NON_MATCHING
-
-    # ─── Step 2: cycle following ─────────────────────────────────────────
-
-    visited = [False] * (2 * PROOFSIZE)
-    n = 0
-    i = 0
+    n_edges = 0
+    i = 0   # start at uvs[0]
 
     while True:
-        visited[i] = True
-        u_target = uv[i]
+        j = i
+        k = j
 
-        j = -1
-        count_matches = 0
-
-        for k in range(2 * PROOFSIZE):
+        # Look for duplicate node in the reverse chain (branch check)
+        while True:
+            k = prev[k]
             if k == i:
-                continue
-            if uv[k] == u_target:
-                count_matches += 1
+                break
+            if uvs[k] == uvs[i]:
+                if j != i:
+                    return EPoWStatus.POW_BRANCH
                 j = k
 
-        if count_matches == 0:
-            return POW_DEAD_END
+        if j == i:
+            return EPoWStatus.POW_DEAD_END
 
-        if count_matches > 1:
-            return POW_BRANCH
-
-        # move to the other endpoint of the found edge
+        # Jump to the other endpoint of the same edge
         i = j ^ 1
-        n += 1
+        n_edges += 1
 
-        # we closed the cycle
         if i == 0:
             break
 
-    # must use exactly PROOFSIZE edges
-    if n != PROOFSIZE:
-        return POW_SHORT_CYCLE
-
-    return POW_OK
+    if n_edges == PROOFSIZE:
+        return EPoWStatus.POW_OK
+    else:
+        return EPoWStatus.POW_SHORT_CYCLE
 
 # ────────────────────────────────────────────────
 # High-level validate function
@@ -161,15 +96,14 @@ def cuckarooz_validate(
     """
     Returns (is_valid: bool, message: str)
     """
-
-    if len(proof_nonces) != PROOFSIZE:
-        return False, f"Invalid proof size (expected {PROOFSIZE}, got {len(proof_nonces)})"
+    if len(proof_nonces) < PROOFSIZE:
+        return False, EPoWStatus.POW_TOO_SMALL
+    if len(proof_nonces) > PROOFSIZE:
+        return False, EPoWStatus.POW_TOO_BIG
 
     keys = SipHashKeys(pre_pow_hash)
     result = verify_cuckarooz(proof_nonces, keys)
 
-    if result == POW_OK:
-        return True, "POW_OK"
-
-    msg = POW_ERROR_MESSAGES.get(result, f"Unknown error code {result}")
-    return False, msg
+    if result == EPoWStatus.POW_OK:
+        return True, result
+    return False, result
