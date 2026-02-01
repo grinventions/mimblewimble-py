@@ -6,6 +6,8 @@ from mimblewimble.pow.algos.cuckaroom import cuckaroom_validate
 from mimblewimble.pow.algos.cuckarooz import cuckarooz_validate
 from mimblewimble.pow.algos.cuckatoo import cuckatoo_validate
 from mimblewimble.pow.prepow import serialize_pre_pow
+from mimblewimble.pow.common import EPoWStatus
+from mimblewimble.pow.algos import pow_validate
 
 from tests.fixtures import block_42_header
 
@@ -35,33 +37,31 @@ def test_cuckaroo_verification():
     valid, msg = cuckaroo_validate(
         solution, keybuf, edge_bits)
     assert valid
-    assert msg == 0 # POW_OK
+    assert msg == EPoWStatus.POW_OK
 
 def test_cuckarood_verification():
-    edge_bits = cuckarood_header['edge_bits']
     solution = cuckarood_header['cuckoo_solution']
     pre_pow = serialize_pre_pow(cuckarood_header)
     keybuf = blake2b(pre_pow, digest_size=32).digest()
     valid, msg = cuckarood_validate(solution, keybuf)
     assert valid
+    assert msg == EPoWStatus.POW_OK
 
 def test_cuckaroom_verification():
-    edge_bits = cuckaroom_header['edge_bits']
     solution = cuckaroom_header['cuckoo_solution']
     pre_pow = serialize_pre_pow(cuckaroom_header)
     keybuf = blake2b(pre_pow, digest_size=32).digest()
     valid, msg = cuckaroom_validate(solution, keybuf)
     assert valid
-    assert msg == 'POW_OK'
+    assert msg == EPoWStatus.POW_OK
 
 def test_cuckarooz_verification():
-    edge_bits = cuckarooz_header['edge_bits']
     solution = cuckarooz_header['cuckoo_solution']
     pre_pow = serialize_pre_pow(cuckarooz_header)
     keybuf = blake2b(pre_pow, digest_size=32).digest()
     valid, msg = cuckarooz_validate(solution, keybuf)
     assert valid
-    assert msg == 'POW_OK'
+    assert msg == EPoWStatus.POW_OK
 
 def test_cuckatoo_verification():
     edge_bits = cuckatoo_header['edge_bits']
@@ -70,4 +70,11 @@ def test_cuckatoo_verification():
     keybuf = blake2b(pre_pow, digest_size=32).digest()
     valid, msg = cuckatoo_validate(solution, keybuf, edge_bits)
     assert valid
-    assert msg == 'POW_OK'
+    assert msg == EPoWStatus.POW_OK
+
+def test_pow_algo_auto():
+    assert pow_validate(cuckaroo_header) == (True, EPoWStatus.POW_OK)
+    assert pow_validate(cuckarood_header) == (True, EPoWStatus.POW_OK)
+    assert pow_validate(cuckaroom_header) == (True, EPoWStatus.POW_OK)
+    assert pow_validate(cuckarooz_header) == (True, EPoWStatus.POW_OK)
+    assert pow_validate(cuckatoo_header) == (True, EPoWStatus.POW_OK)
