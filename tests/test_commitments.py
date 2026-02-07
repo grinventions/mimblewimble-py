@@ -1,12 +1,6 @@
 import os
 import pytest
 
-from secp256k1_zkp_mw import SECP256K1_CONTEXT_SIGN
-from secp256k1_zkp_mw import SECP256K1_CONTEXT_VERIFY
-from secp256k1_zkp_mw import secp256k1_context_create
-from secp256k1_zkp_mw import secp256k1_context_destroy
-from secp256k1_zkp_mw import secp256k1_pedersen_blind_sum
-
 from mimblewimble.models.transaction import BlindingFactor
 
 from mimblewimble.crypto.commitment import Commitment

@@ -112,7 +112,7 @@ class Bulletproof:
 
         self.MAX_WIDTH = 1 << 20
         self.SCRATCH_SPACE_SIZE = 256 * self.MAX_WIDTH
-        self.MAX_GENERATORS = 256;
+        self.MAX_GENERATORS = 256
 
         self.generators = secp256k1_bulletproof_generators_create(
             self.ctx, secp256k1_generator_const_g, self.MAX_GENERATORS);
