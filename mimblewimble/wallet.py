@@ -14,6 +14,7 @@ from hashlib import blake2b, pbkdf2_hmac, sha512
 from bip32 import BIP32
 from bip_utils import Bech32Encoder
 
+from mimblewimble.crypto.rangeproof import RangeProof
 from mimblewimble.models.slatepack.metadata import SlatepackVersion, SlatepackMetadata
 from mimblewimble.serializer import Serializer
 from mimblewimble.mnemonic import Mnemonic
@@ -621,6 +622,14 @@ class NodeAccess:
     def get_outputs(self, outputs: List[OutputDataEntity]):
         raise NotImplementedError
 
+    def get_unspent_outputs(self, start_index, end_index, window_size, range_proof=False):
+        """Get unspent outputs in PMMR index range."""
+        raise NotImplementedError
+
+    def get_pmmr_indices(self, start_block_height: int, end_block_height: int) -> Dict[int, List[int]]:
+        """Get MMR indices for outputs and kernels in block range."""
+        raise NotImplementedError
+
     def get_kernel(self, excess: bytes) -> TransactionKernel:
         """Check if kernel exists, return kernel info + height if found."""
         raise NotImplementedError
@@ -644,15 +653,102 @@ class WalletBalance:
         }
 
 class PersistentWallet:
-    def __init__(self, wallet: Wallet, storage: WalletStorage, node=None):
+    def __init__(
+            self,
+            wallet: Wallet,
+            storage: WalletStorage,
+            node=None,
+            birthday_height=0):
         self._wallet = wallet
         self._storage = storage
+
+        self.birthday_height = birthday_height
+        self.tip_height = birthday_height
 
         if node is not None:
             self._node = node
         else:
             # TODO initialize the default local API node
             pass
+
+    def get_tip_height(self):
+        return self.tip_height
+
+    def is_synced(self):
+        return self.tip_height == self._node.get_current_block_height()
+
+    def scan(self, window_size=100, sync_callback=None, path='m/0/1/0'):
+        node_tip_height = self._node.get_current_block_height()
+        if self.tip_height == node_tip_height:
+            return
+
+        # get the PMMR indices
+        pmmr_indices_response = self._node.get_pmmr_indices(
+            self.tip_height, node_tip_height)
+        start_index = pmmr_indices_response['last_retrieved_index']
+        end_index = pmmr_indices_response['highest_index']
+
+        if sync_callback is not None:
+            sync_callback.msg('pmmr_indices', {
+                'start_index': start_index,
+                'end_index': end_index
+            })
+
+        # scan the PMMR indices for outputs and kernels
+        keychain = KeyChain.fromSeed(self._wallet.master_seed)
+        while True:
+            outputs_response = self._node.get_unspent_outputs(
+                start_index, end_index, window_size, range_proof=True)
+            unspent_outputs = outputs_response['outputs']
+
+            for unspent_output in unspent_outputs:
+                commitment_bytes = bytes.fromhex(unspent_output['commit'])
+                commitment = Commitment(commitment_bytes[1:]) # remove the "09" prefix
+
+                proof_bytes = bytes.fromhex(unspent_output['proof'])
+                range_proof = RangeProof.frombytes(proof_bytes)
+
+                try:
+                    # TODO should path be taken into account?
+                    rewind_proof = keychain.rewindRangeProof(
+                        commitment,
+                        range_proof,
+                        EBulletproofType.ENHANCED)
+                except Exception as e:
+                    # this is not our output, skip
+                    continue
+
+                if sync_callback is not None:
+                    sync_callback.msg('new_output', {
+                        'commitment': commitment_bytes.hex()
+                    })
+
+                # this output belongs to this wallet
+                # we should add it to the storage
+                transaction_output = TransactionOutput(
+                    EOutputFeatures.DEFAULT,
+                    commitment,
+                    range_proof)
+
+                # build the output data entity
+                output_data_entity = OutputDataEntity(
+                    path,
+                    rewind_proof.blinding_factor,
+                    transaction_output,
+                    rewind_proof.amount,
+                    EOutputStatus.SPENDABLE)
+
+                # save this output as spendable in the local storage
+                if not self._storage.is_output_known(commitment.getBytes()):
+                    self._storage.add_output(output_data_entity)
+                else:
+                    self._storage.update_output(output_data_entity)
+
+            if outputs_response['highest_index'] <= outputs_response['last_retrieved_index']:
+                break
+            start_index = outputs_response['last_retrieved_index'] + 1
+
+        self.tip_height = node_tip_height
 
     def refresh(self):
         # get all outputs awaiting confirmation
@@ -733,6 +829,7 @@ class PersistentWallet:
                 # we will check if this output belongs to this wallet
                 # this way we will know if we should store it
                 try:
+                    # TODO should path be taken into account?
                     rewind_proof = keychain.rewindRangeProof(
                         commitment.commitment,
                         range_proof,
@@ -1080,3 +1177,19 @@ class PersistentWallet:
 
     def getSlatepackAddress(self, path='m/0/1/0', testnet=False):
         return self._wallet.getSlatepackAddress(path=path, testnet=testnet)
+
+    def getSeedPhrase(self):
+        return self._wallet.getSeedPhrase()
+
+    @classmethod
+    def restoreFromSeedPhrase(
+            self,
+            phrase: str,
+            storage: WalletStorage,
+            node=None,
+            birthday_height=0):
+        return PersistentWallet(
+            Wallet.fromSeedPhrase(phrase),
+            storage,
+            node=node,
+            birthday_height=birthday_height)

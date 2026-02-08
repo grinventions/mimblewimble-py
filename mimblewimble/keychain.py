@@ -5,7 +5,6 @@ from typing import Union
 
 from bip32 import BIP32
 from bip_utils import Bech32Encoder
-
 from hashlib import blake2b, pbkdf2_hmac, sha512
 
 from nacl import bindings
@@ -160,25 +159,28 @@ class KeyChain:
             rangeproof: RangeProof,
             bulletproof_type: EBulletproofType):
         b = Bulletproof()
-        if bulletproof_type == EBulletproofType.ORIGINAL:
-            nonce = KeyChain.createNonce(
-                commitment, self.bulletproof_nonce)
-            return b.rewindProof(
-                commitment, rangeproof, nonce)
-        elif bulletproof_type == EBulletproofType.ENHANCED:
-            pks = PublicKeys()
-            master_public_key = pks.calculatePublicKey(self.master_key)
+        try:
+            if bulletproof_type == EBulletproofType.ORIGINAL:
+                nonce = KeyChain.createNonce(
+                    commitment, self.bulletproof_nonce)
+                rewind_result = b.rewindProof(
+                    commitment, rangeproof, nonce)
+            elif bulletproof_type == EBulletproofType.ENHANCED:
+                pks = PublicKeys()
+                master_public_key = pks.calculatePublicKey(self.master_key)
 
-            rewind_nonce_hash = SecretKey(blake2b(
-                master_public_key.getBytes(),
-                digest_size=32).digest())
+                rewind_nonce_hash = SecretKey(blake2b(
+                    master_public_key.getBytes(),
+                    digest_size=32).digest())
 
-            return b.rewindProof(
-                commitment,
-                rangeproof,
-                KeyChain.createNonce(commitment, rewind_nonce_hash))
+                rewind_result = b.rewindProof(
+                    commitment,
+                    rangeproof,
+                    KeyChain.createNonce(commitment, rewind_nonce_hash))
+            return rewind_result
+        finally:
+            del b  # just to make sure secp256k1-zkp context is freed
         raise ValueError('Unimplemented bulletproof type')
-
 
     def generateRangeProof(
             self,
@@ -196,8 +198,10 @@ class KeyChain:
         if bulletproof_type == EBulletproofType.ORIGINAL:
             nonce = KeyChain.createNonce(
                 commitment, self.bulletproof_nonce)
-            return b.generateRangeProof(
+            generated_range_proof = b.generateRangeProof(
                 amount, blinding_factor, nonce, nonce, proof_message)
+            del b # just to make sure secp256k1-zkp context is freed
+            return generated_range_proof
         elif bulletproof_type == EBulletproofType.ENHANCED:
             private_nonce_hash = SecretKey(blake2b(
                 self.master_key.getBytes(),
@@ -210,12 +214,15 @@ class KeyChain:
                 master_public_key.getBytes(),
                 digest_size=32).digest())
 
-            return b.generateRangeProof(
+            generated_range_proof = b.generateRangeProof(
                 amount,
                 blinding_factor,
                 KeyChain.createNonce(commitment, private_nonce_hash),
                 KeyChain.createNonce(commitment, rewind_nonce_hash),
                 proof_message)
+            del b # just to make sure secp256k1-zkp context is freed
+            return generated_range_proof
+        del b # just to make sure secp256k1-zkp context is freed
         raise ValueError('Unimplemented bulletproof type')
 
     @classmethod

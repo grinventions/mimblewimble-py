@@ -42,8 +42,15 @@ class RangeProof:
         return self.hex()
 
     @classmethod
+    def frombytes(self, proof_bytes: bytes):
+        serializer = Serializer()
+        serializer.write(proof_bytes)
+        serializer.resetPointer()
+        return self.deserialize(serializer)
+
+    @classmethod
     def fromhex(self, _hex: str):
-        return RangeProof(bytes.fromhex(_hex))
+        return RangeProof.frombytes(bytes.fromhex(_hex))
 
     def format(self):
         return self.hex()

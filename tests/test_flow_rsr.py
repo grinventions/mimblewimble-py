@@ -101,10 +101,12 @@ def test_rsr_flow_slatepacks_persistent():
     alice_path = 'm/0/1/0'
     alice_wallet = PersistentWallet(
         Wallet.initialize(), WalletStorageInMemory(), mock_node)
+    alice_recovery_phrase = alice_wallet.getSeedPhrase()
 
     bob_path = 'm/0/1/0'
     bob_wallet = PersistentWallet(
         Wallet.initialize(), WalletStorageInMemory(), mock_node)
+    bob_recovery_phrase = bob_wallet.getSeedPhrase()
 
     # transaction setup
     fee_base = 7000000
@@ -223,3 +225,37 @@ def test_rsr_flow_slatepacks_persistent():
         'spendable': 30000000000,
         'total': 30000000000
     }
+
+    # test restoring wallet from seed phrase and syncing with node
+    # first Alice
+    alice_wallet_restored = PersistentWallet.restoreFromSeedPhrase(
+        alice_recovery_phrase, WalletStorageInMemory(), mock_node)
+    assert not alice_wallet_restored.is_synced()
+
+    alice_wallet_restored.scan()
+
+    alice_balance_restored = alice_wallet_restored.balance().toJSON()
+    assert alice_balance_restored == {
+        'locked': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 30000000000 - slate_fee,
+        'total': 30000000000 - slate_fee,
+    }
+    assert alice_wallet_restored.is_synced()
+
+    # now Bob
+    bob_wallet_restored = PersistentWallet.restoreFromSeedPhrase(
+        bob_recovery_phrase, WalletStorageInMemory(), mock_node)
+    assert not bob_wallet_restored.is_synced()
+
+    bob_wallet_restored.scan()
+
+    bob_balance_restored = bob_wallet.balance().toJSON()
+    assert bob_balance_restored == {
+        'locked': 0,
+        'awaiting_confirmation': 0,
+        'spendable': 30000000000,
+        'total': 30000000000
+    }
+
+    assert bob_wallet_restored.is_synced()

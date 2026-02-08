@@ -54,3 +54,5 @@ def test_aggsig_interaction():
     aggregateValid = agg.verifyAggregateSignature(aggregate, sumPubKeys, message)
 
     assert aggregateValid
+
+    del agg # just to make sure secp256k1-zkp context is freed
