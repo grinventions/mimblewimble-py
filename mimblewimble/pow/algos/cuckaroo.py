@@ -4,9 +4,10 @@ from mimblewimble.pow.common import siphash_block, SipHashKeys
 from mimblewimble.pow.common import PROOFSIZE
 from mimblewimble.pow.common import EPoWStatus
 
+
 def verify_cuckaroo(proof: list[int], keys: SipHashKeys, edge_bits: int) -> int:
     edge_mask = (1 << edge_bits) - 1
-    node_mask = edge_mask   # Cuckaroo29: nodes & edges same size
+    node_mask = edge_mask  # Cuckaroo29: nodes & edges same size
 
     uvs: List[int] = [0] * (2 * PROOFSIZE)
     xor0 = 0
@@ -19,15 +20,15 @@ def verify_cuckaroo(proof: list[int], keys: SipHashKeys, edge_bits: int) -> int:
         if edge_idx > edge_mask:
             return EPoWStatus.POW_TOO_BIG
 
-        if n > 0 and edge_idx <= proof[n-1]:
+        if n > 0 and edge_idx <= proof[n - 1]:
             return EPoWStatus.POW_TOO_SMALL
 
         edge = siphash_block(keys, edge_idx)
         u = edge & node_mask
         v = (edge >> 32) & node_mask
 
-        uvs[2*n]     = u
-        uvs[2*n + 1] = v
+        uvs[2 * n] = u
+        uvs[2 * n + 1] = v
 
         xor0 ^= u
         xor1 ^= v
@@ -36,20 +37,20 @@ def verify_cuckaroo(proof: list[int], keys: SipHashKeys, edge_bits: int) -> int:
         return EPoWStatus.POW_NON_MATCHING
 
     # Step 2: cycle walk (Grin style)
-    mask = (1 << (PROOFSIZE-1).bit_length()) - 1
+    mask = (1 << (PROOFSIZE - 1).bit_length()) - 1
 
     head_u = [2 * PROOFSIZE] * (mask + 1)
     head_v = [2 * PROOFSIZE] * (mask + 1)
-    prev   = [0] * (2 * PROOFSIZE)
+    prev = [0] * (2 * PROOFSIZE)
 
     for n in range(PROOFSIZE):
-        ubits = uvs[2*n]     & mask
-        prev[2*n]     = head_u[ubits]
-        head_u[ubits] = 2*n
+        ubits = uvs[2 * n] & mask
+        prev[2 * n] = head_u[ubits]
+        head_u[ubits] = 2 * n
 
-        vbits = uvs[2*n + 1] & mask
-        prev[2*n + 1] = head_v[vbits]
-        head_v[vbits] = 2*n + 1
+        vbits = uvs[2 * n + 1] & mask
+        prev[2 * n + 1] = head_v[vbits]
+        head_v[vbits] = 2 * n + 1
 
     # close cycles
     for n in range(PROOFSIZE):
@@ -89,10 +90,11 @@ def verify_cuckaroo(proof: list[int], keys: SipHashKeys, edge_bits: int) -> int:
 
     return EPoWStatus.POW_OK
 
+
 def cuckaroo_validate(
-    proof_nonces: list[int],    # list of 42 edge indices
-    pre_pow_hash: bytes,        # 32 bytes usually (blake2b result)
-    edge_bits: int
+    proof_nonces: list[int],  # list of 42 edge indices
+    pre_pow_hash: bytes,  # 32 bytes usually (blake2b result)
+    edge_bits: int,
 ) -> bool:
 
     if len(proof_nonces) < PROOFSIZE:

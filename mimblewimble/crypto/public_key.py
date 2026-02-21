@@ -36,5 +36,4 @@ class PublicKey:
         return PublicKey(bytes.fromhex(_hex))
 
     def format(self):
-        return 'PublicKey{' + self.compressed_key.hex() + '}'
-
+        return "PublicKey{" + self.compressed_key.hex() + "}"

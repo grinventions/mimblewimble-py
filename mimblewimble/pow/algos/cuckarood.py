@@ -5,8 +5,8 @@ from mimblewimble.pow.common import PROOFSIZE, EPoWStatus
 
 EDGEBITS = 29
 
-NEDGES    = 1 << EDGEBITS
-NNODES    = 1 << (EDGEBITS - 1)
+NEDGES = 1 << EDGEBITS
+NNODES = 1 << (EDGEBITS - 1)
 EDGE_MASK = NEDGES - 1
 NODE_MASK = NNODES - 1
 
@@ -18,8 +18,9 @@ errstr = {
     EPoWStatus.POW_NON_MATCHING: "xor endpoints != 0",
     EPoWStatus.POW_BRANCH: "branch detected",
     EPoWStatus.POW_DEAD_END: "dead end (no reverse edge)",
-    EPoWStatus.POW_SHORT_CYCLE: "cycle shorter than proof size"
+    EPoWStatus.POW_SHORT_CYCLE: "cycle shorter than proof size",
 }
+
 
 def verify_cuckarood(edges: list[int], sip_keys) -> int:
     uvs = [0] * (2 * PROOFSIZE)
@@ -35,7 +36,7 @@ def verify_cuckarood(edges: list[int], sip_keys) -> int:
         if edge_idx >= EDGE_MASK:
             return EPoWStatus.POW_TOO_BIG
 
-        if i > 0 and edge_idx <= edges[i-1]:
+        if i > 0 and edge_idx <= edges[i - 1]:
             return EPoWStatus.POW_TOO_SMALL
 
         if ndir[direction] >= PROOFSIZE // 2:
@@ -47,7 +48,7 @@ def verify_cuckarood(edges: list[int], sip_keys) -> int:
         v = (hash_val >> 32) & NODE_MASK
 
         idx = 4 * ndir[direction] + 2 * direction
-        uvs[idx]     = u
+        uvs[idx] = u
         uvs[idx + 1] = v
 
         xor_u ^= u
@@ -59,11 +60,11 @@ def verify_cuckarood(edges: list[int], sip_keys) -> int:
         return EPoWStatus.POW_NON_MATCHING
 
     NIL = 2 * PROOFSIZE
-    MASK = 63               # 2^6 - 1 — good enough for 42 proofs
+    MASK = 63  # 2^6 - 1 — good enough for 42 proofs
 
     headu = [NIL] * (MASK + 1)
     headv = [NIL] * (MASK + 1)
-    prev  = [0]   * (2 * PROOFSIZE)
+    prev = [0] * (2 * PROOFSIZE)
 
     ndir = [0, 0]
 
@@ -120,7 +121,10 @@ def verify_cuckarood(edges: list[int], sip_keys) -> int:
 
     return EPoWStatus.POW_OK
 
-def cuckarood_validate(proof_nonces: list[int], pre_pow_hash: bytes) -> tuple[bool, str]:
+
+def cuckarood_validate(
+    proof_nonces: list[int], pre_pow_hash: bytes
+) -> tuple[bool, str]:
     """
     Returns (is_valid: bool, error_message: str)
     """

@@ -5,13 +5,16 @@ from mimblewimble.models.transaction import TransactionOutput
 
 class OutputDataEntity:
     def __init__(
-            self,
-            path: str,
-            blinding_factor: BlindingFactor,
-            output: TransactionOutput,
-            amount: int,
-            status: EOutputStatus,
-            mmr_index=None, block_height=None, wallet_tx_id=None):
+        self,
+        path: str,
+        blinding_factor: BlindingFactor,
+        output: TransactionOutput,
+        amount: int,
+        status: EOutputStatus,
+        mmr_index=None,
+        block_height=None,
+        wallet_tx_id=None,
+    ):
         self.path = path
         self.blinding_factor = blinding_factor
         self.output = output

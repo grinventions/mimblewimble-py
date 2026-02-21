@@ -15,7 +15,7 @@ from mimblewimble.models.fee import Fee
 
 class EOutputStatus(IntEnum):
     SPENDABLE = 0
-    IMMATURE = 1 # DEPRECATED: Outputs should be marked as spendable.
+    IMMATURE = 1  # DEPRECATED: Outputs should be marked as spendable.
     NO_CONFIRMATIONS = 2
     SPENT = 3
     LOCKED = 4
@@ -31,18 +31,18 @@ class OutputFeatures:
     @classmethod
     def toString(self, features: EOutputFeatures):
         if features == EOutputFeatures.DEFAULT:
-            return 'Plain'
+            return "Plain"
         if features == EOutputFeatures.COINBASE_OUTPUT:
-            return 'Coinbase'
-        return ''
+            return "Coinbase"
+        return ""
 
     @classmethod
     def fromString(self, string: str):
-        if string == 'Plain':
+        if string == "Plain":
             return EOutputFeatures.DEFAULT
-        if string == 'Coinbase':
+        if string == "Coinbase":
             return EOutputFeatures.COINBASE
-        raise ValueError('Failed to deserialize output features: {0}'.format(string))
+        raise ValueError("Failed to deserialize output features: {0}".format(string))
 
 
 class EKernelFeatures(IntEnum):
@@ -56,31 +56,31 @@ class KernelFeatures:
     @classmethod
     def toString(self, features: EKernelFeatures):
         if features == EKernelFeatures.DEFAULT_KERNEL:
-            return 'Plain'
+            return "Plain"
         if features == EKernelFeatures.COINBASE_KERNEL:
-            return 'Coinbase'
+            return "Coinbase"
         if features == EKernelFeatures.HEIGHT_LOCKED:
-            return 'HeightLocked'
+            return "HeightLocked"
         if features == EKernelFeatures.NO_RECENT_DUPLICATE:
-            return 'NoRecentDuplicate'
-        return ''
+            return "NoRecentDuplicate"
+        return ""
 
     @classmethod
     def fromString(self, string: str):
-        if string == 'Plain':
+        if string == "Plain":
             return EKernalFeatures.DEFAULT_KERNEL
-        if string == 'Coinbase':
+        if string == "Coinbase":
             return EKernalFeatures.COINBASE_KERNEL
-        if string == 'HeightLocked':
+        if string == "HeightLocked":
             return EKernalFeatures.HEIGHT_LOCKED
-        if string == 'NoRecentDuplicate':
+        if string == "NoRecentDuplicate":
             return EKernalFeatures.NO_RECENT_DUPLICATE
-        raise ValueError('Failed to deserialize kernel features: {0}'.format(string))
+        raise ValueError("Failed to deserialize kernel features: {0}".format(string))
 
 
 class BlindingFactor:
     def __init__(self, blindingFactorBytes):
-        self.blindingFactorBytes = blindingFactorBytes # 32 bytes
+        self.blindingFactorBytes = blindingFactorBytes  # 32 bytes
 
     def getBytes(self):
         return self.blindingFactorBytes
@@ -89,7 +89,7 @@ class BlindingFactor:
         return self.blindingFactorBytes.hex()
 
     def isNull(self):
-        return all(v == b'\x00' for v in self.blindingFactorBytes)
+        return all(v == b"\x00" for v in self.blindingFactorBytes)
 
     def serialize(self):
         return self.blindingFactorBytes
@@ -108,10 +108,10 @@ class BlindingFactor:
 
     @classmethod
     def zero(self):
-        return BlindingFactor(b'\x00' * 32)
+        return BlindingFactor(b"\x00" * 32)
 
     def format(self):
-        return 'BlindingFactor{' + self.hex() + '}'
+        return "BlindingFactor{" + self.hex() + "}"
 
     def toSecretKey(self):
         return SecretKey(self.blindingFactorBytes)
@@ -128,7 +128,10 @@ class TransactionInput:
         return self.getCommitment() < other.getCommitment()
 
     def __eq__(self, other):
-        return self.getFeatures() == other.getFeatures() and self.getCommitment() == other.getCommitment()
+        return (
+            self.getFeatures() == other.getFeatures()
+            and self.getCommitment() == other.getCommitment()
+        )
 
     # getters
 
@@ -158,14 +161,14 @@ class TransactionInput:
 
     def toJSON(self):
         return {
-            'features': self.getFeatures().value,
-            'commit': self.getCommitment().toJSON()
+            "features": self.getFeatures().value,
+            "commit": self.getCommitment().toJSON(),
         }
 
     @classmethod
     def fromJSON(self, transactionInputJSON):
-        features = EOutputFeatures.fromString(transactionInputJSON['features'])
-        commitment = Commitment(transactionInputJSON['commit'])
+        features = EOutputFeatures.fromString(transactionInputJSON["features"])
+        commitment = Commitment(transactionInputJSON["commit"])
         return TransactionInput(features, commitment)
 
     # traits
@@ -177,7 +180,9 @@ class TransactionInput:
 
 
 class TransactionOutput:
-    def __init__(self, features: EOutputFeatures, commitment: Commitment, rangeProof: RangeProof):
+    def __init__(
+        self, features: EOutputFeatures, commitment: Commitment, rangeProof: RangeProof
+    ):
         self.features = features
         self.commitment = commitment
         self.rangeProof = rangeProof
@@ -202,34 +207,36 @@ class TransactionOutput:
         return self.rangeProof
 
     def isCoinbase(self):
-        return (self.features & EOutputFeatures.COINBASE_OUTPUT) == EOutputFeatures.COINBASE_OUTPUT
+        return (
+            self.features & EOutputFeatures.COINBASE_OUTPUT
+        ) == EOutputFeatures.COINBASE_OUTPUT
 
     # serialization/deserialization
 
     def serialize(self, serializer: Serializer):
-        serializer.write(self.features.value.to_bytes(1, 'big'))
+        serializer.write(self.features.value.to_bytes(1, "big"))
         self.commitment.serialize(serializer)
         self.rangeProof.serialize(serializer)
 
     @classmethod
     def deserialize(self, serializer: Serializer):
-        features = EOutputFeatures(int.from_bytes(serializer.read(1), 'big'))
+        features = EOutputFeatures(int.from_bytes(serializer.read(1), "big"))
         commitment = Commitment.deserialize(serializer)
         rangeProof = RangeProof.deserialize(serializer)
         return TransactionOutput(features, commitment, rangeProof)
 
     def toJSON(self):
         return {
-            'features': self.getFeatures().value,
-            'commit': self.getCommitment().toJSON(),
-            'proof': self.getRangeProof().toJSON()
+            "features": self.getFeatures().value,
+            "commit": self.getCommitment().toJSON(),
+            "proof": self.getRangeProof().toJSON(),
         }
 
     @classmethod
     def fromJSON(self, transactionOutputJSON):
-        features = EOutputFeatures.fromString(transactionOutputJSON['features'])
-        commitment = Commitment(transactionOutputJSON['commit'])
-        rangeProof = RangeProof(transactionOutputJSON['proof'])
+        features = EOutputFeatures.fromString(transactionOutputJSON["features"])
+        commitment = Commitment(transactionOutputJSON["commit"])
+        rangeProof = RangeProof(transactionOutputJSON["proof"])
         return TransactionOutput(features, commitment, rangeProof)
 
     # traits
@@ -298,11 +305,10 @@ class TransactionBody:
                 fee_shift = kernel.getFeeShift()
         return fee_shift
 
-
     def serialize(self, serializer):
-        serializer.write(len(self.getInputs()).to_bytes(8, 'big'))
-        serializer.write(len(self.getOutputs()).to_bytes(8, 'big'))
-        serializer.write(len(self.getKernels()).to_bytes(8, 'big'))
+        serializer.write(len(self.getInputs()).to_bytes(8, "big"))
+        serializer.write(len(self.getOutputs()).to_bytes(8, "big"))
+        serializer.write(len(self.getKernels()).to_bytes(8, "big"))
 
         # serialize inputs
         for input_ in self.getInputs():
@@ -318,9 +324,9 @@ class TransactionBody:
 
     @classmethod
     def deserialize(self, serializer: Serializer):
-        numInputs = int.from_bytes(serializer.read(8), 'big')
-        numOutputs = int.from_bytes(serializer.read(8), 'big')
-        numKernels = int.from_bytes(serializer.read(8), 'big')
+        numInputs = int.from_bytes(serializer.read(8), "big")
+        numOutputs = int.from_bytes(serializer.read(8), "big")
+        numKernels = int.from_bytes(serializer.read(8), "big")
 
         # read inputs (variable size)
         inputs = []
@@ -345,29 +351,29 @@ class TransactionBody:
 
     def toJSON(self):
         return {
-            'inputs': [_input.toJSON() for _input in self.inputs],
-            'outputs': [_output.toJSON() for _output in self.outputs],
-            'kernels': [_kernel.toJSON() for _kernel in self.kernels]
+            "inputs": [_input.toJSON() for _input in self.inputs],
+            "outputs": [_output.toJSON() for _output in self.outputs],
+            "kernels": [_kernel.toJSON() for _kernel in self.kernels],
         }
 
     @classmethod
     def fromJSON(self, transactionBodyJSON):
         inputs = []
-        for _input in transactionBodyJSON.get('inputs', []):
+        for _input in transactionBodyJSON.get("inputs", []):
             transaction_input = TransactionInput()
             transaction_input.fromJSON(_input)
             self.inputs.append(transaction_input)
         self.inputs.sort()
 
         outputs = []
-        for _output in transactionBodyJSON.get('outputs', []):
+        for _output in transactionBodyJSON.get("outputs", []):
             transaction_output = TransactionOutput()
             transaction_output.fromJSON(_output)
             self.outputs.append(transaction_output)
         self.outputs.sort()
 
         kernels = []
-        for _kernel in transactionBodyJSON.get('kernels', []):
+        for _kernel in transactionBodyJSON.get("kernels", []):
             transaction_kernel = TransactionKernel()
             transaction_kernel.fromJSON(_kernel)
             self.kernels.append(transaction_kernel)
@@ -377,7 +383,14 @@ class TransactionBody:
 
 
 class TransactionKernel:
-    def __init__(self, features: EKernelFeatures, fee: Fee, lockHeight: int, excessCommitment: Commitment, excessSignature: Signature):
+    def __init__(
+        self,
+        features: EKernelFeatures,
+        fee: Fee,
+        lockHeight: int,
+        excessCommitment: Commitment,
+        excessSignature: Signature,
+    ):
         self.features = features
         self.fee = fee
         self.lockHeight = lockHeight
@@ -419,30 +432,32 @@ class TransactionKernel:
         return self.excessSignature
 
     def isCoinbase(self):
-        return (self.features & EOutputFeatures.COINBASE_OUTPUT) == EOutputFeatures.COINBASE_OUTPUT
+        return (
+            self.features & EOutputFeatures.COINBASE_OUTPUT
+        ) == EOutputFeatures.COINBASE_OUTPUT
 
     # serialization/deserialization
     def serialize(self, serializer: Serializer):
         if serializer.getProtocol().value >= EProtocolVersion.V2.value:
-            serializer.write(self.features.value.to_bytes(1, 'big'))
+            serializer.write(self.features.value.to_bytes(1, "big"))
             if self.getFeatures() == EKernelFeatures.DEFAULT_KERNEL:
                 self.fee.serialize(serializer)
             elif self.getFeatures() == EKernelFeatures.HEIGHT_LOCKED:
                 self.fee.serialize(serializer)
-                serializer.write(self.getLockHeight().to_bytes(8, 'big'))
+                serializer.write(self.getLockHeight().to_bytes(8, "big"))
             elif self.getFeatures() == EKernelFeatures.NO_RECENT_DUPLICATE:
                 self.fee.serialize(serializer)
-                serializer.write(self.getLockHeight().to_bytes(2, 'big'))
+                serializer.write(self.getLockHeight().to_bytes(2, "big"))
         else:
-            serializer.write(self.features.value.to_bytes(1, 'big'))
+            serializer.write(self.features.value.to_bytes(1, "big"))
             self.fee.serialize(serializer)
-            serializer.write(self.getLockHeight().to_bytes(8, 'big'))
+            serializer.write(self.getLockHeight().to_bytes(8, "big"))
         self.getExcessCommitment().serialize(serializer)
         self.getExcessSignature().serialize(serializer)
 
     @classmethod
     def deserialize(self, serializer: Serializer):
-        features = EKernelFeatures(int.from_bytes(serializer.read(1), 'big'))
+        features = EKernelFeatures(int.from_bytes(serializer.read(1), "big"))
         fee = None
         lockHeight = 0
         if serializer.getProtocol().value >= EProtocolVersion.V2.value:
@@ -450,46 +465,62 @@ class TransactionKernel:
                 fee = Fee.deserialize(serializer)
 
             if features.value == EKernelFeatures.HEIGHT_LOCKED.value:
-                lockHeight = int.from_bytes(serializer.read(8), 'big')
+                lockHeight = int.from_bytes(serializer.read(8), "big")
             elif features.value == EKernelFeatures.NO_RECENT_DUPLICATE.value:
-                lockHeight = int.from_bytes(serializer.read(2), 'big')
+                lockHeight = int.from_bytes(serializer.read(2), "big")
         else:
             fee = Fee.deserialize(serializer)
-            lockHeight = int.from_bytes(serializer.read(8), 'big')
+            lockHeight = int.from_bytes(serializer.read(8), "big")
 
         excessCommitment = Commitment.deserialize(serializer)
         excessSignature = Signature.deserialize(serializer)
 
         if features.value == EKernelFeatures.NO_RECENT_DUPLICATE.value:
             if lockHeight == 0 or lockHeight > Consensus.WEEK_HEIGHT.value:
-                raise ValueError('Invalid NRD relative height({0}) for kernel: {1}'.format(str(lockHeight), str(excessCommitment)))
+                raise ValueError(
+                    "Invalid NRD relative height({0}) for kernel: {1}".format(
+                        str(lockHeight), str(excessCommitment)
+                    )
+                )
 
-        return TransactionKernel(features, fee, lockHeight, excessCommitment, excessSignature)
+        return TransactionKernel(
+            features, fee, lockHeight, excessCommitment, excessSignature
+        )
 
     def toJSON(self):
         features = {}
         if self.getFeatures() != EKernelFeatures.COINBASE_KERNEL.value:
-            features['fee'] = self.fee.toJSON()
+            features["fee"] = self.fee.toJSON()
         if self.getFeatures() == EKernelFeatures.HEIGHT_LOCKED.value:
-            features['lock_height'] = self.getLockHeight()
+            features["lock_height"] = self.getLockHeight()
         return {
-            'features': features,
-            'excess': self.getExcessCommitment().toJSON(),
-            'excess_sig': self.getExcessSignature().hex() # TODO find way to make it compact
+            "features": features,
+            "excess": self.getExcessCommitment().toJSON(),
+            "excess_sig": self.getExcessSignature().hex(),  # TODO find way to make it compact
         }
 
     @classmethod
     def fromJSON(self, transactionKernelJSON):
-        features = KernelFeatures.fromString(transactionKernelJSON['features']) # TODO something fishy here... it should be a string, what is the exact json key?
-        fee = Fee.fromJSON(transactionKernelJSON['features']['fee'])
-        lockHeight = transactionKernelJSON['features']['lock_height']
-        excessCommitment = Commitment.fromJSON(transactionKernelJSON['excess'])
-        excessSignature = Signature.fromJSON(transactionKernelJSON['excess_sig']) # TODO find way to parse the compact signature
+        features = KernelFeatures.fromString(
+            transactionKernelJSON["features"]
+        )  # TODO something fishy here... it should be a string, what is the exact json key?
+        fee = Fee.fromJSON(transactionKernelJSON["features"]["fee"])
+        lockHeight = transactionKernelJSON["features"]["lock_height"]
+        excessCommitment = Commitment.fromJSON(transactionKernelJSON["excess"])
+        excessSignature = Signature.fromJSON(
+            transactionKernelJSON["excess_sig"]
+        )  # TODO find way to parse the compact signature
         if features == EKernelFeatures.NO_RECENT_DUPLICATE:
             if lockHeight == 0 or lockHeight > Consensus.WEEK_HEIGHT:
-                raise ValueError('Invalid NRD relative height({0}) for kernel: {1}'.format(str(lockHeight), str(excessCommitment)))
+                raise ValueError(
+                    "Invalid NRD relative height({0}) for kernel: {1}".format(
+                        str(lockHeight), str(excessCommitment)
+                    )
+                )
 
-        return TransactionKernel(features, fee, lockHeight, excessCommitment, excessSignature)
+        return TransactionKernel(
+            features, fee, lockHeight, excessCommitment, excessSignature
+        )
 
     # traits
 
@@ -501,48 +532,54 @@ class TransactionKernel:
     # other utils
     @classmethod
     def getSignatureMessage(
-            self, features: EKernelFeatures, fee: int, lock_height: int):
+        self, features: EKernelFeatures, fee: int, lock_height: int
+    ):
         serializer = Serializer()
 
-        serializer.write(features.value.to_bytes(1, 'big'))
+        serializer.write(features.value.to_bytes(1, "big"))
         if features != EKernelFeatures.COINBASE_KERNEL:
             fee.serialize(serializer)
         if features == EKernelFeatures.HEIGHT_LOCKED:
-            serializer.write(lock_height.to_bytes(8, 'big'))
+            serializer.write(lock_height.to_bytes(8, "big"))
         if features == EKernelFeatures.NO_RECENT_DUPLICATE:
-            serializer.write(lock_height.to_bytes(2, 'big'))
+            serializer.write(lock_height.to_bytes(2, "big"))
 
         return hashlib.blake2b(serializer.readall()).digest()
 
 
-
 class Transaction:
     def __init__(self, offset, body: TransactionBody):
-        self.offset = offset # 32 bytes
-        self.body = body # arbitrary size bytes
+        self.offset = offset  # 32 bytes
+        self.body = body  # arbitrary size bytes
 
     def serialize(self):
         return self.offset + self.body
 
     def deserialize(self, byteString: bytes):
         # Read BlindingFactor/Offset (32 bytes)
-        self.offset = byteString[0: 32]
+        self.offset = byteString[0:32]
         # Read Transaction Body (variable size)
         self.body = byteString[32:]
 
     def toJSON(self):
-        return {
-            'offset': self.offset.toJSON(),
-            'body': self.body.toJSON()
-        }
+        return {"offset": self.offset.toJSON(), "body": self.body.toJSON()}
 
 
 class TransactionPrivate:
-    def __init__(self, amount, excess, recipient_address, recipient_signature, sender_address, sender_signature, slate_id):
-        self.amount = amount # 8 bytes
-        self.excess = excess # 33 bytes
-        self.recipient_address = recipient_address # 32 bytes
-        self.recipient_signature = recipient_signature # 64 bytes
-        self.sender_address = sender_address # 32 bytes
-        self.sender_signature = sender_signature # 64 bytes
+    def __init__(
+        self,
+        amount,
+        excess,
+        recipient_address,
+        recipient_signature,
+        sender_address,
+        sender_signature,
+        slate_id,
+    ):
+        self.amount = amount  # 8 bytes
+        self.excess = excess  # 33 bytes
+        self.recipient_address = recipient_address  # 32 bytes
+        self.recipient_signature = recipient_signature  # 64 bytes
+        self.sender_address = sender_address  # 32 bytes
+        self.sender_signature = sender_signature  # 64 bytes
         self.slate_id = slate_id

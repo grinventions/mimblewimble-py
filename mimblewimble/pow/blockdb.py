@@ -18,6 +18,7 @@ class IBlockDB(ABC):
         """Optional – not required by difficulty logic, but helpful"""
         pass
 
+
 class InMemoryBlockDB(IBlockDB):
     """
     Simple in-memory block database for unit tests
@@ -33,7 +34,7 @@ class InMemoryBlockDB(IBlockDB):
     def add_header(self, header: BlockHeader):
         """Add or overwrite a header"""
         self.by_hash[header.getHash().hex()] = header
-        print('height', header.getHeight())
+        print("height", header.getHeight())
         self.by_height[header.getHeight()] = header.getHash().hex()
 
     def get_block_header(self, block_hash: str) -> Optional[BlockHeader]:

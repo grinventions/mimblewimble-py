@@ -5,8 +5,10 @@ from mimblewimble.pow.common import EPoWStatus
 
 ROTE = 21
 
+
 class SipHashState:
     """Mutable SipHash state (v0,v1,v2,v3)"""
+
     def __init__(self, keys: SipHashKeys):
         self.v0 = keys.k0
         self.v1 = keys.k1
@@ -16,7 +18,7 @@ class SipHashState:
     def xor_lanes(self) -> int:
         return self.v0 ^ self.v1 ^ self.v2 ^ self.v3
 
-    def xor_with(self, other: 'SipHashState') -> None:
+    def xor_with(self, other: "SipHashState") -> None:
         self.v0 ^= other.v0
         self.v1 ^= other.v1
         self.v2 ^= other.v2
@@ -62,12 +64,8 @@ class SipHashState:
         self.sip_round()
         self.sip_round()
 
-def sipnode(
-    keys,               # SipHashKeys
-    edge: int,
-    uorv: int,          # 0 or 1
-    edge_mask: int
-) -> int:
+
+def sipnode(keys, edge: int, uorv: int, edge_mask: int) -> int:  # SipHashKeys  # 0 or 1
     """
     Compute one endpoint (u or v) of an edge
     In Cuckatoo: siphash(2*edge + uorv)
@@ -77,16 +75,13 @@ def sipnode(
     shs.hash24(2 * edge + uorv)
     return shs.xor_lanes() & edge_mask
 
-def verify_cuckatoo(
-    edges: List[int],
-    keys,               # SipHashKeys
-    edge_bits: int
-) -> int:
-    num_edges  = 1 << edge_bits
-    edge_mask  = num_edges - 1
 
-    xor0 = xor1 = (PROOFSIZE // 2) & 1   # parity initialization
-    endpoints = [0] * (2 * PROOFSIZE)    # u0,v0, u1,v1, ...
+def verify_cuckatoo(edges: List[int], keys, edge_bits: int) -> int:  # SipHashKeys
+    num_edges = 1 << edge_bits
+    edge_mask = num_edges - 1
+
+    xor0 = xor1 = (PROOFSIZE // 2) & 1  # parity initialization
+    endpoints = [0] * (2 * PROOFSIZE)  # u0,v0, u1,v1, ...
 
     # Phase 1: extract endpoints + xor check
     for i in range(PROOFSIZE):
@@ -101,7 +96,7 @@ def verify_cuckatoo(
         u = sipnode(keys, edge, 0, edge_mask)
         v = sipnode(keys, edge, 1, edge_mask)
 
-        endpoints[2 * i]     = u
+        endpoints[2 * i] = u
         endpoints[2 * i + 1] = v
 
         xor0 ^= u
@@ -115,7 +110,7 @@ def verify_cuckatoo(
     i = 0
 
     while True:
-        current = endpoints[i] >> 1   # ignore partition bit
+        current = endpoints[i] >> 1  # ignore partition bit
 
         j = None
         k = (i + 2) % (2 * PROOFSIZE)
@@ -140,10 +135,11 @@ def verify_cuckatoo(
 
     return EPoWStatus.POW_OK if n == PROOFSIZE else EPoWStatus.POW_SHORT_CYCLE
 
+
 def cuckatoo_validate(
     proof_nonces: List[int],
-    pre_pow_hash: bytes, # blake2b(pre-pow-header)
-    edge_bits: int       # usually 29, 31, sometimes variable
+    pre_pow_hash: bytes,  # blake2b(pre-pow-header)
+    edge_bits: int,  # usually 29, 31, sometimes variable
 ) -> tuple[bool, str]:
     """
     Returns (is_valid: bool, message: str)

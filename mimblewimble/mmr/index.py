@@ -46,7 +46,9 @@ class MMRIndex:
         if self.calculateHeight(self.position + 1) == self.height + 1:
             return MMRIndex(self.position + 1 - (1 << (self.height + 1)), self.height)
         else:
-            return MMRIndex(self.position + (1 << (self.height + 1)) - 1, self.height + 1)
+            return MMRIndex(
+                self.position + (1 << (self.height + 1)) - 1, self.height + 1
+            )
 
     def getLeftChild(self):
         assert self.height > 0
@@ -72,7 +74,7 @@ class MMRIndex:
         numLeft = position
         while peakSize != 0:
             if numLeft >= peakSize:
-                leafIndex += ((peakSize + 1)/2)
+                leafIndex += (peakSize + 1) / 2
                 numLeft -= peakSize
             peakSize >>= 1
         return leafIndex

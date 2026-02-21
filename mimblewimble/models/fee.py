@@ -25,17 +25,17 @@ class Fee:
     # serialization / deserialization
 
     def serialize(self, serializer: Serializer):
-        serializer.write((0).to_bytes(2, 'big'))
-        serializer.write(self.getShift().to_bytes(1, 'big'))
-        serializer.write((self.getFee() >> 32).to_bytes(1, 'big'))
-        serializer.write((self.getFee() & 0xffffffff).to_bytes(4, 'big'))
+        serializer.write((0).to_bytes(2, "big"))
+        serializer.write(self.getShift().to_bytes(1, "big"))
+        serializer.write((self.getFee() >> 32).to_bytes(1, "big"))
+        serializer.write((self.getFee() & 0xFFFFFFFF).to_bytes(4, "big"))
 
     @classmethod
     def deserialize(self, serializer: Serializer):
         serializer.read(2)
-        shift = int.from_bytes(serializer.read(1), 'big') & 0x0f
-        fee = int.from_bytes(serializer.read(1), 'big') << 32
-        fee += int.from_bytes(serializer.read(4), 'big')
+        shift = int.from_bytes(serializer.read(1), "big") & 0x0F
+        fee = int.from_bytes(serializer.read(1), "big") << 32
+        fee += int.from_bytes(serializer.read(4), "big")
         return Fee(shift, fee)
 
     def toJSON(self):
@@ -49,5 +49,3 @@ class Fee:
     @classmethod
     def fromInt(self, fee: int):
         return Fee(0, fee)
-
-

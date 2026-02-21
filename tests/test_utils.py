@@ -4,7 +4,7 @@ from mimblewimble.slatebuilder.slate import SettableByte
 def test_settable_bytes():
     #        76543210
     # 0xb5 = 10110101 = 181
-    b = SettableByte(0xb5)
+    b = SettableByte(0xB5)
     assert b.get_bit(0) == 1
     assert b.get_bit(1) == 0
     assert b.get_bit(2) == 1

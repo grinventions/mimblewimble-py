@@ -15,9 +15,8 @@ from mimblewimble.models.slatepack.address import SlatepackAddress
 from mimblewimble.models.slatepack.metadata import SlatepackVersion
 from mimblewimble.models.slatepack.metadata import SlatepackMetadata
 
-
-SLATEPACK_HEADER = 'BEGINSLATEPACK'
-SLATEPACK_FOOTER = 'ENDSLATEPACK'
+SLATEPACK_HEADER = "BEGINSLATEPACK"
+SLATEPACK_FOOTER = "ENDSLATEPACK"
 SLATEPACK_WORD_LENGTH = 15
 SLATEPACK_WORDS_PER_LINE = 200
 
@@ -25,45 +24,40 @@ SLATEPACK_WORDS_PER_LINE = 200
 def slatepack_spacing(data: str, word_length=None):
     if word_length is None:
         word_length = SLATEPACK_WORD_LENGTH
-    chunks = [
-        data[i:i+word_length] for i in range(
-            0, len(data), word_length)
-    ]
-    chunks[-1] = chunks[-1] + '.'
+    chunks = [data[i : i + word_length] for i in range(0, len(data), word_length)]
+    chunks[-1] = chunks[-1] + "."
     return chunks
 
 
 def slatepack_pack(
-        data: bytes,
-        word_length=None,
-        words_per_line=None,
-        string_encoding='ascii') -> str:
+    data: bytes, word_length=None, words_per_line=None, string_encoding="ascii"
+) -> str:
     encoded = base58.b58encode(data).decode(string_encoding)
-    words = [SLATEPACK_HEADER + '.']
+    words = [SLATEPACK_HEADER + "."]
     words += slatepack_spacing(encoded, word_length=word_length)
-    words += [SLATEPACK_FOOTER + '.']
-    packed = ''
+    words += [SLATEPACK_FOOTER + "."]
+    packed = ""
     line = []
     if words_per_line is None:
         words_per_line = SLATEPACK_WORDS_PER_LINE
     for word in words:
         if len(line) >= words_per_line:
-            packed += ' '.join(line)
-            packed += '\n'
+            packed += " ".join(line)
+            packed += "\n"
             line = []
         line.append(word)
     if len(line) >= 0:
-        packed += ' '.join(line)
-    packed += '\n'
+        packed += " ".join(line)
+    packed += "\n"
     return packed
 
 
 def slatepack_unpack(data: str) -> bytes:
-    processed = data.replace(SLATEPACK_HEADER, '')
-    processed = processed.replace(SLATEPACK_FOOTER, '')
-    processed = processed.replace('.', '')
-    processed = processed.replace(' ', '')
-    processed = processed.replace('\n', '')
+    processed = data.replace(SLATEPACK_HEADER, "")
+    processed = processed.replace(SLATEPACK_FOOTER, "")
+    processed = processed.replace(".", "")
+    processed = processed.replace(" ", "")
+    processed = processed.replace("\n", "")
     return base58.b58decode(processed)
 
 
@@ -74,11 +68,12 @@ class EMode(IntEnum):
 
 class SlatepackMessage:
     def __init__(
-            self,
-            version: SlatepackVersion,
-            metadata: SlatepackMetadata,
-            emode: EMode,
-            payload: bytes):
+        self,
+        version: SlatepackVersion,
+        metadata: SlatepackMetadata,
+        emode: EMode,
+        payload: bytes,
+    ):
         self.version = version
         self.metadata = metadata
         self.emode = emode
@@ -87,7 +82,7 @@ class SlatepackMessage:
         # if decrypted, the version and metadata are ommitted
         self.payload = payload
 
-    def pack(self, word_length=None, words_per_line=None, string_encoding='ascii'):
+    def pack(self, word_length=None, words_per_line=None, string_encoding="ascii"):
         preimage = self.serialize()
 
         hashed = hashlib.sha256(preimage).digest()
@@ -100,7 +95,8 @@ class SlatepackMessage:
             s,
             word_length=word_length,
             words_per_line=words_per_line,
-            string_encoding=string_encoding)
+            string_encoding=string_encoding,
+        )
         return packed
 
     @classmethod
@@ -118,7 +114,7 @@ class SlatepackMessage:
         checksum = hashed[0:4]
 
         if checksum != error_check_code:
-            raise ValueError('Invalid slatepack checkum')
+            raise ValueError("Invalid slatepack checkum")
 
         return preimage
 
@@ -126,7 +122,7 @@ class SlatepackMessage:
         serializer = Serializer()
 
         self.version.serialize(serializer)
-        serializer.write(int(self.emode).to_bytes(1, 'big'))
+        serializer.write(int(self.emode).to_bytes(1, "big"))
 
         opt_flags = 0x00
         if self.emode == EMode.PLAINTEXT and self.metadata.sender is not None:
@@ -135,22 +131,22 @@ class SlatepackMessage:
         if self.emode == EMode.PLAINTEXT and len(self.metadata.recipients) > 0:
             opt_flags |= 0x02
 
-        serializer.write(opt_flags.to_bytes(2, 'big'))
+        serializer.write(opt_flags.to_bytes(2, "big"))
 
-        opt_fields_len = 0 # what should it be?
-        serializer.write(opt_fields_len.to_bytes(4, 'big'))
+        opt_fields_len = 0  # what should it be?
+        serializer.write(opt_fields_len.to_bytes(4, "big"))
 
         if opt_flags & 0x01 == 0x01:
             self.metadata.sender.serialize(serializer)
 
         if opt_flags & 0x02 == 0x02:
             num_recipients = len(self.metadata.recipients)
-            serializer.write(num_recipients.to_bytes(2, 'big'))
+            serializer.write(num_recipients.to_bytes(2, "big"))
             for recipient in self.metadata.recipients:
                 recipient.serialize(serializer)
 
         payload_size_int = len(self.payload)
-        payload_size_bin = payload_size_int.to_bytes(8, 'big') # TODO that was missing
+        payload_size_bin = payload_size_int.to_bytes(8, "big")  # TODO that was missing
         serializer.write(payload_size_bin)
 
         serializer.write(self.payload)
@@ -163,12 +159,12 @@ class SlatepackMessage:
         serializer.write(unpacked)
 
         version = SlatepackVersion.deserialize(serializer)
-        emode = EMode(int.from_bytes(serializer.read(1), 'big'))
+        emode = EMode(int.from_bytes(serializer.read(1), "big"))
 
         opt_flags_bin = serializer.read(2)
-        opt_flags = int.from_bytes(opt_flags_bin, 'big')
+        opt_flags = int.from_bytes(opt_flags_bin, "big")
 
-        opt_fields_len = int.from_bytes(serializer.read(4), 'big')
+        opt_fields_len = int.from_bytes(serializer.read(4), "big")
 
         sender = None
         recipients = []
@@ -177,14 +173,14 @@ class SlatepackMessage:
 
         if opt_flags & 0x02 == 0x02:
             recipients = []
-            num_recipients = int.from_bytes(serializer.read(2), 'big')
+            num_recipients = int.from_bytes(serializer.read(2), "big")
             for i in range(num_recipients):
                 recipient = SlatepackAddress.deserialize(serializer)
                 recipients.append(recipient)
 
         metadata = SlatepackMetadata(sender=sender, recipients=recipients)
 
-        payload_size = int.from_bytes(serializer.read(8), 'big')
+        payload_size = int.from_bytes(serializer.read(8), "big")
         payload = serializer.read(payload_size)
 
         return SlatepackMessage(version, metadata, emode, payload)
@@ -217,21 +213,19 @@ class SlatepackMessage:
 
     def getSlate(self):
         if self.emode == EMode.ENCRYPTED:
-            raise Exception(
-                'requesting a slate but payload is still encrypted')
+            raise Exception("requesting a slate but payload is still encrypted")
         return Slate.deserialize(self.payload)
 
     def encryptPayload(self, recipients: List[SlatepackAddress]):
         if self.emode != EMode.PLAINTEXT:
             raise ValueError(
-                'requesting encrypting an already encrypted payload in SlatepackMessage')
-        keys = [
-            recipient.toAge() for recipient in recipients
-        ]
+                "requesting encrypting an already encrypted payload in SlatepackMessage"
+            )
+        keys = [recipient.toAge() for recipient in recipients]
 
         serializer = Serializer()
 
-        '''
+        """
         opt_flags = 0x01
         if len(self.metadata.recipients) > 0:
             opt_flags |= 0x02
@@ -242,15 +236,15 @@ class SlatepackMessage:
             serializer.write(num_recipients.to_bytes(2, 'big'))
             for recipient in self.metadata.recipients:
                 recipient.serialize(serializer)
-        '''
+        """
         self.metadata.serialize(serializer)
         serializer.write(self.payload)
 
-        '''
+        """
         self.metadata.serialize(s)
         s.write(self.payload)
         # serialized = self.payload
-        '''
+        """
 
         serialized = serializer.readall()
 
@@ -260,9 +254,9 @@ class SlatepackMessage:
     def decryptPayload(self, age_secret_key: str):
         if self.emode != EMode.ENCRYPTED:
             raise ValueError(
-                'requesting decrypting an already decrypted payload in SlatepackMessage')
-        decrypted_payload = ageX25519Decrypt(
-            self.payload, age_secret_key)
+                "requesting decrypting an already decrypted payload in SlatepackMessage"
+            )
+        decrypted_payload = ageX25519Decrypt(self.payload, age_secret_key)
 
         s = Serializer()
         s.write(decrypted_payload)
@@ -271,7 +265,7 @@ class SlatepackMessage:
         self.emode = EMode.PLAINTEXT
         self.payload = s.readremaining()
 
-    '''
+    """
     def encrypt(self):
         serializer = Serializer()
 
@@ -312,22 +306,22 @@ class SlatepackMessage:
             return SlatepackMessage(version, metadata, emode, decrypted_payload)
 
         return SlatepackMessage(version, metadata, emode, payload)
-    '''
+    """
 
     def __str__(self):
-        return ''
+        return ""
 
-    def toJSON(self, testnet=False, codec=Base64Codec, encoding='utf-8'):
+    def toJSON(self, testnet=False, codec=Base64Codec, encoding="utf-8"):
         payload = codec.encode(self.payload, encoding=encoding)
         slatepack = {
-            'slatepack': [self.version.major, self.version.minor],
-            'mode': int(self.emode),
-            'payload': payload
+            "slatepack": [self.version.major, self.version.minor],
+            "mode": int(self.emode),
+            "payload": payload,
         }
         version = str(self.version)
         if self.emode == EMode.PLAINTEXT:
-            slatepack['sender'] = '0'
+            slatepack["sender"] = "0"
             if self.metadata.sender is not None:
-                slatepack['sender'] = self.metadata.sender.toBech32(testnet=testnet)
+                slatepack["sender"] = self.metadata.sender.toBech32(testnet=testnet)
             return slatepack
         return slatepack

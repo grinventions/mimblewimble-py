@@ -46,12 +46,10 @@ class Commitment:
     @classmethod
     def fromPublicKey(self, pk: PublicKey):
         # TODO
-        return Commitment(b'\x00')
+        return Commitment(b"\x00")
 
     def toJSON(self):
         return self.hex()
 
     def format(self):
-        return 'Commitment{' + self.hex() + '}'
-
-
+        return "Commitment{" + self.hex() + "}"

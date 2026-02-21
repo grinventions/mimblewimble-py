@@ -3,6 +3,7 @@ from datetime import datetime
 
 import struct
 
+
 def serialize_pre_pow(header: Dict) -> bytes:
     """
     Serializes block header fields in the same order as BlockHeader::GetPreProofOfWork()
@@ -12,7 +13,7 @@ def serialize_pre_pow(header: Dict) -> bytes:
 
     # 1. version                  → uint16_t (2 bytes)
     version = header["version"]
-    pieces.append(struct.pack(">H", version))          # little-endian
+    pieces.append(struct.pack(">H", version))  # little-endian
 
     # 2. height                   → uint64_t (8 bytes)
     height = header["height"]
@@ -25,21 +26,21 @@ def serialize_pre_pow(header: Dict) -> bytes:
     else:
         dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
         timestamp_sec = int(dt.timestamp())
-    pieces.append(struct.pack(">q", timestamp_sec))     # signed int64_le
+    pieces.append(struct.pack(">q", timestamp_sec))  # signed int64_le
 
     # 4–8. 32-byte hashes (big-endian in serialization!)
     def append_hash32(field_name: str):
-        h = header[field_name]                          # hex string
+        h = header[field_name]  # hex string
         h_bytes = bytes.fromhex(h)
         if len(h_bytes) != 32:
             raise ValueError(f"{field_name} must be 32 bytes")
-        pieces.append(h_bytes)                          # as-is = big-endian
+        pieces.append(h_bytes)  # as-is = big-endian
 
-    append_hash32("previous")           # previousBlockHash
-    append_hash32("prev_root")          # previousRoot
-    append_hash32("output_root")        # outputRoot
-    append_hash32("range_proof_root")   # rangeProofRoot
-    append_hash32("kernel_root")        # kernelRoot
+    append_hash32("previous")  # previousBlockHash
+    append_hash32("prev_root")  # previousRoot
+    append_hash32("output_root")  # outputRoot
+    append_hash32("range_proof_root")  # rangeProofRoot
+    append_hash32("kernel_root")  # kernelRoot
 
     # 9. total_kernel_offset      → 32-byte big integer
     kernel_offset_hex = header["total_kernel_offset"]

@@ -10,9 +10,10 @@ from mimblewimble.crypto.public_keys import PublicKeys
 
 
 def calculateSigningKeys(
-            inputs: List[OutputDataEntity],
-            outputs: List[OutputDataEntity],
-            tx_offset: BlindingFactor):
+    inputs: List[OutputDataEntity],
+    outputs: List[OutputDataEntity],
+    tx_offset: BlindingFactor,
+):
     # cryptography utilities
     p = Pedersen()
     pks = PublicKeys()

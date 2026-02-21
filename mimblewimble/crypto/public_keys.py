@@ -14,10 +14,12 @@ from secp256k1_zkp_mw import SECP256K1_EC_COMPRESSED
 from mimblewimble.crypto.secret_key import SecretKey
 from mimblewimble.crypto.public_key import PublicKey
 
+
 class PublicKeys:
     def __init__(self):
         self.ctx = secp256k1_context_create(
-            SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY)
+            SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY
+        )
 
     def __del__(self):
         secp256k1_context_destroy(self.ctx)
@@ -30,7 +32,8 @@ class PublicKeys:
         assert self.isSecretKeyValid(sk)
         pk = secp256k1_ec_pubkey_create(self.ctx, sk.getBytes())
         pk_serialized = secp256k1_ec_pubkey_serialize(
-            self.ctx, pk, SECP256K1_EC_COMPRESSED)
+            self.ctx, pk, SECP256K1_EC_COMPRESSED
+        )
         return PublicKey(pk_serialized)
 
     def publicKeySum(self, pks, compressed=False):
@@ -40,5 +43,6 @@ class PublicKeys:
             parsed_pks.append(parsed)
         combined = secp256k1_ec_pubkey_combine(self.ctx, parsed_pks)
         pk_serialized = secp256k1_ec_pubkey_serialize(
-            self.ctx, combined, SECP256K1_EC_COMPRESSED)
+            self.ctx, combined, SECP256K1_EC_COMPRESSED
+        )
         return PublicKey(pk_serialized)

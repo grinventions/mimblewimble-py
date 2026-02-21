@@ -14,23 +14,19 @@ from mimblewimble.slatebuilder import SlatePaymentProof
 
 
 class ReceiveSlateBuilder:
-    def __init__(
-            self, master_seed):
+    def __init__(self, master_seed):
         self.master_seed = master_seed
 
     def addReceiverData(
-            self,
-            send_slate: Slate,
-            output: OutputDataEntity,
-            testnet=False) -> Slate:
+        self, send_slate: Slate, output: OutputDataEntity, testnet=False
+    ) -> Slate:
         # renaming the slate object
         receive_slate = send_slate
         receive_slate.setStage(ESlateStage.STANDARD_RECEIVED)
 
         # create the receiver offset
         receiver_offset = BlindingFactor.random()
-        signing_keys = calculateSigningKeys(
-            [], [output], receiver_offset)
+        signing_keys = calculateSigningKeys([], [output], receiver_offset)
         secret_key, public_key, secret_nonce, public_nonce = signing_keys
 
         # adjust the receiver offset
@@ -40,7 +36,8 @@ class ReceiveSlateBuilder:
         kernel_message = TransactionKernel.getSignatureMessage(
             receive_slate.getKernelFeatures(),
             receive_slate.getFee(),
-            receive_slate.getLockHeight())
+            receive_slate.getLockHeight(),
+        )
         signature = SlateSignature(public_key, public_nonce)
         agg = AggSig()
         partial_signature = agg.calculatePartialSignature(
@@ -48,7 +45,8 @@ class ReceiveSlateBuilder:
             secret_nonce,
             receive_slate.calculateTotalExcess(),
             receive_slate.calculateTotalNonce(),
-            kernel_message)
+            kernel_message,
+        )
         del agg
         signature.setSignature(partial_signature)
 
@@ -57,12 +55,8 @@ class ReceiveSlateBuilder:
 
         # add the receiver's tx output
         receive_slate.appendOutput(
-            output.getFeatures(),
-            output.getCommitment(),
-            output.getRangeProof())
+            output.getFeatures(), output.getCommitment(), output.getRangeProof()
+        )
 
         # done!
         return receive_slate, secret_key, secret_nonce
-
-
-

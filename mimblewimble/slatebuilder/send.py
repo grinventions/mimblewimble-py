@@ -22,29 +22,25 @@ from mimblewimble.slatebuilder import SlatePaymentProof
 
 
 class SendSlateBuilder:
-    def __init__(
-            self,
-            master_seed: bytes):
+    def __init__(self, master_seed: bytes):
         self.master_seed = master_seed
 
-
     def build(
-            self,
-            amount: int,
-            fee: int,
-            block_height: int,
-            inputs: List[OutputDataEntity],
-            change_outputs: List[OutputDataEntity],
-            slate_version=0,
-            testnet=False,
-            sender_address=None,
-            receiver_address=None) -> Tuple[
-                Slate, SecretKey, SecretKey]:
+        self,
+        amount: int,
+        fee: int,
+        block_height: int,
+        inputs: List[OutputDataEntity],
+        change_outputs: List[OutputDataEntity],
+        slate_version=0,
+        testnet=False,
+        sender_address=None,
+        receiver_address=None,
+    ) -> Tuple[Slate, SecretKey, SecretKey]:
         # select random transaction offset,
         # and calculate secret key used in kernel signature
         transaction_offset = BlindingFactor.random()
-        signing_keys = calculateSigningKeys(
-            inputs, change_outputs, transaction_offset)
+        signing_keys = calculateSigningKeys(inputs, change_outputs, transaction_offset)
         secret_key, public_key, secret_nonce, public_nonce = signing_keys
         signature = SlateSignature(public_key, public_nonce)
 
@@ -72,32 +68,31 @@ class SendSlateBuilder:
             transaction_offset=transaction_offset,
             proof_opt=payment_proof,
             signatures=[signature],
-            stage=stage)
+            stage=stage,
+        )
         for inp in inputs:
-            slate.appendInput(
-                inp.getFeatures(),
-                inp.getCommitment())
+            slate.appendInput(inp.getFeatures(), inp.getCommitment())
         for out in change_outputs:
             slate.appendOutput(
-                out.getFeatures(),
-                out.getCommitment(),
-                out.getRangeProof())
+                out.getFeatures(), out.getCommitment(), out.getRangeProof()
+            )
         return slate, secret_key, secret_nonce
 
-
     def buildWalletTx(
-            self,
-            tx_offset: BlindingFactor,
-            inputs: List[OutputDataEntity],
-            change_outputs: List[OutputDataEntity],
-            slate: Slate,
-            receiver_address=None,
-            payment_proof=None):
+        self,
+        tx_offset: BlindingFactor,
+        inputs: List[OutputDataEntity],
+        change_outputs: List[OutputDataEntity],
+        slate: Slate,
+        receiver_address=None,
+        payment_proof=None,
+    ):
         if receiver_address is not None and isinstance(payment_proof, bytes):
             raise TypeError(
-                'Expected bytes type argument or None for the receipient address')
+                "Expected bytes type argument or None for the receipient address"
+            )
         if payment_proof is not None and isinstance(payment_proof, SlatePaymentProof):
-            raise TypeError('Expected SlatePaymentProof type argument or None')
+            raise TypeError("Expected SlatePaymentProof type argument or None")
 
         # TODO
         pass

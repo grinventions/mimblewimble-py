@@ -9,10 +9,11 @@ from mimblewimble.pow.prepow import serialize_pre_pow
 
 from hashlib import blake2b
 
+
 def pow_validate(header: dict):
-    edge_bits = header['edge_bits']
-    solution = header['cuckoo_solution']
-    header_version = header['version']
+    edge_bits = header["edge_bits"]
+    solution = header["cuckoo_solution"]
+    header_version = header["version"]
     pre_pow = serialize_pre_pow(header)
     keybuf = blake2b(pre_pow, digest_size=32).digest()
     if edge_bits == 29:

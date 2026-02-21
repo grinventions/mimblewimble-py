@@ -4,17 +4,17 @@ import base64
 
 class Codec:
     @classmethod
-    def encode(self, data: bytes, encoding='utf-8') -> str:
-        raise Exception('unimplemented')
+    def encode(self, data: bytes, encoding="utf-8") -> str:
+        raise Exception("unimplemented")
 
     @classmethod
     def decode(self, data: str) -> bytes:
-        raise Exception('unimplemented')
+        raise Exception("unimplemented")
 
 
 class HexCodec(Codec):
     @classmethod
-    def encode(self, data: bytes, encoding='utf-8') -> str:
+    def encode(self, data: bytes, encoding="utf-8") -> str:
         return data.hex()
 
     @classmethod
@@ -24,7 +24,7 @@ class HexCodec(Codec):
 
 class Base58Codec(Codec):
     @classmethod
-    def encode(self, data: bytes, encoding='utf-8') -> str:
+    def encode(self, data: bytes, encoding="utf-8") -> str:
         return base58.b58encode(data).decode(encoding)
 
     @classmethod
@@ -34,7 +34,7 @@ class Base58Codec(Codec):
 
 class Base64Codec(Codec):
     @classmethod
-    def encode(self, data: bytes, encoding='utf-8') -> str:
+    def encode(self, data: bytes, encoding="utf-8") -> str:
         return base64.b64encode(data).decode(encoding)
 
     @classmethod

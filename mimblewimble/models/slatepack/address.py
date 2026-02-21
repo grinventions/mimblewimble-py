@@ -32,9 +32,9 @@ class SlatepackAddress:
     def toBech32(self, testnet=False):
         public_key = self.toED25519()
         # compute the slatepack address
-        network = 'grin'
+        network = "grin"
         if testnet:
-            network = 'tgrin'
+            network = "tgrin"
         slatepack_address = Bech32Encoder.Encode(network, public_key)
         return slatepack_address
 
@@ -46,26 +46,26 @@ class SlatepackAddress:
         return tor.toOnion(version=version)
 
     def toNostr(self):
-        pass # TODO
+        pass  # TODO
 
     def serialize(self, serializer: Serializer):
         address = self.toBech32()
         address_length = len(address)
-        serializer.write(address_length.to_bytes(1, 'big'))
+        serializer.write(address_length.to_bytes(1, "big"))
         serializer.writeString(address)
 
     @classmethod
     def deserialize(self, serializer: Serializer):
-        address_length = int.from_bytes(serializer.read(1), 'big')
+        address_length = int.from_bytes(serializer.read(1), "big")
         address = serializer.readString(address_length)
         return SlatepackAddress.fromBech32(address)
 
     @classmethod
     def fromBech32(self, address: str, testnet=False):
         # compute the slatepack address
-        network = 'grin'
+        network = "grin"
         if testnet:
-            network = 'tgrin'
+            network = "tgrin"
         public_key = Bech32Decoder.Decode(network, address)
         return SlatepackAddress(public_key)
 

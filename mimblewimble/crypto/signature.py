@@ -26,7 +26,7 @@ class Signature:
     def serialize(self, serializer: Serializer):
         assert len(self.getSignatureBytes()) == 64
         for signature_byte in self.getSignatureBytes():
-            serializer.write(signature_byte.to_bytes(1, 'big'))
+            serializer.write(signature_byte.to_bytes(1, "big"))
 
     @classmethod
     def deserialize(self, serializer: Serializer):
@@ -70,4 +70,4 @@ class Signature:
         return serializer.read().hex()
 
     def format(self):
-        return 'RawSig{' + self.hex() + '}'
+        return "RawSig{" + self.hex() + "}"

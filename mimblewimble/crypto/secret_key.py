@@ -27,4 +27,3 @@ class SecretKey:
     @classmethod
     def deserialize(self, byteBuffer: BytesIO, NUM_BYTES=32):
         return SecretKey(byteBuffer.read(NUM_BYTES))
-

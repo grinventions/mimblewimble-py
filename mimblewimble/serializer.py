@@ -1,11 +1,13 @@
 from io import BytesIO
 from enum import Enum
 
+
 class EProtocolVersion(Enum):
     V1 = 1
     V2 = 2
     V3 = 3
     V1000 = 1000
+
 
 class Serializer:
     def __init__(self, protocol=EProtocolVersion.V1):
@@ -32,25 +34,25 @@ class Serializer:
         line = self.raw.readline()
         self.pnt = self.raw.tell()
         if clean_newline:
-            if line[-1] == ord('\n'):
+            if line[-1] == ord("\n"):
                 return line[0:-1]
         return line
 
     def readlines(self):
         lines = []
         line = self.readline()
-        while line != b'':
+        while line != b"":
             lines.append(line)
             line = self.readline()
-        if line != b'':
+        if line != b"":
             lines.append(line)
         return lines
 
-    def readString(self, n, encoding='ascii'):
+    def readString(self, n, encoding="ascii"):
         as_bytes = self.read(n)
         return as_bytes.decode(encoding)
 
-    def writeString(self, value: str, encoding='ascii'):
+    def writeString(self, value: str, encoding="ascii"):
         as_bytes = value.encode(encoding)
         self.write(as_bytes)
 

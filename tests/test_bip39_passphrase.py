@@ -15,7 +15,6 @@ from mimblewimble.mnemonic import Mnemonic
 from mimblewimble.keychain import KeyChain
 from mimblewimble.wallet import Wallet
 
-
 # BIP39 test vectors with passphrase "TREZOR"
 # From https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki#Test_vectors
 # These are the same vectors used by grin/keychain/src/mnemonic.rs

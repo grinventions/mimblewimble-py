@@ -4,10 +4,11 @@ from mimblewimble.pow.common import EPoWStatus
 
 from typing import List
 
+
 def verify_cuckaroom(proof: List[int], sip_keys: SipHashKeys) -> int:
     xor_all = 0
-    fr = [0] * PROOFSIZE   # from nodes
-    to = [0] * PROOFSIZE   # to nodes
+    fr = [0] * PROOFSIZE  # from nodes
+    to = [0] * PROOFSIZE  # to nodes
 
     # 1. Basic checks + extract oriented edges
     for i in range(PROOFSIZE):
@@ -16,7 +17,7 @@ def verify_cuckaroom(proof: List[int], sip_keys: SipHashKeys) -> int:
         if nonce > EDGE_MASK:
             return EPoWStatus.POW_TOO_BIG
 
-        if i > 0 and nonce <= proof[i-1]:
+        if i > 0 and nonce <= proof[i - 1]:
             return EPoWStatus.POW_TOO_BIG
 
         edge = siphash_block(sip_keys, nonce, 21, xor_all=True)
@@ -75,9 +76,10 @@ def verify_cuckaroom(proof: List[int], sip_keys: SipHashKeys) -> int:
 
     return EPoWStatus.POW_OK
 
+
 def cuckaroom_validate(
-    proof_nonces: List[int],          # list of 42 edge indices (nonces)
-    pre_pow_hash: bytes               # 32-byte blake2b hash of pre-PoW header
+    proof_nonces: List[int],  # list of 42 edge indices (nonces)
+    pre_pow_hash: bytes,  # 32-byte blake2b hash of pre-PoW header
 ) -> tuple[bool, str]:
     """
     Returns (True, "OK") or (False, error message)

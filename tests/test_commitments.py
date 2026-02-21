@@ -7,6 +7,7 @@ from mimblewimble.crypto.commitment import Commitment
 from mimblewimble.crypto.public_key import PublicKey
 from mimblewimble.crypto.pedersen import Pedersen
 
+
 # test adding blinded commitment with transparent one
 def test_adding_blinded_commitments_with_transparent():
     p = Pedersen()
@@ -22,6 +23,7 @@ def test_adding_blinded_commitments_with_transparent():
 
     # they will match because of same blinding factor
     assert summed == another_blinded_commitment
+
 
 # test adding 2 blinded commitment
 def test_adding_two_blinded_commitment():
@@ -42,6 +44,7 @@ def test_adding_two_blinded_commitment():
     # of blinding factors of a and b
     assert summed == blinded_commitment_c
 
+
 # test adding negative blinded commitment
 def test_adding_negative_blinded_commitment():
     p = Pedersen()
@@ -61,16 +64,19 @@ def test_adding_negative_blinded_commitment():
     # of blinding factors of a and b
     assert difference == blinded_commitment_c
 
+
 # test public key to commitment
 def test_public_key_to_commitment():
     p = Pedersen()
     public_key = PublicKey.fromHex(
-        '02f434a6b929d0aa6ac757bbe387075066d51ee5308d5be91d2fb478a494d38bdf')
+        "02f434a6b929d0aa6ac757bbe387075066d51ee5308d5be91d2fb478a494d38bdf"
+    )
 
     commitment = p.toCommitment(public_key)
     commitment_bytes = commitment.getBytes()
 
     # commitment = Commitment.fromPublicKey(public_key)
     expected_commitment = Commitment.fromHex(
-        '08f434a6b929d0aa6ac757bbe387075066d51ee5308d5be91d2fb478a494d38bdf')
+        "08f434a6b929d0aa6ac757bbe387075066d51ee5308d5be91d2fb478a494d38bdf"
+    )
     assert commitment == expected_commitment

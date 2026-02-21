@@ -6,6 +6,7 @@ from mimblewimble.crypto.public_key import PublicKey
 from mimblewimble.crypto.aggsig import AggSig
 from mimblewimble.crypto.public_keys import PublicKeys
 
+
 def test_aggsig_interaction():
     agg = AggSig()
     pks = PublicKeys()
@@ -33,26 +34,29 @@ def test_aggsig_interaction():
 
     # generate partial signatures
     senderPartialSignature = agg.calculatePartialSignature(
-        secretKeySender, secretNonceSender, sumPubKeys, sumPubNonces, message)
+        secretKeySender, secretNonceSender, sumPubKeys, sumPubNonces, message
+    )
     receiverPartialSignature = agg.calculatePartialSignature(
-        secretKeyReceiver, secretNonceReceiver, sumPubKeys, sumPubNonces, message)
+        secretKeyReceiver, secretNonceReceiver, sumPubKeys, sumPubNonces, message
+    )
 
     # verify partial signatures
     senderSigValid = agg.verifyPartialSignature(
-        senderPartialSignature, publicKeySender,
-        sumPubKeys, sumPubNonces, message)
+        senderPartialSignature, publicKeySender, sumPubKeys, sumPubNonces, message
+    )
     receiverSigValid = agg.verifyPartialSignature(
-        receiverPartialSignature, publicKeyReceiver,
-        sumPubKeys, sumPubNonces, message)
+        receiverPartialSignature, publicKeyReceiver, sumPubKeys, sumPubNonces, message
+    )
 
     assert senderSigValid
     assert receiverSigValid
 
     # aggregate the partial signatures
     aggregate = agg.aggregateSignatures(
-        [senderPartialSignature, receiverPartialSignature], sumPubNonces)
+        [senderPartialSignature, receiverPartialSignature], sumPubNonces
+    )
     aggregateValid = agg.verifyAggregateSignature(aggregate, sumPubKeys, message)
 
     assert aggregateValid
 
-    del agg # just to make sure secp256k1-zkp context is freed
+    del agg  # just to make sure secp256k1-zkp context is freed

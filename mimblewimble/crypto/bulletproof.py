@@ -43,12 +43,13 @@ class ProofMessage:
 
     @classmethod
     def fromKeyIndices(
-            self, key_indices: List[int], bulletproof_type: EBulletproofType):
+        self, key_indices: List[int], bulletproof_type: EBulletproofType
+    ):
         padded_path = [0x00 for i in range(20)]
         if bulletproof_type == EBulletproofType.ENHANCED:
             # padded_path[0] 0x00 reserved
             # padded_path[1] 0x00 is wallet type
-            padded_path[2] = 0x01 # switch commits
+            padded_path[2] = 0x01  # switch commits
             padded_path[3] = len(key_indices)
 
         i = 4
@@ -62,8 +63,7 @@ class ProofMessage:
         length = 3
         if bulletproof_type == EBulletproofType.ENHANCED:
             if proof_message[0] != 0x0:
-                raise ValueError(
-                    'Reserved, first value of proof message must be zero')
+                raise ValueError("Reserved, first value of proof message must be zero")
             wallet_type = proof_message[1]
             switch_commits = proof_message[2]
             length = proof_message[3]
@@ -72,8 +72,7 @@ class ProofMessage:
                 for j in range(4):
                     assert proof_message[j] == 0x0
             except:
-                raise ValueError(
-                    'Expected first 4 bytes of proof message to be 0x00')
+                raise ValueError("Expected first 4 bytes of proof message to be 0x00")
         i = 4
         if length == 0:
             length = 3
@@ -85,8 +84,7 @@ class ProofMessage:
 
 
 class RewoundProof:
-    def __init__(
-            self, amount, blinding_factor: SecretKey, message: ProofMessage):
+    def __init__(self, amount, blinding_factor: SecretKey, message: ProofMessage):
         self.amount = amount
         self.blinding_factor = blinding_factor
         self.message = message
@@ -108,14 +106,16 @@ class Bulletproof:
     def __init__(self):
         self.cache = []
         self.ctx = secp256k1_context_create(
-            SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY)
+            SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY
+        )
 
         self.MAX_WIDTH = 1 << 20
         self.SCRATCH_SPACE_SIZE = 256 * self.MAX_WIDTH
         self.MAX_GENERATORS = 256
 
         self.generators = secp256k1_bulletproof_generators_create(
-            self.ctx, secp256k1_generator_const_g, self.MAX_GENERATORS);
+            self.ctx, secp256k1_generator_const_g, self.MAX_GENERATORS
+        )
 
     def flushCache(self):
         self.cache = []
@@ -123,8 +123,7 @@ class Bulletproof:
     def __del__(self):
         secp256k1_context_destroy(self.ctx)
 
-    def verifyBulletproofs(
-            self, range_proofs: List[Tuple[Commitment, RangeProof]]):
+    def verifyBulletproofs(self, range_proofs: List[Tuple[Commitment, RangeProof]]):
         num_bits = 64
 
         _, first_rangeproof = range_proofs[0]
@@ -144,16 +143,23 @@ class Bulletproof:
         # array of generator multiplied by value in pedersen commitments
         # (cannot be NULL)
         value_generators = secp256k1_bulletproof_generators_create(
-            self.ctx, secp256k1_generator_const_h, len(commitments))
+            self.ctx, secp256k1_generator_const_h, len(commitments)
+        )
 
         parsed_commitments = Pedersen.convertCommitments(self.ctx, commitments)
         scratch = secp256k1_scratch_space_create(self.ctx, self.SCRATCH_SPACE_SIZE)
         is_valid = secp256k1_bulletproof_rangeproof_verify_multi(
-            self.ctx, scratch, value_generators,
-            bulletproofs, None,
-            parsed_commitments, len(commitments),
+            self.ctx,
+            scratch,
+            value_generators,
+            bulletproofs,
+            None,
+            parsed_commitments,
+            len(commitments),
             proof_length,
-            [secp256k1_generator_const_h, secp256k1_generator_const_h], None)
+            [secp256k1_generator_const_h, secp256k1_generator_const_h],
+            None,
+        )
         secp256k1_scratch_space_destroy(scratch)
 
         if not is_valid:
@@ -167,48 +173,55 @@ class Bulletproof:
         return True
 
     def generateRangeProof(
-            self, amount: int,
-            key: SecretKey,
-            private_nonce: SecretKey,
-            rewind_nonce: SecretKey,
-            proof_message: ProofMessage):
+        self,
+        amount: int,
+        key: SecretKey,
+        private_nonce: SecretKey,
+        rewind_nonce: SecretKey,
+        proof_message: ProofMessage,
+    ):
         seed = os.urandom(32)
         secp256k1_context_randomize(self.ctx, seed)
 
-        scratch = secp256k1_scratch_space_create(
-            self.ctx, self.SCRATCH_SPACE_SIZE)
+        scratch = secp256k1_scratch_space_create(self.ctx, self.SCRATCH_SPACE_SIZE)
         proof_bytes = secp256k1_bulletproof_rangeproof_prove(
-		    self.ctx,
-		    scratch,
+            self.ctx,
+            scratch,
             self.generators,
             None,
             None,
             None,
             [amount],
             None,
-		    [key.getBytes()],
-		    None,
+            [key.getBytes()],
+            None,
             secp256k1_generator_const_h,
-		    64,
-		    rewind_nonce.getBytes(),
-	        private_nonce.getBytes(),
-		    None,
-		    proof_message.getBytes()
+            64,
+            rewind_nonce.getBytes(),
+            private_nonce.getBytes(),
+            None,
+            proof_message.getBytes(),
         )
         secp256k1_scratch_space_destroy(scratch)
         return RangeProof(proof_bytes)
 
     def rewindProof(
-            self,
-            commitment: Commitment, rangeproof: RangeProof, nonce: SecretKey):
+        self, commitment: Commitment, rangeproof: RangeProof, nonce: SecretKey
+    ):
         parsed_commitments = Pedersen.convertCommitments(self.ctx, [commitment])
         commit = parsed_commitments[0]
 
         rewinding_result = secp256k1_bulletproof_rangeproof_rewind(
-            self.ctx, rangeproof.getProofBytes(), 0, commit,
-            secp256k1_generator_const_h, nonce.getBytes(), None)
+            self.ctx,
+            rangeproof.getProofBytes(),
+            0,
+            commit,
+            secp256k1_generator_const_h,
+            nonce.getBytes(),
+            None,
+        )
         if rewinding_result is None:
-            raise ValueError('Bulletproof invalid')
+            raise ValueError("Bulletproof invalid")
         value, blind, message_bytes = rewinding_result
         blinding_factor = BlindingFactor(blind)
         message = ProofMessage(message_bytes)

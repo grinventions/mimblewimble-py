@@ -9,33 +9,25 @@ from mimblewimble.slatebuilder import ESlateStage, Slate, SlateSignature
 
 
 class InvoiceSlateBuilder:
-    def __init__(
-            self,
-            master_seed: bytes):
+    def __init__(self, master_seed: bytes):
         self.master_seed = master_seed
 
     def build(
-            self,
-            amount: int,
-            output: OutputDataEntity,
-            block_height: int,
-            slate_version=0):
+        self, amount: int, output: OutputDataEntity, block_height: int, slate_version=0
+    ):
 
         slate_id_bytes = os.urandom(16)
         slate_id = str(UUID(bytes=slate_id_bytes))
 
         stage = ESlateStage.INVOICE_SENT
 
-        block_version = Consensus.getHeaderVersion(
-            block_height)
+        block_version = Consensus.getHeaderVersion(block_height)
 
         outputs = [output]
         inputs = []
 
         secret_key, public_key, secret_nonce, public_nonce = calculateSigningKeys(
-            inputs=inputs,
-            outputs=outputs,
-            tx_offset=BlindingFactor.zero()
+            inputs=inputs, outputs=outputs, tx_offset=BlindingFactor.zero()
         )
         signature = SlateSignature(public_key, public_nonce)
 
@@ -46,11 +38,11 @@ class InvoiceSlateBuilder:
             amount,
             EKernelFeatures.DEFAULT_KERNEL,
             signatures=[signature],
-            stage=stage)
+            stage=stage,
+        )
 
         slate.appendOutput(
-            output.getFeatures(),
-            output.getCommitment(),
-            output.getRangeProof())
+            output.getFeatures(), output.getCommitment(), output.getRangeProof()
+        )
 
         return slate, secret_key, secret_nonce

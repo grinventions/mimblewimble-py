@@ -1,5 +1,6 @@
 from mimblewimble.serializer import Serializer
 
+
 # https://github.com/GrinPlusPlus/GrinPlusPlus/blob/fa3705f5558f0372410aa4222f5f1d97a0ab2247/include/Wallet/Models/Slate/SlatePaymentProof.h#L8
 # TODO define types:
 #  ed25519_public_key_t for the addresses
@@ -34,7 +35,7 @@ class SlatePaymentProof:
         has_sig = 0
         if self.receiver_signature is not None:
             has_sig = 1
-        serializer.write(has_sig.to_bytes(1, 'big'))
+        serializer.write(has_sig.to_bytes(1, "big"))
         if has_sig > 0:
             serializer.write(self.receiver_signature)
 
@@ -43,24 +44,23 @@ class SlatePaymentProof:
         ed25519_sender = serializer.read(32)
         ed25519_receiver = serializer.read(32)
         ed25519_signature = None
-        has_sig = int.from_bytes(serializer.read(1), 'big')
+        has_sig = int.from_bytes(serializer.read(1), "big")
         if has_sig > 0:
             ed25519_signature = serializer.read(64)
         return SlatePaymentProof(
-            ed25519_sender,
-            ed25519_receiver,
-            receiver_signature=ed25519_signature)
+            ed25519_sender, ed25519_receiver, receiver_signature=ed25519_signature
+        )
 
     def toJSON(self):
         obj = {}
         if self.sender_address is not None:
-            obj['saddr'] = self.sender_address.hex()
+            obj["saddr"] = self.sender_address.hex()
         if self.receiver_address is not None:
-            obj['raddr'] = self.receiver_address.hex()
+            obj["raddr"] = self.receiver_address.hex()
         if self.receiver_signature is not None:
-            obj['rsig'] = self.receiver_signature.hex()
+            obj["rsig"] = self.receiver_signature.hex()
         return obj
 
     @classmethod
     def fromJSON(self):
-        raise Exception('unimplemented')
+        raise Exception("unimplemented")

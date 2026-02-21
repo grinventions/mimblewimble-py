@@ -2,10 +2,10 @@ from typing import List
 
 from mimblewimble.serializer import Serializer
 
-AGE_INTRO = b'age-encryption.org/v1'
-AGE_RECIPIENT_PREFIX = b'->'
-AGE_FOOTER_PREFIX = b'---'
-AGE_AEAD = b'ChaChaPoly'
+AGE_INTRO = b"age-encryption.org/v1"
+AGE_RECIPIENT_PREFIX = b"->"
+AGE_FOOTER_PREFIX = b"---"
+AGE_AEAD = b"ChaChaPoly"
 
 
 class AgeRecipientBody:
@@ -13,19 +13,17 @@ class AgeRecipientBody:
         self.body = body
 
     def serialize(self, serializer: Serializer):
-        serializer.write(self.body + b'\n')
+        serializer.write(self.body + b"\n")
 
     @classmethod
     def deserialize(self, serializer: Serializer):
         pnt = serializer.pnt
         line = serializer.readline(clean_newline=True)
 
-        is_recipient = line.startswith(
-                AGE_RECIPIENT_PREFIX)
-        is_footer = line.startswith(
-                AGE_FOOTER_PREFIX)
+        is_recipient = line.startswith(AGE_RECIPIENT_PREFIX)
+        is_footer = line.startswith(AGE_FOOTER_PREFIX)
 
-        if is_recipient or is_footer or line == b'':
+        if is_recipient or is_footer or line == b"":
             serializer.resetPointer(n=pnt)
             return None
 
@@ -42,9 +40,7 @@ class AgeRecipient:
         self.body.append(body)
 
     def serialize(self, serializer: Serializer):
-        serializer.write(
-            b'-> ' + self._type + b' ' + b' '.join(
-                self.args) + b'\n')
+        serializer.write(b"-> " + self._type + b" " + b" ".join(self.args) + b"\n")
         if len(self.body) > 0:
             for body in self.body:
                 body.serialize(serializer)
@@ -54,8 +50,7 @@ class AgeRecipient:
         pnt = serializer.pnt
         line = serializer.readline(clean_newline=True)
 
-        if not line.startswith(
-                AGE_RECIPIENT_PREFIX):
+        if not line.startswith(AGE_RECIPIENT_PREFIX):
             serializer.resetPointer(n=pnt)
             return None
 
@@ -70,8 +65,7 @@ class AgeRecipient:
         body = AgeRecipientBody.deserialize(serializer)
         while body is not None:
             recipient.append_body(body)
-            body = AgeRecipientBody.deserialize(
-                serializer)
+            body = AgeRecipientBody.deserialize(serializer)
 
         return recipient
 
@@ -91,8 +85,7 @@ class AgeHeader:
         recipient = AgeRecipient.deserialize(serializer)
         while recipient is not None:
             recipients.append(recipient)
-            recipient = AgeRecipient.deserialize(
-                serializer)
+            recipient = AgeRecipient.deserialize(serializer)
 
         return AgeHeader(recipients=recipients)
 
@@ -102,8 +95,7 @@ class AgeBody:
         self.body = body
 
     def serialize(self, serializer: Serializer):
-        serializer.write(
-            b'\n' + AGE_FOOTER_PREFIX + b' ' + self.body)
+        serializer.write(b"\n" + AGE_FOOTER_PREFIX + b" " + self.body)
 
     @classmethod
     def deserialize(self, serializer: Serializer):
@@ -121,7 +113,7 @@ class AgeMessage:
         self.body = body
 
     def serialize(self, serializer: Serializer):
-        serializer.write(self.pre + AGE_INTRO + b'\n')
+        serializer.write(self.pre + AGE_INTRO + b"\n")
         self.header.serialize(serializer)
         self.body.serialize(serializer)
 
@@ -134,7 +126,7 @@ class AgeMessage:
         if len(splitted) > 1:
             pre = splitted[0]
         else:
-            pre = b''
+            pre = b""
         header = AgeHeader.deserialize(serializer)
         if header is None:
             return None

@@ -2,7 +2,11 @@ from typing import Dict, List, Optional
 
 from mimblewimble.entity import OutputDataEntity
 from mimblewimble.wallet import NodeAccess
-from mimblewimble.models.transaction import Transaction, TransactionOutput, EKernelFeatures
+from mimblewimble.models.transaction import (
+    Transaction,
+    TransactionOutput,
+    EKernelFeatures,
+)
 
 
 class MockNode(NodeAccess):
@@ -33,9 +37,7 @@ class MockNode(NodeAccess):
         return self.block_height
 
     def get_outputs(
-            self,
-            commitments: List[bytes],
-            include_proof: bool = True
+        self, commitments: List[bytes], include_proof: bool = True
     ) -> Dict[bytes, Dict]:
         """
         Simulate /v2/foreign/get_outputs
@@ -50,37 +52,41 @@ class MockNode(NodeAccess):
                     "height": height,
                     "mmr_index": 12345,  # dummy
                     "spent": spent,
-                    "proof": range_proof.hex()
+                    "proof": range_proof.hex(),
                 }
         return result
 
-    def get_unspent_outputs(self, start_index, end_index, window_size, range_proof=False):
+    def get_unspent_outputs(
+        self, start_index, end_index, window_size, range_proof=False
+    ):
         """Get unspent outputs in PMMR index range."""
         outputs = []
         max_index = min(end_index, start_index + window_size)
         last_retrieved_index = start_index
-        for i, commitment in enumerate(self.fake_pmmr[start_index:max_index+1]):
+        for i, commitment in enumerate(self.fake_pmmr[start_index : max_index + 1]):
             if commitment in self.chain_outputs:
                 height, spent, range_proof = self.chain_outputs[commitment]
                 if not spent:
-                    outputs.append({
-                        "commit": "09" + commitment.hex(),
-                        "height": height,
-                        "mmr_index": start_index + i,
-                        "proof": range_proof.hex()
-                    })
+                    outputs.append(
+                        {
+                            "commit": "09" + commitment.hex(),
+                            "height": height,
+                            "mmr_index": start_index + i,
+                            "proof": range_proof.hex(),
+                        }
+                    )
             last_retrieved_index += 1
         return {
-            'outputs': outputs,
-            'last_retrieved_index': last_retrieved_index,
-            'highest_index': end_index
+            "outputs": outputs,
+            "last_retrieved_index": last_retrieved_index,
+            "highest_index": end_index,
         }
 
     def get_pmmr_indices(self, start_block_height: int, end_block_height: int) -> Dict:
         """Get MMR indices for outputs and kernels in block range."""
         return {
-            'last_retrieved_index': self.pmmr_start_index,
-            'highest_index': self.pmmr_end_index
+            "last_retrieved_index": self.pmmr_start_index,
+            "highest_index": self.pmmr_end_index,
         }
 
     def get_kernel(self, excess: bytes) -> Optional[Dict]:
@@ -92,7 +98,7 @@ class MockNode(NodeAccess):
             return {
                 "kernel": {"excess": "08" + excess.hex()},
                 "height": height,
-                "mmr_index": 54321
+                "mmr_index": 54321,
             }
         return None
 
@@ -129,7 +135,11 @@ class MockNode(NodeAccess):
 
                 # add output commitments to chain_outputs
                 for output in tx.body.outputs:
-                    range_proof = output.getRangeProof() if hasattr(output, 'getRangeProof') else None
+                    range_proof = (
+                        output.getRangeProof()
+                        if hasattr(output, "getRangeProof")
+                        else None
+                    )
                     if isinstance(output, OutputDataEntity):
                         commit = output.output.getCommitment().getBytes()
                     if isinstance(output, TransactionOutput):
@@ -141,7 +151,9 @@ class MockNode(NodeAccess):
 
                 # add kernel excesses to chain_kernels
                 for kernel in tx.body.kernels:
-                    self.chain_kernels[kernel.getExcessCommitment().getBytes()] = self.block_height
+                    self.chain_kernels[kernel.getExcessCommitment().getBytes()] = (
+                        self.block_height
+                    )
 
         self.mempool.clear()
 
@@ -156,7 +168,7 @@ class MockNode(NodeAccess):
                 if spent:
                     highest_unspent = pmmr_index + 1
         self.pmmr_start_index = highest_unspent
-        self.pmmr_end_index = len(self.fake_pmmr)-1
+        self.pmmr_end_index = len(self.fake_pmmr) - 1
 
     def _include_transaction(self, tx: Transaction, height: int):
         """
@@ -164,7 +176,9 @@ class MockNode(NodeAccess):
         """
         # Register outputs
         for output in tx.body.outputs:
-            range_proof = output.getRangeProof() if hasattr(output, 'getRangeProof') else None
+            range_proof = (
+                output.getRangeProof() if hasattr(output, "getRangeProof") else None
+            )
             if isinstance(output, OutputDataEntity):
                 commit = output.output.getCommitment().getBytes()
             if isinstance(output, TransactionOutput):
@@ -185,7 +199,13 @@ class MockNode(NodeAccess):
             height, _ = self.chain_outputs[commitment]
             self.chain_outputs[commitment] = (height, True, None)
 
-    def add_fake_output(self, commitment: bytes, height: int, spent: bool = False, proof: Optional[bytes] = None):
+    def add_fake_output(
+        self,
+        commitment: bytes,
+        height: int,
+        spent: bool = False,
+        proof: Optional[bytes] = None,
+    ):
         """
         Manually inject an output (e.g., received via slatepack offline).
         """
@@ -198,4 +218,6 @@ class MockNode(NodeAccess):
         self.chain_kernels[excess] = height
 
     def how_many_unspent(self):
-        return sum(1 for _, (height, spent, _) in self.chain_outputs.items() if not spent)
+        return sum(
+            1 for _, (height, spent, _) in self.chain_outputs.items() if not spent
+        )

@@ -4,6 +4,7 @@ from nacl import bindings
 
 from mimblewimble.keychain import KeyChain
 
+
 def test_nacl():
     seed = os.urandom(32)
     pk, sk = bindings.crypto_sign_seed_keypair(seed)
@@ -17,7 +18,7 @@ def test_nacl():
 
 def test_signature():
     master_seed = os.urandom(32)
-    path = 'm/0/1/0'
+    path = "m/0/1/0"
 
     keychain = KeyChain.fromSeed(master_seed)
 

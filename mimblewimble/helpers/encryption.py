@@ -22,7 +22,7 @@ def encrypt(plaintext: bytes, passphrase: bytes, nonce=None, salt=None):
         salt = os.urandom(8)
     if nonce is None:
         nonce = os.urandom(12)
-    key = pbkdf2_hmac('sha512', passphrase, salt, 100)
+    key = pbkdf2_hmac("sha512", passphrase, salt, 100)
     cipher = ChaCha20_Poly1305.new(key=key[0:32], nonce=nonce)
     ciphertext = cipher.encrypt(plaintext)
     tag = cipher.digest()
@@ -30,20 +30,15 @@ def encrypt(plaintext: bytes, passphrase: bytes, nonce=None, salt=None):
 
 
 def decrypt(
-        ciphertext: bytes,
-        passphrase: bytes,
-        tag: bytes,
-        salt: bytes,
-        nonce: bytes):
-    key = pbkdf2_hmac('sha512', passphrase, salt, 100)
+    ciphertext: bytes, passphrase: bytes, tag: bytes, salt: bytes, nonce: bytes
+):
+    key = pbkdf2_hmac("sha512", passphrase, salt, 100)
     cipher = ChaCha20_Poly1305.new(key=key[0:32], nonce=nonce)
     plaintext = cipher.decrypt_and_verify(ciphertext, tag)
     return plaintext
 
 
-def ageX25519Encrypt(
-        plaintext: bytes,
-        _recipients: List[str]):
+def ageX25519Encrypt(plaintext: bytes, _recipients: List[str]):
     recipients = []
     for r in _recipients:
         if isinstance(r, AgePublicKey):
@@ -51,14 +46,10 @@ def ageX25519Encrypt(
         else:
             as_str = r
         recipients.append(as_str)
-    recipients = [
-        age_x25519.Recipient.from_str(r) for r in recipients]
+    recipients = [age_x25519.Recipient.from_str(r) for r in recipients]
     return age_encrypt(plaintext, recipients)
 
 
-def ageX25519Decrypt(
-        ciphertext: bytes, age_secret_key: str):
-    receiver = age_x25519.Identity.from_str(
-        age_secret_key)
+def ageX25519Decrypt(ciphertext: bytes, age_secret_key: str):
+    receiver = age_x25519.Identity.from_str(age_secret_key)
     return age_decrypt(ciphertext, [receiver])
-

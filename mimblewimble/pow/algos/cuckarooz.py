@@ -5,13 +5,14 @@ from mimblewimble.pow.common import SipHashKeys
 from mimblewimble.pow.common import PROOFSIZE, EDGE_MASK, EDGEBITS
 from mimblewimble.pow.common import EPoWStatus
 
-NNODES    = 1 << EDGEBITS # ← Cuckarooz: monopartite
-NEDGES    = 1 << EDGEBITS
+NNODES = 1 << EDGEBITS  # ← Cuckarooz: monopartite
+NEDGES = 1 << EDGEBITS
 EDGE_MASK = NEDGES - 1
 NODE_MASK = NNODES - 1
 
+
 def verify_cuckarooz(proof: List[int], sip_keys: SipHashKeys) -> int:
-    uvs = [0] * (2 * PROOFSIZE)          # flattened: u0,v0, u1,v1, ...
+    uvs = [0] * (2 * PROOFSIZE)  # flattened: u0,v0, u1,v1, ...
     xor_all = 0
 
     # 1. Basic checks + extract endpoints
@@ -21,14 +22,14 @@ def verify_cuckarooz(proof: List[int], sip_keys: SipHashKeys) -> int:
         if nonce > EDGE_MASK:
             return EPoWStatus.POW_TOO_BIG
 
-        if i > 0 and nonce <= proof[i-1]:
+        if i > 0 and nonce <= proof[i - 1]:
             return EPoWStatus.POW_NOT_ASCENDING
 
         edge = siphash_block(sip_keys, nonce, 21, xor_all=True)
         u = edge & NODE_MASK
         v = (edge >> 32) & NODE_MASK
 
-        uvs[2 * i]     = u
+        uvs[2 * i] = u
         uvs[2 * i + 1] = v
         xor_all ^= u ^ v
 
@@ -36,7 +37,7 @@ def verify_cuckarooz(proof: List[int], sip_keys: SipHashKeys) -> int:
         return EPoWStatus.POW_NON_MATCHING
 
     # 2. Cycle detection – Grin-style linked-list walk (undirected)
-    MASK = 63   # 2⁶-1 — sufficient for 42 edges
+    MASK = 63  # 2⁶-1 — sufficient for 42 edges
 
     head = [2 * PROOFSIZE] * (MASK + 1)
     prev = [0] * (2 * PROOFSIZE)
@@ -54,7 +55,7 @@ def verify_cuckarooz(proof: List[int], sip_keys: SipHashKeys) -> int:
             prev[n] = head[bits]
 
     n_edges = 0
-    i = 0   # start at uvs[0]
+    i = 0  # start at uvs[0]
 
     while True:
         j = i
@@ -85,13 +86,15 @@ def verify_cuckarooz(proof: List[int], sip_keys: SipHashKeys) -> int:
     else:
         return EPoWStatus.POW_SHORT_CYCLE
 
+
 # ────────────────────────────────────────────────
 # High-level validate function
 # ────────────────────────────────────────────────
 
+
 def cuckarooz_validate(
-    proof_nonces: List[int],          # list of PROOFSIZE edge indices
-    pre_pow_hash: bytes               # 32-byte blake2b(pre-pow-header)
+    proof_nonces: List[int],  # list of PROOFSIZE edge indices
+    pre_pow_hash: bytes,  # 32-byte blake2b(pre-pow-header)
 ) -> tuple[bool, str]:
     """
     Returns (is_valid: bool, message: str)

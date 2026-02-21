@@ -14,11 +14,13 @@ class HeaderInfo:
     is_secondary: bool = False
 
     @classmethod
-    def from_time_and_diff(cls, ts: int, diff: int) -> 'HeaderInfo':
-        return cls(timestamp=ts, difficulty=diff, secondary_scaling=0, is_secondary=False)
+    def from_time_and_diff(cls, ts: int, diff: int) -> "HeaderInfo":
+        return cls(
+            timestamp=ts, difficulty=diff, secondary_scaling=0, is_secondary=False
+        )
 
     @classmethod
-    def from_diff_and_scaling(cls, diff: int, scaling: int = 0) -> 'HeaderInfo':
+    def from_diff_and_scaling(cls, diff: int, scaling: int = 0) -> "HeaderInfo":
         return cls(difficulty=diff, secondary_scaling=scaling)
 
     def get_difficulty(self) -> int:
@@ -33,9 +35,10 @@ class HeaderInfo:
     def is_secondary(self) -> bool:
         return self.is_secondary
 
+
 class DifficultyLoader:
     def __init__(self, block_db: IBlockDB):
-        self.block_db = block_db    # your interface to get headers by hash
+        self.block_db = block_db  # your interface to get headers by hash
 
     def load_difficulty_data(self, header) -> List[HeaderInfo]:
         """
@@ -50,7 +53,7 @@ class DifficultyLoader:
         while len(difficulty_data) < num_blocks_needed and current is not None:
             ts = current.timestamp
             total_diff = current.total_difficulty
-            scaling = current.scaling_difficulty          # or .GetScalingDifficulty()
+            scaling = current.scaling_difficulty  # or .GetScalingDifficulty()
             secondary = current.proof_of_work.is_secondary  # adapt to your real field
 
             prev = self.block_db.get_block_header(current.prev_hash)
@@ -66,7 +69,7 @@ class DifficultyLoader:
                     timestamp=ts,
                     difficulty=diff,
                     secondary_scaling=scaling,
-                    is_secondary=secondary
+                    is_secondary=secondary,
                 )
             )
 
@@ -75,7 +78,9 @@ class DifficultyLoader:
         # Pad with fake pre-genesis blocks if needed + reverse order
         return self._pad_difficulty_data(difficulty_data)
 
-    def _pad_difficulty_data(self, difficulty_data: List[HeaderInfo]) -> List[HeaderInfo]:
+    def _pad_difficulty_data(
+        self, difficulty_data: List[HeaderInfo]
+    ) -> List[HeaderInfo]:
         """
         Pads with simulated pre-genesis blocks if we don't have enough real data
         Returns oldest → newest order
@@ -108,7 +113,7 @@ class DifficultyLoader:
 
 class DifficultyCalculator:
     def __init__(self, block_db: IBlockDB):
-        self.block_db = block_db           # your block header database / cache / chain access
+        self.block_db = block_db  # your block header database / cache / chain access
 
     def calculate_next_difficulty(self, header) -> HeaderInfo:
         if header.version < 5:
@@ -126,23 +131,27 @@ class DifficultyCalculator:
             raise RuntimeError("Previous header not found")
 
         last_block_time = last_header.timestamp - prev_header.timestamp
-        last_diff = last_header.total_difficulty - prev_header.total_difficulty   # assuming total_difficulty exists
+        last_diff = (
+            last_header.total_difficulty - prev_header.total_difficulty
+        )  # assuming total_difficulty exists
 
         # WTEMA style update
         numerator = last_diff * Consensus.wtema_half_life
-        denominator = Consensus.wtema_half_life - Consensus.block_time_sec + last_block_time
+        denominator = (
+            Consensus.wtema_half_life - Consensus.block_time_sec + last_block_time
+        )
         next_diff = numerator // denominator if denominator != 0 else last_diff
 
         # Very rough minimum difficulty floor (protects against very fast blocks)
         # You should replace min_wtema_graph_weight() with your real function
-        min_diff = self.min_wtema_graph_weight()   # ← implement or define this
+        min_diff = self.min_wtema_graph_weight()  # ← implement or define this
 
         difficulty = max(min_diff, next_diff)
 
         return HeaderInfo.from_diff_and_scaling(difficulty, 0)
 
     def next_DMA(self, header) -> HeaderInfo:
-        loader = DifficultyLoader(self.block_db)           # assuming you have this class
+        loader = DifficultyLoader(self.block_db)  # assuming you have this class
         difficulty_data: List[HeaderInfo] = loader.load_difficulty_data(header)
 
         if len(difficulty_data) < 2:
@@ -151,18 +160,28 @@ class DifficultyCalculator:
         # Skip first (oldest) element for secondary ratio calculation
         difficulty_data_skip_first = difficulty_data[1:]
 
-        sec_pow_scaling = self.secondary_POW_scaling(header.height, difficulty_data_skip_first)
+        sec_pow_scaling = self.secondary_POW_scaling(
+            header.height, difficulty_data_skip_first
+        )
 
         # Timestamp delta over the whole window
-        ts_delta = difficulty_data[Consensus.difficulty_adjust_window].timestamp - difficulty_data[0].timestamp
+        ts_delta = (
+            difficulty_data[Consensus.difficulty_adjust_window].timestamp
+            - difficulty_data[0].timestamp
+        )
 
         # Sum of difficulties in the adjustment window (excluding oldest)
         difficulty_sum = sum(h.get_difficulty() for h in difficulty_data_skip_first)
 
-        actual = self.damp(ts_delta, Consensus.block_time_window, Consensus.dma_damp_factor)
+        actual = self.damp(
+            ts_delta, Consensus.block_time_window, Consensus.dma_damp_factor
+        )
         adj_ts = self.clamp(actual, Consensus.block_time_window, Consensus.clamp_factor)
 
-        difficulty = max(Consensus.min_dma_difficulty, (difficulty_sum * Consensus.block_time_sec) // adj_ts)
+        difficulty = max(
+            Consensus.min_dma_difficulty,
+            (difficulty_sum * Consensus.block_time_sec) // adj_ts,
+        )
 
         return HeaderInfo.from_diff_and_scaling(difficulty, sec_pow_scaling)
 
@@ -173,13 +192,19 @@ class DifficultyCalculator:
     def scaling_factor_sum(self, difficulty_data: List[HeaderInfo]) -> int:
         return sum(h.get_secondary_scaling() for h in difficulty_data)
 
-    def secondary_POW_scaling(self, height: int, difficulty_data: List[HeaderInfo]) -> int:
+    def secondary_POW_scaling(
+        self, height: int, difficulty_data: List[HeaderInfo]
+    ) -> int:
         scale_sum = self.scaling_factor_sum(difficulty_data)
 
-        target_pct = Consensus.secondary_POW_ratio(height)          # ← you must implement / import this
+        target_pct = Consensus.secondary_POW_ratio(
+            height
+        )  # ← you must implement / import this
         target_count = Consensus.difficulty_adjust_window * target_pct
 
-        actual = self.damp(self.AR_count(difficulty_data), target_count, Consensus.ar_scale_damp_factor)
+        actual = self.damp(
+            self.AR_count(difficulty_data), target_count, Consensus.ar_scale_damp_factor
+        )
         adj_count = self.clamp(actual, target_count, Consensus.clamp_factor)
 
         if adj_count == 0:
