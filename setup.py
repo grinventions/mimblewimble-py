@@ -19,6 +19,12 @@ setuptools.setup(
         "pynacl",
         "pyrage",
     ],
+    extras_require={
+        "dev": [
+            "black",
+            "pytest",
+        ],
+    },
     url="https://github.com/grinventions/mimblewimble-py",
     classifiers=[
         "Programming Language :: Python :: 3",

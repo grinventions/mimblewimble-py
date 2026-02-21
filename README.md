@@ -398,6 +398,30 @@ you may use TOR proxy to reach foreign API listener under `3ryw4jlp77of647c3znwu
 * Managing blocks
 * Managing transactions
 
+## Contributing
+
+### Setup
+
+Install dev dependencies using
+
+```sh
+pip install ".[dev]"
+```
+
+Make sure tests are passing using
+
+```sh
+pytest
+```
+
+and run linter from the root of this repo
+
+```sh
+black .
+```
+
+to ensure your changes match the coding style. This also minimizes diffs which result from IDE configuration.
+
 ## Use-cases
 
 * Implement python-based wallets and nodes for [grin](https://grin.mw/)
