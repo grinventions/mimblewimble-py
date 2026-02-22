@@ -1,0 +1,788 @@
+﻿...........................F.F.F.F.F.F.F.F.F...F.FFFFFFFF.F.FF.FFF.FF.FF [ 41%]
+FF.FF.FF.F.F.FFFFF....F.FFFFF.FF.FFF.FF.FFF.FF.FFF.FF.FFF.FF........FFFF [ 82%]
+FFFFFFFFFFF.FFFFFFFFFFFFFFFFFF                                           [100%]
+================================== FAILURES ===================================
+____________ TestPmmrLeafToInsertionIndex.test_leaf_positions[1-1] ____________
+tests\test_pmmr.py:160: in test_leaf_positions
+    assert pmmr_leaf_to_insertion_index(pos0) == expected_idx
+E   assert None == 1
+E    +  where None = pmmr_leaf_to_insertion_index(1)
+____________ TestPmmrLeafToInsertionIndex.test_leaf_positions[4-3] ____________
+tests\test_pmmr.py:160: in test_leaf_positions
+    assert pmmr_leaf_to_insertion_index(pos0) == expected_idx
+E   assert None == 3
+E    +  where None = pmmr_leaf_to_insertion_index(4)
+____________ TestPmmrLeafToInsertionIndex.test_leaf_positions[8-5] ____________
+tests\test_pmmr.py:160: in test_leaf_positions
+    assert pmmr_leaf_to_insertion_index(pos0) == expected_idx
+E   assert None == 5
+E    +  where None = pmmr_leaf_to_insertion_index(8)
+___________ TestPmmrLeafToInsertionIndex.test_leaf_positions[11-7] ____________
+tests\test_pmmr.py:160: in test_leaf_positions
+    assert pmmr_leaf_to_insertion_index(pos0) == expected_idx
+E   assert None == 7
+E    +  where None = pmmr_leaf_to_insertion_index(11)
+___________ TestPmmrLeafToInsertionIndex.test_leaf_positions[16-9] ____________
+tests\test_pmmr.py:160: in test_leaf_positions
+    assert pmmr_leaf_to_insertion_index(pos0) == expected_idx
+E   assert None == 9
+E    +  where None = pmmr_leaf_to_insertion_index(16)
+___________ TestPmmrLeafToInsertionIndex.test_leaf_positions[19-11] ___________
+tests\test_pmmr.py:160: in test_leaf_positions
+    assert pmmr_leaf_to_insertion_index(pos0) == expected_idx
+E   assert None == 11
+E    +  where None = pmmr_leaf_to_insertion_index(19)
+___________ TestPmmrLeafToInsertionIndex.test_leaf_positions[23-13] ___________
+tests\test_pmmr.py:160: in test_leaf_positions
+    assert pmmr_leaf_to_insertion_index(pos0) == expected_idx
+E   assert None == 13
+E    +  where None = pmmr_leaf_to_insertion_index(23)
+___________ TestPmmrLeafToInsertionIndex.test_leaf_positions[26-15] ___________
+tests\test_pmmr.py:160: in test_leaf_positions
+    assert pmmr_leaf_to_insertion_index(pos0) == expected_idx
+E   assert None == 15
+E    +  where None = pmmr_leaf_to_insertion_index(26)
+___________ TestPmmrLeafToInsertionIndex.test_non_leaf_returns_none ___________
+tests\test_pmmr.py:164: in test_non_leaf_returns_none
+    assert pmmr_leaf_to_insertion_index(2) is None
+E   assert 1 is None
+E    +  where 1 = pmmr_leaf_to_insertion_index(2)
+______________________ TestPeaks.test_peaks[4-expected3] ______________________
+tests\test_pmmr.py:192: in test_peaks
+    assert peaks(mmr_size) == expected
+E   assert [6] == [2, 3]
+E     
+E     At index 0 diff: 6 != 2
+E     Right contains one more item: 3
+E     Use -v to get more diff
+______________________ TestPeaks.test_peaks[8-expected5] ______________________
+tests\test_pmmr.py:192: in test_peaks
+    assert peaks(mmr_size) == expected
+E   assert [14] == [6, 7]
+E     
+E     At index 0 diff: 14 != 6
+E     Right contains one more item: 7
+E     Use -v to get more diff
+_____________________ TestPeaks.test_peaks[10-expected6] ______________________
+tests\test_pmmr.py:192: in test_peaks
+    assert peaks(mmr_size) == expected
+E   assert [14] == [6, 9]
+E     
+E     At index 0 diff: 14 != 6
+E     Right contains one more item: 9
+E     Use -v to get more diff
+_____________________ TestPeaks.test_peaks[11-expected7] ______________________
+tests\test_pmmr.py:192: in test_peaks
+    assert peaks(mmr_size) == expected
+E   assert [14] == [6, 9, 10]
+E     
+E     At index 0 diff: 14 != 6
+E     Right contains 2 more items, first extra item: 9
+E     Use -v to get more diff
+_____________________ TestPeaks.test_peaks[22-expected8] ______________________
+tests\test_pmmr.py:192: in test_peaks
+    assert peaks(mmr_size) == expected
+E   assert [30] == [14, 21]
+E     
+E     At index 0 diff: 30 != 14
+E     Right contains one more item: 21
+E     Use -v to get more diff
+_____________________ TestPeaks.test_peaks[32-expected9] ______________________
+tests\test_pmmr.py:192: in test_peaks
+    assert peaks(mmr_size) == expected
+E   assert [62] == [30, 31]
+E     
+E     At index 0 diff: 62 != 30
+E     Right contains one more item: 31
+E     Use -v to get more diff
+_____________________ TestPeaks.test_peaks[35-expected10] _____________________
+tests\test_pmmr.py:192: in test_peaks
+    assert peaks(mmr_size) == expected
+E   assert [62] == [30, 33, 34]
+E     
+E     At index 0 diff: 62 != 30
+E     Right contains 2 more items, first extra item: 33
+E     Use -v to get more diff
+_____________________ TestPeaks.test_peaks[42-expected11] _____________________
+tests\test_pmmr.py:192: in test_peaks
+    assert peaks(mmr_size) == expected
+E   assert [62] == [30, 37, 40, 41]
+E     
+E     At index 0 diff: 62 != 30
+E     Right contains 3 more items, first extra item: 37
+E     Use -v to get more diff
+_______________________ TestPeaks.test_large_realistic ________________________
+tests\test_pmmr.py:197: in test_large_realistic
+    assert result[0] == 524286
+E   assert 1048574 == 524286
+_____________________ TestPeaks.test_peaks_two_incomplete _____________________
+tests\test_pmmr.py:207: in test_peaks_two_incomplete
+    assert peaks(2) == []  # not a valid MMR state (size must be post-push)
+    ^^^^^^^^^^^^^^^^^^^^^
+E   assert [2] == []
+E     
+E     Left contains one more item: 2
+E     Use -v to get more diff
+________________ TestBintreePostorderHeight.test_heights[1-0] _________________
+tests\test_pmmr.py:224: in test_heights
+    assert bintree_postorder_height(pos0) == expected_height
+E   assert 1 == 0
+E    +  where 1 = bintree_postorder_height(1)
+________________ TestBintreePostorderHeight.test_heights[2-1] _________________
+tests\test_pmmr.py:224: in test_heights
+    assert bintree_postorder_height(pos0) == expected_height
+E   assert 0 == 1
+E    +  where 0 = bintree_postorder_height(2)
+________________ TestBintreePostorderHeight.test_heights[4-0] _________________
+tests\test_pmmr.py:224: in test_heights
+    assert bintree_postorder_height(pos0) == expected_height
+E   assert 1 == 0
+E    +  where 1 = bintree_postorder_height(4)
+________________ TestBintreePostorderHeight.test_heights[5-1] _________________
+tests\test_pmmr.py:224: in test_heights
+    assert bintree_postorder_height(pos0) == expected_height
+E   assert 2 == 1
+E    +  where 2 = bintree_postorder_height(5)
+________________ TestBintreePostorderHeight.test_heights[6-2] _________________
+tests\test_pmmr.py:224: in test_heights
+    assert bintree_postorder_height(pos0) == expected_height
+E   assert 0 == 2
+E    +  where 0 = bintree_postorder_height(6)
+________________ TestBintreePostorderHeight.test_heights[8-0] _________________
+tests\test_pmmr.py:224: in test_heights
+    assert bintree_postorder_height(pos0) == expected_height
+E   assert 1 == 0
+E    +  where 1 = bintree_postorder_height(8)
+________________ TestBintreePostorderHeight.test_heights[9-1] _________________
+tests\test_pmmr.py:224: in test_heights
+    assert bintree_postorder_height(pos0) == expected_height
+E   assert 0 == 1
+E    +  where 0 = bintree_postorder_height(9)
+________________ TestBintreePostorderHeight.test_heights[11-0] ________________
+tests\test_pmmr.py:224: in test_heights
+    assert bintree_postorder_height(pos0) == expected_height
+E   assert 1 == 0
+E    +  where 1 = bintree_postorder_height(11)
+________________ TestBintreePostorderHeight.test_heights[12-1] ________________
+tests\test_pmmr.py:224: in test_heights
+    assert bintree_postorder_height(pos0) == expected_height
+E   assert 2 == 1
+E    +  where 2 = bintree_postorder_height(12)
+________________ TestBintreePostorderHeight.test_heights[13-2] ________________
+tests\test_pmmr.py:224: in test_heights
+    assert bintree_postorder_height(pos0) == expected_height
+E   assert 3 == 2
+E    +  where 3 = bintree_postorder_height(13)
+________________ TestBintreePostorderHeight.test_heights[14-3] ________________
+tests\test_pmmr.py:224: in test_heights
+    assert bintree_postorder_height(pos0) == expected_height
+E   assert 0 == 3
+E    +  where 0 = bintree_postorder_height(14)
+________________ TestBintreePostorderHeight.test_heights[16-0] ________________
+tests\test_pmmr.py:224: in test_heights
+    assert bintree_postorder_height(pos0) == expected_height
+E   assert 1 == 0
+E    +  where 1 = bintree_postorder_height(16)
+________________ TestBintreePostorderHeight.test_heights[17-1] ________________
+tests\test_pmmr.py:224: in test_heights
+    assert bintree_postorder_height(pos0) == expected_height
+E   assert 0 == 1
+E    +  where 0 = bintree_postorder_height(17)
+_______________________ TestIsLeaf.test_is_leaf[1-True] _______________________
+tests\test_pmmr.py:239: in test_is_leaf
+    assert is_leaf(pos0) == expected
+E   assert False == True
+E    +  where False = is_leaf(1)
+______________________ TestIsLeaf.test_is_leaf[2-False] _______________________
+tests\test_pmmr.py:239: in test_is_leaf
+    assert is_leaf(pos0) == expected
+E   assert True == False
+E    +  where True = is_leaf(2)
+_______________________ TestIsLeaf.test_is_leaf[4-True] _______________________
+tests\test_pmmr.py:239: in test_is_leaf
+    assert is_leaf(pos0) == expected
+E   assert False == True
+E    +  where False = is_leaf(4)
+______________________ TestIsLeaf.test_is_leaf[6-False] _______________________
+tests\test_pmmr.py:239: in test_is_leaf
+    assert is_leaf(pos0) == expected
+E   assert True == False
+E    +  where True = is_leaf(6)
+________________________ TestFamily.test_family[1-2-0] ________________________
+tests\test_pmmr.py:260: in test_family
+    assert sibling == expected_sibling, f"pos={pos0}: sibling {sibling} != {expected_sibling}"
+E   AssertionError: pos=1: sibling -2 != 0
+E   assert -2 == 0
+________________________ TestFamily.test_family[2-6-5] ________________________
+tests\test_pmmr.py:259: in test_family
+    assert parent == expected_parent, f"pos={pos0}: parent {parent} != {expected_parent}"
+E   AssertionError: pos=2: parent 4 != 6
+E   assert 4 == 6
+________________________ TestFamily.test_family[3-5-4] ________________________
+tests\test_pmmr.py:259: in test_family
+    assert parent == expected_parent, f"pos={pos0}: parent {parent} != {expected_parent}"
+E   AssertionError: pos=3: parent 4 != 5
+E   assert 4 == 5
+________________________ TestFamily.test_family[4-5-3] ________________________
+tests\test_pmmr.py:259: in test_family
+    assert parent == expected_parent, f"pos={pos0}: parent {parent} != {expected_parent}"
+E   AssertionError: pos=4: parent 8 != 5
+E   assert 8 == 5
+________________________ TestFamily.test_family[5-6-2] ________________________
+tests\test_pmmr.py:260: in test_family
+    assert sibling == expected_sibling, f"pos={pos0}: sibling {sibling} != {expected_sibling}"
+E   AssertionError: pos=5: sibling -2 != 2
+E   assert -2 == 2
+___________________ TestFamilyBranch.test_3_node_tree_leaf1 ___________________
+tests\test_pmmr.py:291: in test_3_node_tree_leaf1
+    assert family_branch(1, 3) == [(2, 0)]
+E   assert [(2, -2)] == [(2, 0)]
+E     
+E     At index 0 diff: (2, -2) != (2, 0)
+E     Use -v to get more diff
+___________________ TestFamilyBranch.test_7_node_tree_leaf0 ___________________
+tests\test_pmmr.py:297: in test_7_node_tree_leaf0
+    assert family_branch(0, 7) == [(2, 1), (6, 5)]
+E   assert [(2, 1), (4, 3)] == [(2, 1), (6, 5)]
+E     
+E     At index 1 diff: (4, 3) != (6, 5)
+E     Use -v to get more diff
+________________ TestFamilyBranch.test_partial_tree_local_peak ________________
+tests\test_pmmr.py:302: in test_partial_tree_local_peak
+    assert family_branch(3, 5) == []
+E   assert [(4, 2)] == []
+E     
+E     Left contains one more item: (4, 2)
+E     Use -v to get more diff
+_______________ TestFamilyBranch.test_partial_tree_gets_parent ________________
+tests\test_pmmr.py:306: in test_partial_tree_gets_parent
+    assert family_branch(3, 6) == [(5, 4)]
+E   assert [(4, 2)] == [(5, 4)]
+E     
+E     At index 0 diff: (4, 2) != (5, 4)
+E     Use -v to get more diff
+___________________ TestFamilyBranch.test_7_node_tree_pos3 ____________________
+tests\test_pmmr.py:309: in test_7_node_tree_pos3
+    assert family_branch(3, 7) == [(5, 4), (6, 2)]
+E   assert [(4, 2)] == [(5, 4), (6, 2)]
+E     
+E     At index 0 diff: (4, 2) != (5, 4)
+E     Right contains one more item: (6, 2)
+E     Use -v to get more diff
+___________________ TestFamilyBranch.test_large_tree_depth ____________________
+tests\test_pmmr.py:316: in test_large_tree_depth
+    assert branch[1] == (6, 5)
+E   assert (4, 3) == (6, 5)
+E     
+E     At index 0 diff: 4 != 6
+E     Use -v to get more diff
+___________ TestBintreeRange.test_bintree_range[1-expected_range1] ____________
+tests\test_pmmr.py:339: in test_bintree_range
+    assert list(result) == list(expected_range)
+E   assert [-1, 0, 1] == [1]
+E     
+E     At index 0 diff: -1 != 1
+E     Left contains 2 more items, first extra item: 0
+E     Use -v to get more diff
+___________ TestBintreeRange.test_bintree_range[2-expected_range2] ____________
+tests\test_pmmr.py:339: in test_bintree_range
+    assert list(result) == list(expected_range)
+E   assert [2] == [0, 1, 2]
+E     
+E     At index 0 diff: 2 != 0
+E     Right contains 2 more items, first extra item: 1
+E     Use -v to get more diff
+___________ TestBintreeRange.test_bintree_range[4-expected_range4] ____________
+tests\test_pmmr.py:339: in test_bintree_range
+    assert list(result) == list(expected_range)
+E   assert [2, 3, 4] == [4]
+E     
+E     At index 0 diff: 2 != 4
+E     Left contains 2 more items, first extra item: 3
+E     Use -v to get more diff
+___________ TestBintreeRange.test_bintree_range[5-expected_range5] ____________
+tests\test_pmmr.py:339: in test_bintree_range
+    assert list(result) == list(expected_range)
+E   assert [-1, 0, 1, 2, 3, 4, ...] == [3, 4, 5]
+E     
+E     At index 0 diff: -1 != 3
+E     Left contains 4 more items, first extra item: 2
+E     Use -v to get more diff
+___________ TestBintreeRange.test_bintree_range[6-expected_range6] ____________
+tests\test_pmmr.py:339: in test_bintree_range
+    assert list(result) == list(expected_range)
+E   assert [6] == [0, 1, 2, 3, 4, 5, ...]
+E     
+E     At index 0 diff: 6 != 0
+E     Right contains 6 more items, first extra item: 1
+E     Use -v to get more diff
+___________________ TestBintreeExtremes.test_rightmost[1-1] ___________________
+tests\test_pmmr.py:353: in test_rightmost
+    assert bintree_rightmost(pos0) == expected
+E   assert 0 == 1
+E    +  where 0 = bintree_rightmost(1)
+___________________ TestBintreeExtremes.test_rightmost[2-1] ___________________
+tests\test_pmmr.py:353: in test_rightmost
+    assert bintree_rightmost(pos0) == expected
+E   assert 2 == 1
+E    +  where 2 = bintree_rightmost(2)
+___________________ TestBintreeExtremes.test_rightmost[4-4] ___________________
+tests\test_pmmr.py:353: in test_rightmost
+    assert bintree_rightmost(pos0) == expected
+E   assert 3 == 4
+E    +  where 3 = bintree_rightmost(4)
+___________________ TestBintreeExtremes.test_rightmost[5-4] ___________________
+tests\test_pmmr.py:353: in test_rightmost
+    assert bintree_rightmost(pos0) == expected
+E   assert 3 == 4
+E    +  where 3 = bintree_rightmost(5)
+___________________ TestBintreeExtremes.test_rightmost[6-4] ___________________
+tests\test_pmmr.py:353: in test_rightmost
+    assert bintree_rightmost(pos0) == expected
+E   assert 6 == 4
+E    +  where 6 = bintree_rightmost(6)
+___________________ TestBintreeExtremes.test_leftmost[1-1] ____________________
+tests\test_pmmr.py:359: in test_leftmost
+    assert bintree_leftmost(pos0) == expected
+E   assert -1 == 1
+E    +  where -1 = bintree_leftmost(1)
+___________________ TestBintreeExtremes.test_leftmost[2-0] ____________________
+tests\test_pmmr.py:359: in test_leftmost
+    assert bintree_leftmost(pos0) == expected
+E   assert 2 == 0
+E    +  where 2 = bintree_leftmost(2)
+___________________ TestBintreeExtremes.test_leftmost[4-4] ____________________
+tests\test_pmmr.py:359: in test_leftmost
+    assert bintree_leftmost(pos0) == expected
+E   assert 2 == 4
+E    +  where 2 = bintree_leftmost(4)
+___________________ TestBintreeExtremes.test_leftmost[5-3] ____________________
+tests\test_pmmr.py:359: in test_leftmost
+    assert bintree_leftmost(pos0) == expected
+E   assert -1 == 3
+E    +  where -1 = bintree_leftmost(5)
+___________________ TestBintreeExtremes.test_leftmost[6-0] ____________________
+tests\test_pmmr.py:359: in test_leftmost
+    assert bintree_leftmost(pos0) == expected
+E   assert 6 == 0
+E    +  where 6 = bintree_leftmost(6)
+___________________ TestRoundUpToLeafPos.test_round_up[1-1] ___________________
+tests\test_pmmr.py:374: in test_round_up
+    assert round_up_to_leaf_pos(pos0) == expected
+E   assert 0 == 1
+E    +  where 0 = round_up_to_leaf_pos(1)
+___________________ TestRoundUpToLeafPos.test_round_up[2-3] ___________________
+tests\test_pmmr.py:374: in test_round_up
+    assert round_up_to_leaf_pos(pos0) == expected
+E   assert 2 == 3
+E    +  where 2 = round_up_to_leaf_pos(2)
+___________________ TestRoundUpToLeafPos.test_round_up[4-4] ___________________
+tests\test_pmmr.py:374: in test_round_up
+    assert round_up_to_leaf_pos(pos0) == expected
+E   assert 3 == 4
+E    +  where 3 = round_up_to_leaf_pos(4)
+___________________ TestRoundUpToLeafPos.test_round_up[5-7] ___________________
+tests\test_pmmr.py:374: in test_round_up
+    assert round_up_to_leaf_pos(pos0) == expected
+E   assert 3 == 7
+E    +  where 3 = round_up_to_leaf_pos(5)
+___________________ TestRoundUpToLeafPos.test_round_up[6-7] ___________________
+tests\test_pmmr.py:374: in test_round_up
+    assert round_up_to_leaf_pos(pos0) == expected
+E   assert 6 == 7
+E    +  where 6 = round_up_to_leaf_pos(6)
+___________________ TestRoundUpToLeafPos.test_round_up[8-8] ___________________
+tests\test_pmmr.py:374: in test_round_up
+    assert round_up_to_leaf_pos(pos0) == expected
+E   assert 7 == 8
+E    +  where 7 = round_up_to_leaf_pos(8)
+__________________ TestRoundUpToLeafPos.test_round_up[9-10] ___________________
+tests\test_pmmr.py:374: in test_round_up
+    assert round_up_to_leaf_pos(pos0) == expected
+E   assert 9 == 10
+E    +  where 9 = round_up_to_leaf_pos(9)
+__________________ TestPMMRPushRoot.test_root_after_3_leaves __________________
+tests\test_pmmr.py:506: in test_root_after_3_leaves
+    assert self._pmmr.root() == expected_root
+           ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+__________________ TestPMMRPushRoot.test_root_after_4_leaves __________________
+tests\test_pmmr.py:512: in test_root_after_4_leaves
+    assert self._pmmr.size() == 7
+E   assert 6 == 7
+E    +  where 6 = size()
+E    +    where size = <mimblewimble.mmr.pmmr.PMMR object at 0x0000022098684990>.size
+E    +      where <mimblewimble.mmr.pmmr.PMMR object at 0x0000022098684990> = <tests.test_pmmr.TestPMMRPushRoot object at 0x0000022098797150>._pmmr
+__________________ TestPMMRPushRoot.test_root_after_8_leaves __________________
+tests\test_pmmr.py:520: in test_root_after_8_leaves
+    assert self._pmmr.size() == 15
+E   assert 11 == 15
+E    +  where 11 = size()
+E    +    where size = <mimblewimble.mmr.pmmr.PMMR object at 0x000002209876DC10>.size
+E    +      where <mimblewimble.mmr.pmmr.PMMR object at 0x000002209876DC10> = <tests.test_pmmr.TestPMMRPushRoot object at 0x0000022098796750>._pmmr
+__________________ TestPMMRPushRoot.test_root_after_9_leaves __________________
+tests\test_pmmr.py:531: in test_root_after_9_leaves
+    assert self._pmmr.size() == 16
+E   assert 13 == 16
+E    +  where 13 = size()
+E    +    where size = <mimblewimble.mmr.pmmr.PMMR object at 0x00000220986CE850>.size
+E    +      where <mimblewimble.mmr.pmmr.PMMR object at 0x00000220986CE850> = <tests.test_pmmr.TestPMMRPushRoot object at 0x0000022098797390>._pmmr
+________________ TestPMMRPushRoot.test_get_data_after_9_pushes ________________
+tests\test_pmmr.py:545: in test_get_data_after_9_pushes
+    assert self._pmmr.get_data(1) == elems[1]   # TestElem(2)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: assert None == b'\x02\x00\x00\x00'
+E    +  where None = get_data(1)
+E    +    where get_data = <mimblewimble.mmr.pmmr.PMMR object at 0x0000022098622610>.get_data
+E    +      where <mimblewimble.mmr.pmmr.PMMR object at 0x0000022098622610> = <tests.test_pmmr.TestPMMRPushRoot object at 0x00000220987A2F90>._pmmr
+_______________ TestPMMRPushRoot.test_get_data_non_leaf_is_none _______________
+tests\test_pmmr.py:557: in test_get_data_non_leaf_is_none
+    assert self._pmmr.get_data(2) is None  # internal node
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: assert b'\x02\x00\x00\x00' is None
+E    +  where b'\x02\x00\x00\x00' = get_data(2)
+E    +    where get_data = <mimblewimble.mmr.pmmr.PMMR object at 0x0000022097C64B90>.get_data
+E    +      where <mimblewimble.mmr.pmmr.PMMR object at 0x0000022097C64B90> = <tests.test_pmmr.TestPMMRPushRoot object at 0x00000220987A3E90>._pmmr
+________________ TestPMMRPushRoot.test_get_hash_internal_node _________________
+tests\test_pmmr.py:566: in test_get_hash_internal_node
+    assert self._pmmr.get_hash(9) == hashes[9]
+E   AssertionError: assert b'\xa5\x82\x9....\x95\xf0\xe6' == b'Ldl\x99}M:\...\x96\xd3#\xf3'
+E     
+E     At index 0 diff: b'\xa5' != b'L'
+E     Use -v to get more diff
+_____________________ TestPMMRPushRoot.test_backend_sizes _____________________
+tests\test_pmmr.py:582: in test_backend_sizes
+    assert self._pmmr.hash_size() == 35
+E   assert 32 == 35
+E    +  where 32 = hash_size()
+E    +    where hash_size = <mimblewimble.mmr.pmmr.PMMR object at 0x00000220986E4ED0>.hash_size
+E    +      where <mimblewimble.mmr.pmmr.PMMR object at 0x00000220986E4ED0> = <tests.test_pmmr.TestPMMRPushRoot object at 0x00000220987A3290>._pmmr
+______________ TestPMMRPrune.test_prune_last_leaf_root_unchanged ______________
+tests\test_pmmr.py:605: in test_prune_last_leaf_root_unchanged
+    root_before = self._pmmr.root()
+                  ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+_____________ TestPMMRPrune.test_prune_first_leaf_root_unchanged ______________
+tests\test_pmmr.py:611: in test_prune_first_leaf_root_unchanged
+    root_before = self._pmmr.root()
+                  ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+__________________ TestPMMRPrune.test_prune_non_leaf_raises ___________________
+tests\test_pmmr.py:618: in test_prune_non_leaf_raises
+    with pytest.raises((ValueError, AssertionError)):
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'AssertionError'>)
+______________ TestPMMRPrune.test_prune_sequence_root_unchanged _______________
+tests\test_pmmr.py:623: in test_prune_sequence_root_unchanged
+    root_before = self._pmmr.root()
+                  ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+_________________ TestPMMRPrune.test_pruned_data_returns_none _________________
+tests\test_pmmr.py:629: in test_pruned_data_returns_none
+    self._pmmr.prune(0)
+mimblewimble\mmr\pmmr.py:380: in prune
+    self._compact_ancestors(pos0)
+mimblewimble\mmr\pmmr.py:401: in _compact_ancestors
+    if not self._subtree_pruned(sibling):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:418: in _subtree_pruned
+    return self._subtree_pruned(left_pos) and self._subtree_pruned(right_pos)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:413: in _subtree_pruned
+    return leaf_idx is not None and self._prune_bm.is_pruned(leaf_idx)
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\storage.py:298: in is_pruned
+    return leaf_idx in self._bm
+           ^^^^^^^^^^^^^^^^^^^^
+pyroaring/abstract_bitmap.pxi:205: in pyroaring.AbstractBitMap.__contains__
+    ???
+E   OverflowError: can't convert negative value to uint32_t
+______________ TestPMMRPrune.test_unpruned_data_still_accessible ______________
+tests\test_pmmr.py:633: in test_unpruned_data_still_accessible
+    self._pmmr.prune(0)
+mimblewimble\mmr\pmmr.py:380: in prune
+    self._compact_ancestors(pos0)
+mimblewimble\mmr\pmmr.py:401: in _compact_ancestors
+    if not self._subtree_pruned(sibling):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:418: in _subtree_pruned
+    return self._subtree_pruned(left_pos) and self._subtree_pruned(right_pos)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:413: in _subtree_pruned
+    return leaf_idx is not None and self._prune_bm.is_pruned(leaf_idx)
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\storage.py:298: in is_pruned
+    return leaf_idx in self._bm
+           ^^^^^^^^^^^^^^^^^^^^
+pyroaring/abstract_bitmap.pxi:205: in pyroaring.AbstractBitMap.__contains__
+    ???
+E   OverflowError: can't convert negative value to uint32_t
+___________________ TestPMMRRewind.test_rewind_to_4_leaves ____________________
+tests\test_pmmr.py:656: in test_rewind_to_4_leaves
+    assert self._pmmr.size() == 16
+E   assert 13 == 16
+E    +  where 13 = size()
+E    +    where size = <mimblewimble.mmr.pmmr.PMMR object at 0x000002209D85C350>.size
+E    +      where <mimblewimble.mmr.pmmr.PMMR object at 0x000002209D85C350> = <tests.test_pmmr.TestPMMRRewind object at 0x0000022098786B90>._pmmr
+_______________ TestMerkleProof.test_proof_verify_all_leaves[0] _______________
+tests\test_pmmr.py:695: in test_proof_verify_all_leaves
+    root = self._pmmr.root()
+           ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+_______________ TestMerkleProof.test_proof_verify_all_leaves[1] _______________
+tests\test_pmmr.py:695: in test_proof_verify_all_leaves
+    root = self._pmmr.root()
+           ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+_______________ TestMerkleProof.test_proof_verify_all_leaves[3] _______________
+tests\test_pmmr.py:695: in test_proof_verify_all_leaves
+    root = self._pmmr.root()
+           ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+_______________ TestMerkleProof.test_proof_verify_all_leaves[4] _______________
+tests\test_pmmr.py:695: in test_proof_verify_all_leaves
+    root = self._pmmr.root()
+           ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+_______________ TestMerkleProof.test_proof_verify_all_leaves[7] _______________
+tests\test_pmmr.py:695: in test_proof_verify_all_leaves
+    root = self._pmmr.root()
+           ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+_______________ TestMerkleProof.test_proof_verify_all_leaves[8] _______________
+tests\test_pmmr.py:695: in test_proof_verify_all_leaves
+    root = self._pmmr.root()
+           ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+______________ TestMerkleProof.test_proof_verify_all_leaves[10] _______________
+tests\test_pmmr.py:695: in test_proof_verify_all_leaves
+    root = self._pmmr.root()
+           ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+______________ TestMerkleProof.test_proof_verify_all_leaves[11] _______________
+tests\test_pmmr.py:695: in test_proof_verify_all_leaves
+    root = self._pmmr.root()
+           ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+______________ TestMerkleProof.test_proof_verify_all_leaves[15] _______________
+tests\test_pmmr.py:695: in test_proof_verify_all_leaves
+    root = self._pmmr.root()
+           ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+_____________ TestMerkleProof.test_proof_serialisation_roundtrip ______________
+tests\test_pmmr.py:709: in test_proof_serialisation_roundtrip
+    proof = self._pmmr.merkle_proof(0)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:333: in merkle_proof
+    raise RuntimeError(f"Peak hash at pos0={p} is None")
+E   RuntimeError: Peak hash at pos0=14 is None
+_______________ TestMerkleProof.test_invalid_data_fails_verify ________________
+tests\test_pmmr.py:716: in test_invalid_data_fails_verify
+    root = self._pmmr.root()
+           ^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+_________________ TestMerkleProof.test_proof_non_leaf_raises __________________
+tests\test_pmmr.py:724: in test_proof_non_leaf_raises
+    self._pmmr.merkle_proof(2)  # pos=2 is internal
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:333: in merkle_proof
+    raise RuntimeError(f"Peak hash at pos0={p} is None")
+E   RuntimeError: Peak hash at pos0=14 is None
+______________________ TestLeafIters.test_leaf_pos_iter _______________________
+tests\test_pmmr.py:748: in test_leaf_pos_iter
+    assert positions == [0, 1, 3, 4, 7]
+E   assert [0, 2, 3, 6] == [0, 1, 3, 4, 7]
+E     
+E     At index 1 diff: 2 != 1
+E     Right contains one more item: 7
+E     Use -v to get more diff
+______________________ TestLeafIters.test_leaf_idx_iter _______________________
+tests\test_pmmr.py:752: in test_leaf_idx_iter
+    assert pairs == [(0, 0), (1, 1), (2, 3), (3, 4), (4, 7)]
+E   assert [(0, 0), (1, ...2, 3), (3, 4)] == [(0, 0), (1, ...3, 4), (4, 7)]
+E     
+E     Right contains one more item: (4, 7)
+E     Use -v to get more diff
+________________________ TestLeafIters.test_leaf_count ________________________
+tests\test_pmmr.py:755: in test_leaf_count
+    assert self._pmmr.leaf_count() == 5
+E   assert 4 == 5
+E    +  where 4 = leaf_count()
+E    +    where leaf_count = <mimblewimble.mmr.pmmr.PMMR object at 0x00000220987EA6D0>.leaf_count
+E    +      where <mimblewimble.mmr.pmmr.PMMR object at 0x00000220987EA6D0> = <tests.test_pmmr.TestLeafIters object at 0x000002209876CED0>._pmmr
+__________________ TestPMMRValidate.test_validate_clean_pmmr __________________
+tests\test_pmmr.py:777: in test_validate_clean_pmmr
+    self._pmmr.validate()  # no exception
+    ^^^^^^^^^^^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:452: in validate
+    assert stored == expected, (
+           ^^^^^^^^^^^^^^^^^^
+E   AssertionError: Hash mismatch at pos0=4: stored=67e7ab4e3a1054d7de7dc8dbb608096330af61d7f52f312f3c22eadb2b468a66, computed=565ccb7c5d14ffa384470e9a60e8e16b53e5ab6e8e6314ebd5f75bac57000578
+_________________ TestPMMRValidate.test_validate_after_flush __________________
+tests\test_pmmr.py:781: in test_validate_after_flush
+    self._pmmr.validate()
+mimblewimble\mmr\pmmr.py:452: in validate
+    assert stored == expected, (
+           ^^^^^^^^^^^^^^^^^^
+E   AssertionError: Hash mismatch at pos0=4: stored=67e7ab4e3a1054d7de7dc8dbb608096330af61d7f52f312f3c22eadb2b468a66, computed=565ccb7c5d14ffa384470e9a60e8e16b53e5ab6e8e6314ebd5f75bac57000578
+__________________ TestPMMRPersistence.test_flush_and_reopen __________________
+tests\test_pmmr.py:795: in test_flush_and_reopen
+    root_before = pmmr.root()
+                  ^^^^^^^^^^^
+mimblewimble\mmr\pmmr.py:229: in root
+    raise RuntimeError(
+E   RuntimeError: Peak hash missing; PMMR may be over-compacted for root computation
+
+During handling of the above exception, another exception occurred:
+C:\Users\migue\AppData\Roaming\uv\python\cpython-3.11.13-windows-x86_64-none\Lib\shutil.py:632: in _rmtree_unsafe
+    os.unlink(fullname)
+E   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\migue\\AppData\\Local\\Temp\\tmp8ty4553g\\test_data.bin'
+
+During handling of the above exception, another exception occurred:
+tests\test_pmmr.py:790: in test_flush_and_reopen
+    with tempfile.TemporaryDirectory() as d:
+C:\Users\migue\AppData\Roaming\uv\python\cpython-3.11.13-windows-x86_64-none\Lib\tempfile.py:943: in __exit__
+    self.cleanup()
+C:\Users\migue\AppData\Roaming\uv\python\cpython-3.11.13-windows-x86_64-none\Lib\tempfile.py:947: in cleanup
+    self._rmtree(self.name, ignore_errors=self._ignore_cleanup_errors)
+C:\Users\migue\AppData\Roaming\uv\python\cpython-3.11.13-windows-x86_64-none\Lib\tempfile.py:929: in _rmtree
+    _shutil.rmtree(name, onerror=onerror)
+C:\Users\migue\AppData\Roaming\uv\python\cpython-3.11.13-windows-x86_64-none\Lib\shutil.py:787: in rmtree
+    return _rmtree_unsafe(path, onerror)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\migue\AppData\Roaming\uv\python\cpython-3.11.13-windows-x86_64-none\Lib\shutil.py:634: in _rmtree_unsafe
+    onerror(os.unlink, fullname, sys.exc_info())
+C:\Users\migue\AppData\Roaming\uv\python\cpython-3.11.13-windows-x86_64-none\Lib\tempfile.py:893: in onerror
+    _os.unlink(path)
+E   PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\migue\\AppData\\Local\\Temp\\tmp8ty4553g\\test_data.bin'
+=========================== short test summary info ===========================
+FAILED tests/test_pmmr.py::TestPmmrLeafToInsertionIndex::test_leaf_positions[1-1]
+FAILED tests/test_pmmr.py::TestPmmrLeafToInsertionIndex::test_leaf_positions[4-3]
+FAILED tests/test_pmmr.py::TestPmmrLeafToInsertionIndex::test_leaf_positions[8-5]
+FAILED tests/test_pmmr.py::TestPmmrLeafToInsertionIndex::test_leaf_positions[11-7]
+FAILED tests/test_pmmr.py::TestPmmrLeafToInsertionIndex::test_leaf_positions[16-9]
+FAILED tests/test_pmmr.py::TestPmmrLeafToInsertionIndex::test_leaf_positions[19-11]
+FAILED tests/test_pmmr.py::TestPmmrLeafToInsertionIndex::test_leaf_positions[23-13]
+FAILED tests/test_pmmr.py::TestPmmrLeafToInsertionIndex::test_leaf_positions[26-15]
+FAILED tests/test_pmmr.py::TestPmmrLeafToInsertionIndex::test_non_leaf_returns_none
+FAILED tests/test_pmmr.py::TestPeaks::test_peaks[4-expected3] - assert [6] ==...
+FAILED tests/test_pmmr.py::TestPeaks::test_peaks[8-expected5] - assert [14] =...
+FAILED tests/test_pmmr.py::TestPeaks::test_peaks[10-expected6] - assert [14] ...
+FAILED tests/test_pmmr.py::TestPeaks::test_peaks[11-expected7] - assert [14] ...
+FAILED tests/test_pmmr.py::TestPeaks::test_peaks[22-expected8] - assert [30] ...
+FAILED tests/test_pmmr.py::TestPeaks::test_peaks[32-expected9] - assert [62] ...
+FAILED tests/test_pmmr.py::TestPeaks::test_peaks[35-expected10] - assert [62]...
+FAILED tests/test_pmmr.py::TestPeaks::test_peaks[42-expected11] - assert [62]...
+FAILED tests/test_pmmr.py::TestPeaks::test_large_realistic - assert 1048574 =...
+FAILED tests/test_pmmr.py::TestPeaks::test_peaks_two_incomplete - assert [2] ...
+FAILED tests/test_pmmr.py::TestBintreePostorderHeight::test_heights[1-0] - as...
+FAILED tests/test_pmmr.py::TestBintreePostorderHeight::test_heights[2-1] - as...
+FAILED tests/test_pmmr.py::TestBintreePostorderHeight::test_heights[4-0] - as...
+FAILED tests/test_pmmr.py::TestBintreePostorderHeight::test_heights[5-1] - as...
+FAILED tests/test_pmmr.py::TestBintreePostorderHeight::test_heights[6-2] - as...
+FAILED tests/test_pmmr.py::TestBintreePostorderHeight::test_heights[8-0] - as...
+FAILED tests/test_pmmr.py::TestBintreePostorderHeight::test_heights[9-1] - as...
+FAILED tests/test_pmmr.py::TestBintreePostorderHeight::test_heights[11-0] - a...
+FAILED tests/test_pmmr.py::TestBintreePostorderHeight::test_heights[12-1] - a...
+FAILED tests/test_pmmr.py::TestBintreePostorderHeight::test_heights[13-2] - a...
+FAILED tests/test_pmmr.py::TestBintreePostorderHeight::test_heights[14-3] - a...
+FAILED tests/test_pmmr.py::TestBintreePostorderHeight::test_heights[16-0] - a...
+FAILED tests/test_pmmr.py::TestBintreePostorderHeight::test_heights[17-1] - a...
+FAILED tests/test_pmmr.py::TestIsLeaf::test_is_leaf[1-True] - assert False ==...
+FAILED tests/test_pmmr.py::TestIsLeaf::test_is_leaf[2-False] - assert True ==...
+FAILED tests/test_pmmr.py::TestIsLeaf::test_is_leaf[4-True] - assert False ==...
+FAILED tests/test_pmmr.py::TestIsLeaf::test_is_leaf[6-False] - assert True ==...
+FAILED tests/test_pmmr.py::TestFamily::test_family[1-2-0] - AssertionError: p...
+FAILED tests/test_pmmr.py::TestFamily::test_family[2-6-5] - AssertionError: p...
+FAILED tests/test_pmmr.py::TestFamily::test_family[3-5-4] - AssertionError: p...
+FAILED tests/test_pmmr.py::TestFamily::test_family[4-5-3] - AssertionError: p...
+FAILED tests/test_pmmr.py::TestFamily::test_family[5-6-2] - AssertionError: p...
+FAILED tests/test_pmmr.py::TestFamilyBranch::test_3_node_tree_leaf1 - assert ...
+FAILED tests/test_pmmr.py::TestFamilyBranch::test_7_node_tree_leaf0 - assert ...
+FAILED tests/test_pmmr.py::TestFamilyBranch::test_partial_tree_local_peak - a...
+FAILED tests/test_pmmr.py::TestFamilyBranch::test_partial_tree_gets_parent - ...
+FAILED tests/test_pmmr.py::TestFamilyBranch::test_7_node_tree_pos3 - assert [...
+FAILED tests/test_pmmr.py::TestFamilyBranch::test_large_tree_depth - assert (...
+FAILED tests/test_pmmr.py::TestBintreeRange::test_bintree_range[1-expected_range1]
+FAILED tests/test_pmmr.py::TestBintreeRange::test_bintree_range[2-expected_range2]
+FAILED tests/test_pmmr.py::TestBintreeRange::test_bintree_range[4-expected_range4]
+FAILED tests/test_pmmr.py::TestBintreeRange::test_bintree_range[5-expected_range5]
+FAILED tests/test_pmmr.py::TestBintreeRange::test_bintree_range[6-expected_range6]
+FAILED tests/test_pmmr.py::TestBintreeExtremes::test_rightmost[1-1] - assert ...
+FAILED tests/test_pmmr.py::TestBintreeExtremes::test_rightmost[2-1] - assert ...
+FAILED tests/test_pmmr.py::TestBintreeExtremes::test_rightmost[4-4] - assert ...
+FAILED tests/test_pmmr.py::TestBintreeExtremes::test_rightmost[5-4] - assert ...
+FAILED tests/test_pmmr.py::TestBintreeExtremes::test_rightmost[6-4] - assert ...
+FAILED tests/test_pmmr.py::TestBintreeExtremes::test_leftmost[1-1] - assert -...
+FAILED tests/test_pmmr.py::TestBintreeExtremes::test_leftmost[2-0] - assert 2...
+FAILED tests/test_pmmr.py::TestBintreeExtremes::test_leftmost[4-4] - assert 2...
+FAILED tests/test_pmmr.py::TestBintreeExtremes::test_leftmost[5-3] - assert -...
+FAILED tests/test_pmmr.py::TestBintreeExtremes::test_leftmost[6-0] - assert 6...
+FAILED tests/test_pmmr.py::TestRoundUpToLeafPos::test_round_up[1-1] - assert ...
+FAILED tests/test_pmmr.py::TestRoundUpToLeafPos::test_round_up[2-3] - assert ...
+FAILED tests/test_pmmr.py::TestRoundUpToLeafPos::test_round_up[4-4] - assert ...
+FAILED tests/test_pmmr.py::TestRoundUpToLeafPos::test_round_up[5-7] - assert ...
+FAILED tests/test_pmmr.py::TestRoundUpToLeafPos::test_round_up[6-7] - assert ...
+FAILED tests/test_pmmr.py::TestRoundUpToLeafPos::test_round_up[8-8] - assert ...
+FAILED tests/test_pmmr.py::TestRoundUpToLeafPos::test_round_up[9-10] - assert...
+FAILED tests/test_pmmr.py::TestPMMRPushRoot::test_root_after_3_leaves - Runti...
+FAILED tests/test_pmmr.py::TestPMMRPushRoot::test_root_after_4_leaves - asser...
+FAILED tests/test_pmmr.py::TestPMMRPushRoot::test_root_after_8_leaves - asser...
+FAILED tests/test_pmmr.py::TestPMMRPushRoot::test_root_after_9_leaves - asser...
+FAILED tests/test_pmmr.py::TestPMMRPushRoot::test_get_data_after_9_pushes - A...
+FAILED tests/test_pmmr.py::TestPMMRPushRoot::test_get_data_non_leaf_is_none
+FAILED tests/test_pmmr.py::TestPMMRPushRoot::test_get_hash_internal_node - As...
+FAILED tests/test_pmmr.py::TestPMMRPushRoot::test_backend_sizes - assert 32 =...
+FAILED tests/test_pmmr.py::TestPMMRPrune::test_prune_last_leaf_root_unchanged
+FAILED tests/test_pmmr.py::TestPMMRPrune::test_prune_first_leaf_root_unchanged
+FAILED tests/test_pmmr.py::TestPMMRPrune::test_prune_non_leaf_raises - Failed...
+FAILED tests/test_pmmr.py::TestPMMRPrune::test_prune_sequence_root_unchanged
+FAILED tests/test_pmmr.py::TestPMMRPrune::test_pruned_data_returns_none - Ove...
+FAILED tests/test_pmmr.py::TestPMMRPrune::test_unpruned_data_still_accessible
+FAILED tests/test_pmmr.py::TestPMMRRewind::test_rewind_to_4_leaves - assert 1...
+FAILED tests/test_pmmr.py::TestMerkleProof::test_proof_verify_all_leaves[0]
+FAILED tests/test_pmmr.py::TestMerkleProof::test_proof_verify_all_leaves[1]
+FAILED tests/test_pmmr.py::TestMerkleProof::test_proof_verify_all_leaves[3]
+FAILED tests/test_pmmr.py::TestMerkleProof::test_proof_verify_all_leaves[4]
+FAILED tests/test_pmmr.py::TestMerkleProof::test_proof_verify_all_leaves[7]
+FAILED tests/test_pmmr.py::TestMerkleProof::test_proof_verify_all_leaves[8]
+FAILED tests/test_pmmr.py::TestMerkleProof::test_proof_verify_all_leaves[10]
+FAILED tests/test_pmmr.py::TestMerkleProof::test_proof_verify_all_leaves[11]
+FAILED tests/test_pmmr.py::TestMerkleProof::test_proof_verify_all_leaves[15]
+FAILED tests/test_pmmr.py::TestMerkleProof::test_proof_serialisation_roundtrip
+FAILED tests/test_pmmr.py::TestMerkleProof::test_invalid_data_fails_verify - ...
+FAILED tests/test_pmmr.py::TestMerkleProof::test_proof_non_leaf_raises - Runt...
+FAILED tests/test_pmmr.py::TestLeafIters::test_leaf_pos_iter - assert [0, 2, ...
+FAILED tests/test_pmmr.py::TestLeafIters::test_leaf_idx_iter - assert [(0, 0)...
+FAILED tests/test_pmmr.py::TestLeafIters::test_leaf_count - assert 4 == 5
+FAILED tests/test_pmmr.py::TestPMMRValidate::test_validate_clean_pmmr - Asser...
+FAILED tests/test_pmmr.py::TestPMMRValidate::test_validate_after_flush - Asse...
+FAILED tests/test_pmmr.py::TestPMMRPersistence::test_flush_and_reopen - Permi...
+102 failed, 72 passed in 15.25s

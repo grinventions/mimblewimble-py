@@ -7,3 +7,7 @@ bip_utils
 cryptography
 pynacl
 pyrage
+pyroaring
+numpy
+requests
+black
