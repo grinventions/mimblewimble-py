@@ -16,6 +16,7 @@ setuptools.setup(
         "secp256k1-zkp-mw",
         "bip_utils",
         "bip32",
+        "grinmw",
         "pynacl",
         "pyrage",
     ],
