@@ -293,15 +293,43 @@ class BlockHeader:
         O = json.loads(jsonString)
         return BlockHeader.fromDict(O)
 
-    def getPreProofOfWork(self, serializer):
-        serializer = BytesIO()
-        self.serialize(serializer)
-        return serializer.getvalue()
+    def getPrePoW(self) -> bytes:
+        """Return the pre-PoW serialised header bytes.
+
+        This is the data that is hashed to produce the canonical block header
+        hash used throughout Grin's protocol (locators, segment keys, etc.).
+        The PoW nonce and cycle are excluded; the nonce field position is
+        zeroed out before hashing.
+        """
+        s = Serializer()
+        s.write(self.version.to_bytes(2, "big"))
+        s.write(self.height.to_bytes(8, "big"))
+        s.write(self.timestamp.to_bytes(8, "big"))
+        s.write(self.previousBlockHash)
+        s.write(self.previousRoot)
+        s.write(self.outputRoot)
+        s.write(self.rangeProofRoot)
+        s.write(self.kernelRoot)
+        s.write(self.totalKernelOffset.serialize())
+        s.write(self.outputMMRSize.to_bytes(8, "big"))
+        s.write(self.kernelMMRSize.to_bytes(8, "big"))
+        s.write(self.totalDifficulty.to_bytes(8, "big"))
+        s.write(self.scalingDifficulty.to_bytes(4, "big"))
+        # nonce slot zeroed out (8 bytes) — excluded from hash pre-image
+        s.write(b"\x00" * 8)
+        return s.getvalue()
 
     # hashing
 
-    def getHash(self):
-        return self.proofOfWork.getHash()
+    def getHash(self) -> bytes:
+        """Return the canonical blake2b-256 header hash.
+
+        Computed over the pre-PoW serialised header bytes (nonce slot zeroed).
+        This matches Grin's reference implementation:
+          blake2b_256(pre_pow_bytes)
+        NOT the PoW cycle hash — that is only used for the PoW proof itself.
+        """
+        return hashlib.blake2b(self.getPrePoW(), digest_size=32).digest()
 
     def shortHash(self):
         # TODO
@@ -396,7 +424,7 @@ class CompactBlock:
         self.nonce = nonce
         self.outputs = fullOutputs
         self.kernels = fullKernels
-        self.short_ids = shoftIds
+        self.short_ids = shortIds
 
     # getters
 
@@ -426,32 +454,26 @@ class CompactBlock:
 
     # serialization / deserialization
 
-    def serialize():
-        # TODO check if there is a need to set byteorder='big'
-        bytes_nonce = self.nonce.to_bytes(64)
+    def serialize(self):
+        # nonce is 8 bytes (uint64 big-endian)
+        bytes_nonce = self.nonce.to_bytes(8, "big")
 
-        bytes_num_outputs = len(self.getOutputs()).to_bytes(64)
-        bytes_num_kernels = len(self.getKernels()).to_bytes(64)
-        bytes_num_short_ids = len(self.getShortIds()).to_bytes(64)
+        bytes_num_outputs = len(self.getOutputs()).to_bytes(2, "big")
+        bytes_num_kernels = len(self.getKernels()).to_bytes(2, "big")
+        bytes_num_short_ids = len(self.getShortIds()).to_bytes(2, "big")
 
         outputs = self.getOutputs()
-        bytes_outputs = outputs[0].serialize()
-        for _output in outputs[1:]:
-            bytes_outputs += _output.serialize()
+        bytes_outputs = b"".join(_output.serialize() for _output in outputs)
 
         kernels = self.getKernels()
-        bytes_kernels = kernels[0].serialize()
-        for _kernel in kernels[1:]:
-            bytes_kernels += _kernel.serialize()
+        bytes_kernels = b"".join(_kernel.serialize() for _kernel in kernels)
 
         short_ids = self.getShortIds()
-        bytes_short_ids = short_ids[0].serialize()
-        for _short_id in short_ids[1:]:
-            bytes_short_ids += _short_id.serialize()
+        bytes_short_ids = b"".join(_short_id.serialize() for _short_id in short_ids)
 
         return (
             bytes_nonce
-            + bytes_num_otputs
+            + bytes_num_outputs
             + bytes_num_kernels
             + bytes_num_short_ids
             + bytes_outputs
@@ -460,31 +482,26 @@ class CompactBlock:
         )
 
     @classmethod
-    def deserialize(byteString: bytes):
-        nonce = int(byteString[0:64])
+    def deserialize(cls, B):
+        """Deserialize a CompactBlock from a Serializer stream.
 
-        numOutputs = int(byteString[65:128])
-        numKernels = int(byteString[129:192])
-        numShortIds = int(byteString[193:256])
+        Wire format: nonce(8) | num_outputs(2) | num_kernels(2) |
+                     num_short_ids(2) | outputs | kernels | short_ids
+        """
+        header = BlockHeader.deserialize(B)
+        nonce = int.from_bytes(B.read(8), "big")
 
-        # TODO byteString should be shifted accordingly
-        # TODO check how much it should be shifted at each iteration
-        outputs = []
-        for i in range(numOutputs):
-            outputs.prepend(TransactionOutput.deserialize(byteString))
+        num_outputs = int.from_bytes(B.read(2), "big")
+        num_kernels = int.from_bytes(B.read(2), "big")
+        num_short_ids = int.from_bytes(B.read(2), "big")
 
-        kernels = []
-        for i in range(numKernels):
-            kernels.prepend(TransactionKernel.deserialize(byteString))
+        outputs = [TransactionOutput.deserialize(B) for _ in range(num_outputs)]
+        kernels = [TransactionKernel.deserialize(B) for _ in range(num_kernels)]
+        short_ids = [ShortId.deserialize(B) for _ in range(num_short_ids)]
 
-        shortIds = []
-        for i in range(numShortIds):
-            shortIds.prepend(ShortId.deserialize(byteString))
+        return CompactBlock(header, nonce, outputs, kernels, short_ids)
 
-        return CompactBlock(nonce, outputs, kernels, shortIds)
-
-    def toJSON():
-        # transaction outputs
+    def toJSON(self):
         outputs = []
         for _output in self.getOutputs():
             output_json = _output.toJSON()
@@ -493,11 +510,15 @@ class CompactBlock:
 
         return {
             "header": self.header.toJSON(),
-            "inputs": [_input.toJSON() for _input in self.getInputs()],
+            "nonce": self.nonce,
             "outputs": outputs,
             "kernels": [kernel.toJSON() for kernel in self.getKernels()],
+            "short_ids": [sid.toJSON() for sid in self.getShortIds()],
         }
 
     # hashing
-    def __hash__():
-        return hash(self.header)
+    def __hash__(self):
+        return hash(self.header.getHash())
+
+    def getHash(self):
+        return self.header.getHash()
