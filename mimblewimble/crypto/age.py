@@ -31,10 +31,10 @@ class AgeRecipientBody:
 
 
 class AgeRecipient:
-    def __init__(self, _type, args=[], body=[]):
+    def __init__(self, _type, args=None, body=None):
         self._type = _type
-        self.args = args
-        self.body = body
+        self.args = args if args is not None else []
+        self.body = body if body is not None else []
 
     def append_body(self, body: AgeRecipientBody):
         self.body.append(body)
@@ -71,8 +71,8 @@ class AgeRecipient:
 
 
 class AgeHeader:
-    def __init__(self, recipients=[]):
-        self.recipients = recipients
+    def __init__(self, recipients=None):
+        self.recipients = recipients if recipients is not None else []
 
     def serialize(self, serializer: Serializer):
         for recipient in self.recipients:
@@ -120,13 +120,9 @@ class AgeMessage:
     @classmethod
     def deserialize(self, serializer: Serializer):
         line = serializer.readline(clean_newline=True)
-        if not line.find(AGE_INTRO):
+        if AGE_INTRO not in line:
             return None
-        splitted = line.split(AGE_INTRO)
-        if len(splitted) > 1:
-            pre = splitted[0]
-        else:
-            pre = b""
+        pre, _, _ = line.partition(AGE_INTRO)
         header = AgeHeader.deserialize(serializer)
         if header is None:
             return None

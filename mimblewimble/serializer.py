@@ -44,8 +44,6 @@ class Serializer:
         while line != b"":
             lines.append(line)
             line = self.readline()
-        if line != b"":
-            lines.append(line)
         return lines
 
     def readString(self, n, encoding="ascii"):

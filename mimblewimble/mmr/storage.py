@@ -217,6 +217,45 @@ class MMRDataFile:
         self._data_buf.append(data)
         return idx
 
+    def set_data(self, leaf_idx: int, data: bytes) -> None:
+        """Overwrite (or extend to) *leaf_idx* with *data*.
+
+        Used during PIBD desegmentation where segments may be applied
+        out-of-order.  If *leaf_idx* is beyond the current end, the data
+        store is extended with empty placeholder entries up to that index
+        and then the new entry is appended.  Existing entries are
+        overwritten in-place on disk.
+        """
+        total = self.data_size()
+        disk_count = self._disk_leaf_count
+
+        if leaf_idx < disk_count:
+            # Overwrite on-disk entry.  Because the data file uses a separate
+            # index file we do a read-modify-write: update the data bytes and
+            # adjust the offset stored in the index.
+            #
+            # Strategy: write the new data at the END of the data file and
+            # update the index entry to point there.  This avoids expensive
+            # in-place shifts while guaranteeing the entry is valid.
+            self._data_fh.seek(0, 2)
+            new_offset = self._data_fh.tell()
+            self._data_fh.write(data)
+            self._data_fh.flush()
+            # Update index entry
+            self._idx_fh.seek(leaf_idx * IDX_ENTRY_SIZE)
+            self._idx_fh.write(struct.pack("<QQ", new_offset, len(data)))
+            self._idx_fh.flush()
+            # Update cached data size
+            self._disk_data_size = new_offset + len(data)
+        elif leaf_idx < total:
+            # In the write buffer
+            self._data_buf[leaf_idx - disk_count] = data
+        else:
+            # Extend with empty placeholders then append the new entry
+            for _ in range(leaf_idx - total):
+                self._data_buf.append(b"")
+            self._data_buf.append(data)
+
     def flush(self) -> None:
         """Write buffers to disk."""
         if not self._data_buf:
