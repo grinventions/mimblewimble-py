@@ -6,7 +6,12 @@ Unit tests for the header-sync locator logic and the HeaderSync class.
 
 import pytest
 
-from mimblewimble.p2p.header_sync import HeaderSync, build_locator, LOCATOR_SIZE
+from mimblewimble.p2p.header_sync import (
+    LOCATOR_SIZE,
+    HeaderSync,
+    apply_headers_message,
+    build_locator,
+)
 
 # ---------------------------------------------------------------------------
 # Locator construction
@@ -182,3 +187,24 @@ class TestHeaderSync:
         peer._last_locator = None
         result = hdr_sync.check_run(1000, 2000)
         assert result is False
+
+
+def test_apply_headers_message_persists_into_peer_storage():
+    adapter = MockAdapter()
+
+    class _Peers:
+        def __init__(self):
+            self.saved = []
+
+        def store_headers(self, headers):
+            self.saved.extend(headers)
+
+    peers = _Peers()
+    raw_headers = [b"header-a", b"header-b"]
+
+    applied = apply_headers_message(adapter, raw_headers, peer_addr="p1", peers=peers)
+
+    assert applied == 2
+    assert adapter._headers == raw_headers
+    assert len(peers.saved) == 2
+    assert peers.saved[0].raw == b"header-a"

@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from typing import Callable, List, Optional
+from typing import TYPE_CHECKING, Callable, List, Optional
 
 from mimblewimble.p2p.adapter import ChainAdapter
 from mimblewimble.p2p.connection import Connection, ConnectionError
@@ -41,6 +41,9 @@ from mimblewimble.p2p.message import (
     MAINNET_MAGIC,
 )
 from mimblewimble.mmr.segment import SegmentIdentifier
+
+if TYPE_CHECKING:
+    from mimblewimble.p2p.peers import PeerStore
 
 log = logging.getLogger(__name__)
 
@@ -73,11 +76,13 @@ class Peer:
         conn: Connection,
         handshake: HandshakeResult,
         adapter: Optional[ChainAdapter] = None,
+        peer_store: Optional["PeerStore"] = None,
     ) -> None:
         self._conn = conn
         self.handshake = handshake
         self.addr = conn.peer_addr
         self._adapter = adapter
+        self._peer_store = peer_store
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._last_seen: float = time.monotonic()
@@ -204,7 +209,14 @@ class Peer:
         try:
             if msg_type == MessageType.Headers:
                 msg = MsgHeaders.deserialize(body)
-                self._adapter.sync_block_headers(msg.headers)
+                from mimblewimble.p2p.header_sync import apply_headers_message
+
+                apply_headers_message(
+                    self._adapter,
+                    msg.headers,
+                    peer_addr=self.addr,
+                    peers=self._peer_store,
+                )
 
             elif msg_type == MessageType.TxHashSetArchive:
                 msg = MsgTxHashSetArchive.deserialize(body)

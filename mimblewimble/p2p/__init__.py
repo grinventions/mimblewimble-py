@@ -23,16 +23,31 @@ from mimblewimble.p2p.handshake import (
 )
 from mimblewimble.p2p.message import Capabilities, MessageType
 from mimblewimble.p2p.peer import Peer
-from mimblewimble.p2p.peers import PeerStore, PeerQuery
+from mimblewimble.p2p.peers import (
+    BlockRecord,
+    HeaderRecord,
+    NodeRecord,
+    NodeStorage,
+    NodeStorageInMemory,
+    OutputRecord,
+    PeerQuery,
+    PeerStore,
+)
 
 __all__ = [
     "ChainAdapter",
     "Capabilities",
+    "BlockRecord",
     "Connection",
+    "HeaderRecord",
     "HandshakeError",
     "HandshakeResult",
     "MessageType",
     "NoopChainAdapter",
+    "NodeRecord",
+    "NodeStorage",
+    "NodeStorageInMemory",
+    "OutputRecord",
     "Peer",
     "PeerQuery",
     "PeerStore",

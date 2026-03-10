@@ -20,7 +20,7 @@ Reference: servers/src/grin/sync/state_sync.rs
 
 from __future__ import annotations
 
-import io
+import hashlib
 import logging
 import time
 import zipfile
@@ -38,7 +38,7 @@ from mimblewimble.mmr.sync import TxHashSetSync
 from mimblewimble.mmr.txhashset import Desegmenter, TxHashSet, TxHashSetError
 from mimblewimble.p2p.adapter import ChainAdapter
 from mimblewimble.p2p.peer import Peer
-from mimblewimble.p2p.peers import PeerStore
+from mimblewimble.p2p.peers import BlockRecord, OutputRecord, PeerStore
 
 log = logging.getLogger(__name__)
 
@@ -258,23 +258,37 @@ class StateSync:
         )
         self._sync_state.update(SyncStatus.TXHASHSET_VALIDATION)
 
-        # Extract ZIP to a temp directory
+        # Extract ZIP payload directly from memory to a temp directory
         tmp_dir = self._data_dir / f"_snapshot_{block_hash.hex()[:16]}"
         tmp_dir.mkdir(parents=True, exist_ok=True)
-        zip_path = tmp_dir / "snapshot.zip"
-        zip_path.write_bytes(zip_bytes)
 
         try:
-            TxHashSetSync.extract(zip_path, tmp_dir)
+            TxHashSetSync.extract_bytes(zip_bytes, tmp_dir)
         except (TxHashSetError, zipfile.BadZipFile, OSError, ValueError) as e:
             raise StateSyncError(f"Failed to extract snapshot ZIP: {e}") from e
 
+        snapshot_outputs: list[OutputRecord] = []
         # Open the extracted TxHashSet and verify roots
         try:
             tmp_txhs = TxHashSet(tmp_dir)
             out_root = tmp_txhs.output_pmmr.root()
             rp_root = tmp_txhs.rangeproof_pmmr.root()
             kern_root = tmp_txhs.kernel_mmr.root()
+            for leaf_idx, pos0 in tmp_txhs.output_pmmr.leaf_idx_iter(0):
+                data = tmp_txhs.output_pmmr.get_data(pos0)
+                if data is None:
+                    continue
+                snapshot_outputs.append(
+                    OutputRecord(
+                        commitment_hex=hashlib.blake2b(
+                            data, digest_size=32
+                        ).hexdigest(),
+                        block_hash_hex=block_hash.hex(),
+                        height=height,
+                        status="snapshot",
+                        raw=data,
+                    )
+                )
             tmp_txhs.close()
         except Exception as e:
             raise StateSyncError(f"Cannot read extracted TxHashSet: {e}") from e
@@ -294,6 +308,16 @@ class StateSync:
                 f"Snapshot kernel root mismatch: "
                 f"got {kern_root.hex()} expected {expected_kernel_root.hex()}"
             )
+
+        # Persist snapshot block metadata and extracted outputs via NodeStorage.
+        try:
+            self._peers.store_blocks(
+                [BlockRecord(hash_hex=block_hash.hex(), height=height, raw=zip_bytes)]
+            )
+            if snapshot_outputs:
+                self._peers.store_outputs(snapshot_outputs)
+        except Exception as e:
+            log.debug("StateSync: snapshot persistence skipped/failed: %s", e)
 
         log.info("StateSync: snapshot roots verified — applying to chain")
         # Move validated txhashset data into the live txhashset dir
@@ -323,6 +347,26 @@ class StateSync:
         bitmap_root = self._desegmenter._bitmap.root(0) or b"\x00" * 32
         try:
             self._desegmenter.add_output_segment(segment, bitmap_root)
+
+            output_records: list[OutputRecord] = []
+            for leaf_idx, leaf_data in segment.leaf_iter():
+                output_records.append(
+                    OutputRecord(
+                        commitment_hex=hashlib.blake2b(
+                            leaf_data, digest_size=32
+                        ).hexdigest(),
+                        block_hash_hex=block_hash.hex(),
+                        height=leaf_idx,
+                        status="segment",
+                        raw=leaf_data,
+                    )
+                )
+            if output_records:
+                try:
+                    self._peers.store_outputs(output_records)
+                except Exception as e:
+                    log.debug("StateSync: output persistence skipped/failed: %s", e)
+
             sti = SegmentTypeIdentifier(
                 segment_type=SegmentType.OUTPUT, identifier=segment.identifier
             )

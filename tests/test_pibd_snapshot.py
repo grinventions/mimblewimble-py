@@ -9,7 +9,6 @@ PMMR roots match the Stage-1 header and rejects one with tampered roots.
 
 import hashlib
 import io
-import tempfile
 import zipfile
 from pathlib import Path
 from typing import Any, cast
@@ -26,8 +25,9 @@ from mimblewimble.p2p.state_sync import StateSync, StateSyncError
 
 
 def build_and_zip_txhashset(tmp_dir: Path, n_outputs: int, n_kernels: int):
-    """Build a TxHashSet, snapshot it to ZIP, and return (zip_bytes, header_info)."""
-    txhs = TxHashSet(tmp_dir / "src")
+    """Build a TxHashSet and return an in-memory ZIP plus expected roots."""
+    txhs_dir = tmp_dir / "src"
+    txhs = TxHashSet(txhs_dir)
 
     for i in range(n_outputs):
         data = hashlib.blake2b(i.to_bytes(8, "little"), digest_size=33).digest()
@@ -47,10 +47,8 @@ def build_and_zip_txhashset(tmp_dir: Path, n_outputs: int, n_kernels: int):
     output_mmr_size = txhs.output_pmmr.size()
     kernel_mmr_size = txhs.kernel_mmr.size()
 
-    # Create a ZIP of the txhashset
-    zip_path = txhs.snapshot(_FakeHeader(output_mmr_size, kernel_mmr_size))
-    with open(zip_path, "rb") as f:
-        zip_bytes = f.read()
+    # Create a Grin-style txhashset ZIP entirely in memory.
+    zip_bytes = _build_txhashset_zip_bytes(txhs_dir)
 
     txhs.close()
     return zip_bytes, output_root, rp_root, kern_root
@@ -64,6 +62,24 @@ class _FakeHeader:
 
     def getHash(self):
         return b"\xab" * 32
+
+
+def _build_txhashset_zip_bytes(txhs_dir: Path) -> bytes:
+    """Build txhashset ZIP payload in memory, avoiding temporary zip files."""
+    payload = io.BytesIO()
+    with zipfile.ZipFile(payload, "w", compression=zipfile.ZIP_STORED) as zf:
+        for sub in ("output", "rangeproof", "kernel"):
+            subdir = txhs_dir / sub
+            for fname in (
+                "pmmr_hash.bin",
+                "pmmr_data.bin",
+                "pmmr_data_idx.bin",
+                "pmmr_prune.bin",
+            ):
+                fpath = subdir / fname
+                if fpath.exists():
+                    zf.writestr(f"{sub}/{fname}", fpath.read_bytes())
+    return payload.getvalue()
 
 
 # ---------------------------------------------------------------------------
@@ -91,6 +107,11 @@ def test_snapshot_accepted_with_correct_roots(tmp_path):
         expected_kernel_root=kern_root,
     )
     assert result is True
+    snapshot_dir = tmp_path / "data" / f"_snapshot_{'ab' * 8}"
+    assert not (snapshot_dir / "snapshot.zip").exists()
+    assert len(state_sync._peers.stored_blocks) == 1
+    assert state_sync._peers.stored_blocks[0].hash_hex == (b"\xab" * 32).hex()
+    assert len(state_sync._peers.stored_outputs) > 0
     txhs.close()
 
 
@@ -213,6 +234,10 @@ def _make_state_sync(tmp_path: Path, txhs: TxHashSet) -> StateSync:
     from mimblewimble.p2p.adapter import NoopChainAdapter
 
     class _NullPeers:
+        def __init__(self):
+            self.stored_blocks = []
+            self.stored_outputs = []
+
         def count(self):
             return 0
 
@@ -221,6 +246,12 @@ def _make_state_sync(tmp_path: Path, txhs: TxHashSet) -> StateSync:
 
         def txhashset_capable(self):
             return _NQ()
+
+        def store_blocks(self, blocks):
+            self.stored_blocks.extend(blocks)
+
+        def store_outputs(self, outputs):
+            self.stored_outputs.extend(outputs)
 
     class _NQ:
         def highest_difficulty(self):

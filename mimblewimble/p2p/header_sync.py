@@ -20,11 +20,13 @@ and its ``check_run()`` method is called periodically.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 from typing import List, Optional
 
 from mimblewimble.p2p.adapter import ChainAdapter
+from mimblewimble.p2p.peers import HeaderRecord, PeerStore
 from mimblewimble.p2p.message import (
     MAX_HEADERS,
     MessageType,
@@ -153,6 +155,7 @@ def apply_headers_message(
     adapter: ChainAdapter,
     raw_headers: List[bytes],
     peer_addr: str = "",
+    peers: Optional[PeerStore] = None,
 ) -> int:
     """Apply a batch of raw serialised headers from *peer_addr*.
 
@@ -168,6 +171,18 @@ def apply_headers_message(
         len(raw_headers),
         peer_addr,
     )
+
+    if peers is not None:
+        header_records = [
+            HeaderRecord(
+                hash_hex=hashlib.blake2b(raw_header, digest_size=32).hexdigest(),
+                height=idx,
+                raw=raw_header,
+            )
+            for idx, raw_header in enumerate(raw_headers)
+        ]
+        peers.store_headers(header_records)
+
     adapter.sync_block_headers(raw_headers)
     return len(raw_headers)
 
