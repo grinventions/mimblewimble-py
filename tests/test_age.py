@@ -346,3 +346,38 @@ def test_case_age_slatepacks():
     decrypted = ageX25519Decrypt(ciphertext, age_secret_key)
 
     assert decrypted == plaintext
+
+
+def test_age_message_deserialize_with_intro_at_start():
+    serializer = Serializer()
+    serializer.write(
+        b"age-encryption.org/v1\n"
+        b"-> X25519 receiver\n"
+        b"stanza-body\n"
+        b"\n"
+        b"--- footer-mac\n"
+    )
+    serializer.resetPointer()
+
+    message = AgeMessage.deserialize(serializer)
+
+    assert message is not None
+    assert message.pre == b""
+    assert len(message.header.recipients) == 1
+    assert message.body.body == b"footer-mac"
+
+
+def test_age_message_deserialize_rejects_missing_intro():
+    serializer = Serializer()
+    serializer.write(
+        b"not-an-age-header\n"
+        b"-> X25519 receiver\n"
+        b"stanza-body\n"
+        b"\n"
+        b"--- footer-mac\n"
+    )
+    serializer.resetPointer()
+
+    message = AgeMessage.deserialize(serializer)
+
+    assert message is None

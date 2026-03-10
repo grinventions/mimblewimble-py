@@ -483,6 +483,70 @@ class PMMR:
         if self._prune_bm is not None:
             self._prune_bm.save()
 
+    # ------------------------------------------------------------------
+    # PIBD segment write / verify
+    # ------------------------------------------------------------------
+
+    def write_segment(self, segment: "Segment") -> None:  # type: ignore[name-defined]
+        """Write a PIBD segment's hashes and leaf data directly into this PMMR.
+
+        Used during PIBD desegmentation to populate the PMMR without going
+        through the normal append path.  Positions that already have hashes
+        are overwritten (idempotent for identical segments).
+
+        The PMMR is NOT resized by this operation — callers are responsible
+        for ensuring the backend files are large enough to hold the segment's
+        positions (e.g. by pre-extending with ``extend_to_size()``).
+        """
+        from mimblewimble.mmr.segment import Segment
+        from mimblewimble.mmr.index import insertion_to_pmmr_index
+
+        # Write internal hashes
+        for pos0, h in segment.hash_iter():
+            self._hashes.set(pos0, h)
+
+        # Write leaf data and leaf hashes
+        for leaf_idx, data in segment.leaf_iter():
+            pos0 = insertion_to_pmmr_index(leaf_idx)
+            leaf_h = hash_with_index(pos0, data)
+            self._hashes.set(pos0, leaf_h)
+            self._data.set_data(leaf_idx, data)
+
+    def extend_to_size(self, target_size: int) -> None:
+        """Extend the hash backing file to at least *target_size* entries.
+
+        Fills new positions with the zero hash (b'\\x00' * 32).
+        Used before ``write_segment()`` to ensure writes are in-bounds.
+        """
+        current = self._hashes.size()
+        if target_size <= current:
+            return
+        zero = b"\x00" * 32
+        for _ in range(target_size - current):
+            self._hashes.append(zero)
+
+    def verify_segment_root(
+        self,
+        segment: "Segment",  # type: ignore[name-defined]
+        mmr_root: bytes,
+    ) -> bool:
+        """Verify that *segment*'s local root is consistent with *mmr_root*.
+
+        Delegates to ``Segment.verify(mmr_root)``.
+
+        Returns:
+            True if the proof is valid.
+        Raises:
+            SegmentError if data required for verification is missing.
+        """
+        from mimblewimble.mmr.segment import SegmentError
+
+        return segment.verify(mmr_root)
+
+    # ------------------------------------------------------------------
+    # Persistence
+    # ------------------------------------------------------------------
+
     def close(self) -> None:
         self.flush()
         self._hashes.close()
