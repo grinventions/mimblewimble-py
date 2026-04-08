@@ -13,10 +13,10 @@ from mimblewimble.blockchain import FullBlock
 class GenesisTest(unittest.TestCase):
     def test_mainnet(self):
         genesis = mainnet
-        # check proof of work hash
+        # check canonical header hash (pre-PoW hash)
         assert (
             genesis.getHash().hex()
-            == "40adad0aec27797b48840aa9e00472015c21baea118ce7a2ff1a82c0f8f5bf82"
+            == "b722e3b15365a7260ec274f4937d0879b44134a9d5ec4adc78829234d8ebb9eb"
         )
         # check serialized block header hash
         serializer = Serializer()
@@ -33,10 +33,10 @@ class GenesisTest(unittest.TestCase):
 
     def test_floonet(self):
         genesis = floonet
-        # check proof of work hash
+        # check canonical header hash (pre-PoW hash)
         assert (
             genesis.getHash().hex()
-            == "edc758c1370d43e1d733f70f58cf187c3be8242830429b1676b89fd91ccf2dab"
+            == "382d158bd0f6191f70b6bba7ddb4d2c513064ce27db37939a99c02caf7ba88bf"
         )
         # check serialized block header hash
         serializer = Serializer()

@@ -231,7 +231,7 @@ class MsgHand:
 
     def serialize(self) -> bytes:
         body = struct.pack(
-            "<IIqq",
+            "<IIQQ",
             self.version,
             self.capabilities,
             self.nonce,
@@ -246,7 +246,7 @@ class MsgHand:
     @classmethod
     def deserialize(cls, body: bytes) -> "MsgHand":
         version, capabilities, nonce, genesis_block_difficulty = struct.unpack_from(
-            "<IIqq", body, 0
+            "<IIQQ", body, 0
         )
         offset = 4 + 4 + 8 + 8
         sender_addr, offset = _decode_str(body, offset)
@@ -283,7 +283,7 @@ class MsgShake:
 
     def serialize(self) -> bytes:
         body = struct.pack(
-            "<IIqq",
+            "<IIQQ",
             self.version,
             self.capabilities,
             self.nonce,
@@ -297,7 +297,7 @@ class MsgShake:
     @classmethod
     def deserialize(cls, body: bytes) -> "MsgShake":
         version, capabilities, nonce, genesis_block_difficulty = struct.unpack_from(
-            "<IIqq", body, 0
+            "<IIQQ", body, 0
         )
         offset = 4 + 4 + 8 + 8
         receiver_addr, offset = _decode_str(body, offset)
