@@ -79,10 +79,9 @@ class Consensus:
     @classmethod
     def getMaxCoinbaseHeight(blockHeight, automated_testing=False):
         if automated_testing:
-            return math.max(blockHeight, 25) - 20
+            return max(blockHeight, 25) - 20
         return (
-            math.max(blockHeight, Consensus.coinbase_maturity)
-            - Consensus.coinbase_maturity
+            max(blockHeight, Consensus.coinbase_maturity) - Consensus.coinbase_maturity
         )
 
     # Default number of blocks in the past when cross-block cut-through will start happening
@@ -91,7 +90,7 @@ class Consensus:
     @classmethod
     def getHorizonHeight(block_height):
         return (
-            math.max(block_height, Consensus.cut_through_horizon)
+            max(block_height, Consensus.cut_through_horizon)
             - Consensus.cut_through_horizon
         )
 
@@ -164,7 +163,7 @@ class Consensus:
         expiry_height = int(Consensus.year_height)
         xpr_edge_bits = int(edge_bits)
         if edge_bits == 31 and height >= expiry_height:
-            xpr_edge_bits -= math.min(
+            xpr_edge_bits -= min(
                 xpr_edge_bits, 1 + (height - expiry_height) / Consensus.week_height
             )
         return 2 << (edge_bits - Consensus.base_edge_bits) * xpr_edge_bits
@@ -182,13 +181,13 @@ class Consensus:
     # limit value to be within some factor from a goal
     @classmethod
     def clamp(actual, goal, clamp_factor):
-        return math.max(goal / clamp_factor, math.min(actual, goal * clamp_factor))
+        return max(goal / clamp_factor, min(actual, goal * clamp_factor))
 
     # Ratio the secondary proof of work should take over the primary, as a function of block height (time).
     # Starts at 90% losing a percent approximately every week. Represented as an integer between 0 and 100.
     @classmethod
     def secondaryPOWRatio(self, height):
-        return 90 - math.min(90, (height / (2 * Consensus.year_height / 90)))
+        return 90 - min(90, (height / (2 * Consensus.year_height / 90)))
 
     @classmethod
     def scalingDifficulty(self, edgeBits):
@@ -234,13 +233,21 @@ class Consensus:
                 return 4
         return 5
 
-    def __init__(self):
-        pass
+    @classmethod
+    def isPrimary(cls, edge_bits: int) -> bool:
+        """Return True if edge_bits corresponds to a primary PoW (Cuckatoo31+).
+
+        Matches Grin's ``pow::is_primary()``: primary PoW uses edge_bits at or
+        above the default_min_edge_bits threshold (31) with a Cuckatoo cycle.
+        Post-HF4 only Cuckatoo32+ is accepted as primary.
+        """
+        return edge_bits >= Consensus.default_min_edge_bits
 
     @classmethod
-    def isPrimary(edgeBits):
-        pass
+    def isSecondary(cls, edge_bits: int) -> bool:
+        """Return True if edge_bits corresponds to secondary PoW (Cuckaroo/d 29).
 
-    @classmethod
-    def isSecondary(edgeBits):
-        pass
+        Matches Grin's ``pow::is_secondary()``: secondary PoW uses exactly
+        second_pow_edge_bits (29) with a Cuckaroo(d) cycle.
+        """
+        return edge_bits == Consensus.second_pow_edge_bits

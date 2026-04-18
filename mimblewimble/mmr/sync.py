@@ -22,6 +22,7 @@ Usage::
 
 from __future__ import annotations
 
+import io
 import zipfile
 from pathlib import Path
 
@@ -150,66 +151,14 @@ class TxHashSetSync:
         data_dir = Path(data_dir)
 
         with zipfile.ZipFile(zip_path, "r") as zf:
-            total_uncompressed = 0
-            for entry in zf.infolist():
-                if entry.is_dir():
-                    continue
+            cls._extract_open_zipfile(zf, data_dir)
 
-                # Sanitise entry name to prevent zip-slip attacks
-                normalized_name = entry.filename.replace("\\", "/")
-                entry_path = Path(normalized_name)
-                parts = entry_path.parts
-                if (
-                    not parts
-                    or entry_path.is_absolute()
-                    or ".." in parts
-                    or any(":" in p for p in parts)
-                ):
-                    continue
-
-                # Only extract output/, rangeproof/, kernel/ sub-trees
-                if parts[0] not in ("output", "rangeproof", "kernel"):
-                    continue
-
-                if entry.file_size < 0 or entry.file_size > cls._MAX_SINGLE_ENTRY_BYTES:
-                    raise TxHashSetError(
-                        f"Archive entry too large: {entry.filename} ({entry.file_size} bytes)"
-                    )
-
-                compressed = max(entry.compress_size, 1)
-                ratio = entry.file_size / compressed
-                if ratio > cls._MAX_COMPRESSION_RATIO:
-                    raise TxHashSetError(
-                        f"Suspicious compression ratio in {entry.filename} ({ratio:.1f}x)"
-                    )
-
-                total_uncompressed += entry.file_size
-                if total_uncompressed > cls._MAX_ZIP_UNCOMPRESSED_BYTES:
-                    raise TxHashSetError(
-                        "Archive uncompressed size exceeds safety limit"
-                    )
-
-                dest = data_dir / entry_path
-                dest_resolved = dest.resolve()
-                data_dir_resolved = data_dir.resolve()
-                if data_dir_resolved not in dest_resolved.parents:
-                    raise TxHashSetError(
-                        f"Unsafe archive path outside destination: {entry.filename}"
-                    )
-                dest.parent.mkdir(parents=True, exist_ok=True)
-
-                with zf.open(entry) as src, open(dest, "wb") as dst:
-                    written = 0
-                    while True:
-                        buf = src.read(1 << 20)
-                        if not buf:
-                            break
-                        written += len(buf)
-                        if written > cls._MAX_SINGLE_ENTRY_BYTES:
-                            raise TxHashSetError(
-                                f"Archive entry exceeds max allowed size while extracting: {entry.filename}"
-                            )
-                        dst.write(buf)
+    @classmethod
+    def extract_bytes(cls, zip_bytes: bytes, data_dir: Path) -> None:
+        """Extract a TxHashSet ZIP from in-memory bytes into *data_dir*."""
+        data_dir = Path(data_dir)
+        with zipfile.ZipFile(io.BytesIO(zip_bytes), "r") as zf:
+            cls._extract_open_zipfile(zf, data_dir)
 
     @classmethod
     def validate_from_header(cls, txhashset: TxHashSet, header) -> bool:
@@ -229,3 +178,63 @@ class TxHashSetSync:
             h = header.hash
             return h.hex() if isinstance(h, (bytes, bytearray)) else str(h)
         raise ValueError("Cannot extract hash from header object")
+
+    @classmethod
+    def _extract_open_zipfile(cls, zf: zipfile.ZipFile, data_dir: Path) -> None:
+        """Extract validated entries from an already-open ZipFile."""
+        total_uncompressed = 0
+        for entry in zf.infolist():
+            if entry.is_dir():
+                continue
+
+            normalized_name = entry.filename.replace("\\", "/")
+            entry_path = Path(normalized_name)
+            parts = entry_path.parts
+            if (
+                not parts
+                or entry_path.is_absolute()
+                or ".." in parts
+                or any(":" in p for p in parts)
+            ):
+                continue
+
+            if parts[0] not in ("output", "rangeproof", "kernel"):
+                continue
+
+            if entry.file_size < 0 or entry.file_size > cls._MAX_SINGLE_ENTRY_BYTES:
+                raise TxHashSetError(
+                    f"Archive entry too large: {entry.filename} ({entry.file_size} bytes)"
+                )
+
+            compressed = max(entry.compress_size, 1)
+            ratio = entry.file_size / compressed
+            if ratio > cls._MAX_COMPRESSION_RATIO:
+                raise TxHashSetError(
+                    f"Suspicious compression ratio in {entry.filename} ({ratio:.1f}x)"
+                )
+
+            total_uncompressed += entry.file_size
+            if total_uncompressed > cls._MAX_ZIP_UNCOMPRESSED_BYTES:
+                raise TxHashSetError("Archive uncompressed size exceeds safety limit")
+
+            dest = data_dir / entry_path
+            dest_resolved = dest.resolve()
+            data_dir_resolved = data_dir.resolve()
+            if data_dir_resolved not in dest_resolved.parents:
+                raise TxHashSetError(
+                    f"Unsafe archive path outside destination: {entry.filename}"
+                )
+            dest.parent.mkdir(parents=True, exist_ok=True)
+
+            with zf.open(entry) as src, open(dest, "wb") as dst:
+                written = 0
+                while True:
+                    buf = src.read(1 << 20)
+                    if not buf:
+                        break
+                    written += len(buf)
+                    if written > cls._MAX_SINGLE_ENTRY_BYTES:
+                        raise TxHashSetError(
+                            f"Archive entry exceeds max allowed size while extracting: {entry.filename}"
+                        )
+                    dst.write(buf)
