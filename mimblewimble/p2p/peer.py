@@ -20,6 +20,10 @@ from typing import TYPE_CHECKING, Callable, List, Optional
 from mimblewimble.p2p.adapter import ChainAdapter
 from mimblewimble.p2p.connection import Connection, ConnectionError
 from mimblewimble.p2p.handshake import HandshakeResult, do_handshake_outbound
+
+# Maximum number of peer addresses to send in a single PeerAddrs reply
+MAX_PEER_ADDRS_RESPONSE = 20
+
 from mimblewimble.p2p.message import (
     MessageType,
     MsgGetHeaders,
@@ -29,6 +33,9 @@ from mimblewimble.p2p.message import (
     MsgGetKernelSegment,
     MsgGetBlock,
     MsgGetCompactBlock,
+    MsgCompactBlock,
+    MsgGetPeerAddrs,
+    MsgPeerAddrs,
     MsgPing,
     MsgTxHashSetRequest,
     MsgBanReason,
@@ -77,12 +84,14 @@ class Peer:
         handshake: HandshakeResult,
         adapter: Optional[ChainAdapter] = None,
         peer_store: Optional["PeerStore"] = None,
+        on_new_peer_addr: Optional[Callable[[str], None]] = None,
     ) -> None:
         self._conn = conn
         self.handshake = handshake
         self.addr = conn.peer_addr
         self._adapter = adapter
         self._peer_store = peer_store
+        self._on_new_peer_addr = on_new_peer_addr
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._last_seen: float = time.monotonic()
@@ -168,6 +177,32 @@ class Peer:
         msg = MsgGetKernelSegment(block_hash=block_hash, identifier=identifier)
         self._send(msg.serialize())
 
+    def request_block(self, block_hash: bytes) -> None:
+        """Send a GetBlock request for *block_hash*."""
+        msg = MsgGetBlock(block_hash=block_hash)
+        self._send(msg.serialize())
+
+    def request_compact_block(self, block_hash: bytes) -> None:
+        """Send a GetCompactBlock request for *block_hash*."""
+        msg = MsgGetCompactBlock(block_hash=block_hash)
+        self._send(msg.serialize())
+
+    def request_peer_addrs(self) -> None:
+        """Send a GetPeerAddrs request to learn about more peers."""
+        from mimblewimble.p2p.message import Capabilities
+
+        msg = MsgGetPeerAddrs(capabilities=int(Capabilities.FULL_NODE))
+        self._send(msg.serialize())
+
+    def send_peer_addrs(self, peer_addrs) -> None:
+        """Reply with a list of known peer addresses.
+
+        Args:
+            peer_addrs: List of :class:`~mimblewimble.p2p.message.PeerAddr`.
+        """
+        msg = MsgPeerAddrs(peers=peer_addrs)
+        self._send(msg.serialize())
+
     def ban(self, reason: str = "") -> None:
         """Send a BanReason and close the connection."""
         try:
@@ -244,9 +279,31 @@ class Peer:
                 if msg.segment is not None:
                     self._adapter.receive_kernel_segment(msg.block_hash, msg.segment)
 
+            elif msg_type == MessageType.Block:
+                # The wire body is the raw serialised FullBlock bytes.
+                # Pass the whole body; the adapter is responsible for deserialising.
+                self._adapter.handle_block(b"", body)
+
+            elif msg_type == MessageType.CompactBlock:
+                self._adapter.handle_compact_block(body)
+
+            elif msg_type == MessageType.Transaction:
+                self._adapter.handle_transaction(body, from_stem=False)
+
+            elif msg_type == MessageType.StemTransaction:
+                self._adapter.handle_transaction(body, from_stem=True)
+
             elif msg_type == MessageType.BanReason:
                 log.warning("Banned by peer %s", self.addr)
                 self._running = False
+
+            elif msg_type == MessageType.GetPeerAddrs:
+                msg = MsgGetPeerAddrs.deserialize(body)
+                self._handle_get_peer_addrs(msg)
+
+            elif msg_type == MessageType.PeerAddrs:
+                msg = MsgPeerAddrs.deserialize(body)
+                self._handle_peer_addrs(msg)
 
             else:
                 log.debug("Unhandled message %s from %s", msg_type.name, self.addr)
@@ -265,6 +322,39 @@ class Peer:
             except ConnectionError as e:
                 log.warning("Send to %s failed: %s", self.addr, e)
                 self._running = False
+
+    def _handle_get_peer_addrs(self, msg: MsgGetPeerAddrs) -> None:
+        """Reply to a GetPeerAddrs request with locally known peers."""
+        if self._peer_store is None:
+            return
+        from mimblewimble.p2p.message import PeerAddr
+
+        try:
+            live_peers = self._peer_store.live().pick_n(MAX_PEER_ADDRS_RESPONSE)
+        except Exception:
+            return
+        addrs = []
+        for p in live_peers:
+            if p.addr == self.addr:
+                continue  # don't reflect the requesting peer back to itself
+            addrs.append(PeerAddr(addr=p.addr))
+        if addrs:
+            self.send_peer_addrs(addrs)
+
+    def _handle_peer_addrs(self, msg: MsgPeerAddrs) -> None:
+        """Process a PeerAddrs reply — attempt to connect to unknown peers."""
+        for pa in msg.peers:
+            addr = pa.addr
+            if self._peer_store is not None:
+                known = self._peer_store.all()
+                if any(p.addr == addr for p in known):
+                    continue
+            log.info("Peer discovery: new candidate %s from %s", addr, self.addr)
+            if self._on_new_peer_addr is not None:
+                try:
+                    self._on_new_peer_addr(addr)
+                except Exception as exc:
+                    log.debug("on_new_peer_addr(%s) error: %s", addr, exc)
 
     def __repr__(self) -> str:
         return (

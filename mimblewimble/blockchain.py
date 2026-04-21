@@ -1,5 +1,7 @@
 import hashlib
 import json  # TODO remove after debugging
+import time
+from datetime import datetime, timezone
 from io import BytesIO
 
 from mimblewimble.mmr.index import MMRIndex
@@ -12,6 +14,46 @@ from mimblewimble.models.transaction import TransactionInput
 from mimblewimble.models.transaction import TransactionOutput
 from mimblewimble.models.transaction import TransactionBody
 from mimblewimble.models.transaction import BlindingFactor
+from mimblewimble.models.transaction import TransactionKernel, EKernelFeatures
+
+
+class HeaderValidationError(ValueError):
+    """Raised when a block header fails validation."""
+
+    pass
+
+
+class BlockValidationError(ValueError):
+    """Raised when a full block fails validation."""
+
+    pass
+
+
+def _kernel_signing_msg(kernel: "TransactionKernel") -> bytes:
+    """Compute the 32-byte blake2b signing message for a TransactionKernel.
+
+    Matches Grin's KernelFeatures::kernel_sig_msg() in core/src/core/transaction.rs:
+        blake2b_256(feature_byte [| fee_u64_be] [| lock_or_rel_height_be])
+    """
+    msg_bytes = bytearray()
+    features = kernel.getFeatures()
+    msg_bytes.append(features.value)
+
+    if features == EKernelFeatures.DEFAULT_KERNEL:
+        fee_val = kernel.getFee().getFee() if kernel.getFee() is not None else 0
+        msg_bytes += fee_val.to_bytes(8, "big")
+    elif features == EKernelFeatures.COINBASE_KERNEL:
+        pass  # just the feature byte
+    elif features == EKernelFeatures.HEIGHT_LOCKED:
+        fee_val = kernel.getFee().getFee() if kernel.getFee() is not None else 0
+        msg_bytes += fee_val.to_bytes(8, "big")
+        msg_bytes += kernel.getLockHeight().to_bytes(8, "big")
+    elif features == EKernelFeatures.NO_RECENT_DUPLICATE:
+        fee_val = kernel.getFee().getFee() if kernel.getFee() is not None else 0
+        msg_bytes += fee_val.to_bytes(8, "big")
+        msg_bytes += kernel.getLockHeight().to_bytes(2, "big")
+
+    return hashlib.blake2b(bytes(msg_bytes), digest_size=32).digest()
 
 
 class ProofOfWork:
@@ -73,6 +115,10 @@ class ProofOfWork:
     def getHash(self):
         cycle = self.serializeCycle()
         return hashlib.blake2b(cycle, digest_size=32).digest()
+
+    @property
+    def is_secondary(self) -> bool:
+        return self.isSecondary()
 
 
 class BlockHeader:
@@ -158,6 +204,26 @@ class BlockHeader:
 
     def isSecondaryPoW(self):
         return self.proofOfWork.isSecondary()
+
+    # Compatibility properties for DifficultyCalculator / DifficultyLoader
+    # These expose snake_case aliases expected by the difficulty subsystem.
+
+    @property
+    def prev_hash(self) -> str:
+        """Hex-encoded previous block hash (key format for IBlockDB lookups)."""
+        return self.previousBlockHash.hex()
+
+    @property
+    def total_difficulty(self) -> int:
+        return self.totalDifficulty
+
+    @property
+    def scaling_difficulty(self) -> int:
+        return self.scalingDifficulty
+
+    @property
+    def proof_of_work(self) -> "ProofOfWork":
+        return self.proofOfWork
 
     # Merklish root stuffz
 
@@ -247,13 +313,17 @@ class BlockHeader:
         for proofNonce in self.getProofOfWork().getProofNonces():
             cuckooSolution += proofNonce.to_bytes(8, "big")
 
+        ts_utc = datetime.fromtimestamp(
+            self.getTimestamp(), tz=timezone.utc
+        ).isoformat()
+
         return {
             "height": self.getHeight(),
             "hash": self.getHash().hex(),
             "version": self.getVersion(),
             "timestamp_raw": self.getTimestamp(),
-            "timestamp_local": self.getTimestamp(),  # TODO convert to local
-            "timestamp": self.getTimestamp(),  # TODO convert to UTC
+            "timestamp_local": ts_utc,
+            "timestamp": ts_utc,
             "previous": self.getPreviousHash().hex(),
             "prev_root": self.getPreviousRoot().hex(),
             "kernel_root": self.getKernelRoot().hex(),
@@ -334,6 +404,118 @@ class BlockHeader:
     def shortHash(self):
         # TODO
         pass
+
+    def validate(
+        self,
+        prev_header: "BlockHeader | None" = None,
+        block_db=None,
+        current_time: int | None = None,
+    ) -> None:
+        """Validate this header.  Raises :class:`HeaderValidationError` on failure."""
+        validate_header(
+            self, prev_header=prev_header, block_db=block_db, current_time=current_time
+        )
+
+
+def validate_header(
+    header: "BlockHeader",
+    prev_header: "BlockHeader | None" = None,
+    block_db=None,
+    current_time: int | None = None,
+) -> None:
+    """Validate a single block header.
+
+    Checks (in order):
+      1. Timestamp is not too far in the future.
+      2. Chain-linking: prev_hash / height match *prev_header* when supplied.
+      3. Proof-of-Work solution is valid for the declared algorithm.
+      4. Declared difficulty meets the next-difficulty target (requires *block_db*).
+
+    Args:
+        header:       The :class:`BlockHeader` to validate.
+        prev_header:  The immediately preceding :class:`BlockHeader`, if available.
+        block_db:     An :class:`~mimblewimble.pow.blockdb.IBlockDB` instance used
+                      to compute the expected next-difficulty.  When ``None`` the
+                      difficulty check is skipped.
+        current_time: Current Unix epoch (seconds).  Defaults to ``time.time()``.
+
+    Raises:
+        HeaderValidationError: on any validation failure.
+    """
+    from mimblewimble.pow.algos import pow_validate
+
+    now = current_time if current_time is not None else int(time.time())
+
+    # 1. Timestamp: reject blocks more than FTL seconds in the future
+    max_ts = now + int(Consensus.default_future_time_limit_sec)
+    if header.getTimestamp() > max_ts:
+        raise HeaderValidationError(
+            f"Header timestamp {header.getTimestamp()} too far in future "
+            f"(max {max_ts}, height={header.getHeight()})"
+        )
+
+    # 2. Chain-linking
+    if prev_header is not None:
+        if header.getPreviousHash() != prev_header.getHash():
+            raise HeaderValidationError(
+                f"Header prev_hash mismatch at height {header.getHeight()}: "
+                f"expected {prev_header.getHash().hex()[:12]}… "
+                f"got {header.getPreviousHash().hex()[:12]}…"
+            )
+        if header.getHeight() != prev_header.getHeight() + 1:
+            raise HeaderValidationError(
+                f"Header height {header.getHeight()} expected "
+                f"{prev_header.getHeight() + 1}"
+            )
+
+    # 3. Proof-of-Work
+    # Build the dict that pow_validate() expects; cuckoo_solution must be List[int].
+    header_dict = header.toJSON()
+    header_dict["cuckoo_solution"] = header.getProofNonces()
+    # serialize_pre_pow uses the raw timestamp int when present
+    header_dict["timestamp"] = header.getTimestamp()
+
+    result = pow_validate(header_dict)
+    # pow_validate returns (bool, status) for all algorithm variants
+    if isinstance(result, tuple):
+        valid, status = result
+    else:
+        # Older algo wrappers may return just the status code
+        from mimblewimble.pow.common import EPoWStatus
+
+        valid = result == EPoWStatus.POW_OK
+        status = result
+
+    if not valid:
+        raise HeaderValidationError(
+            f"Header PoW invalid (status={status}, height={header.getHeight()}, "
+            f"edge_bits={header.getEdgeBits()})"
+        )
+
+    # 4. Difficulty target check (optional; requires previous-header chain in block_db)
+    if block_db is not None and header.getHeight() > 0:
+        try:
+            from mimblewimble.pow.difficulty_calculator import DifficultyCalculator
+
+            calc = DifficultyCalculator(block_db)
+            expected = calc.calculate_next_difficulty(header)
+            expected_diff = expected.get_difficulty()
+            if prev_header is not None:
+                block_diff = (
+                    header.getTotalDifficulty() - prev_header.getTotalDifficulty()
+                )
+            else:
+                block_diff = header.getTotalDifficulty()
+            if block_diff < expected_diff:
+                raise HeaderValidationError(
+                    f"Header difficulty {block_diff} below minimum {expected_diff} "
+                    f"(height={header.getHeight()})"
+                )
+        except HeaderValidationError:
+            raise
+        except Exception:
+            # Not enough history to compute difficulty; skip rather than fail.
+            pass
 
 
 class FullBlock:
@@ -417,6 +599,204 @@ class FullBlock:
     def markAsValidated(self):
         self.validated = True
 
+    # ------------------------------------------------------------------
+    # Validation
+    # ------------------------------------------------------------------
+
+    def validate(
+        self,
+        prev_header: "BlockHeader | None" = None,
+        block_db=None,
+        current_time: int | None = None,
+    ) -> None:
+        """Validate this block end-to-end.
+
+        Checks:
+          1. Header PoW, timestamp, chain-linking, and difficulty.
+          2. Block weight does not exceed the protocol limit.
+          3. Coinbase output/kernel consistency (reward + fees balance).
+          4. Kernel excess sum (Mimblewimble balance equation).
+          5. Output rangeproofs (Bulletproof batch verify).
+          6. Kernel Schnorr signatures (batch verify).
+          7. Kernel lock-height constraints.
+
+        Args:
+            prev_header:  The immediately preceding block header (for chain-linking
+                          and difficulty checks).  May be ``None`` for genesis.
+            block_db:     An :class:`~mimblewimble.pow.blockdb.IBlockDB` for the
+                          difficulty check.  Skipped when ``None``.
+            current_time: Current Unix epoch seconds; defaults to ``time.time()``.
+
+        Raises:
+            HeaderValidationError: if the header is invalid.
+            BlockValidationError:  if the block body is invalid.
+        """
+        # 1. Header
+        validate_header(
+            self.header,
+            prev_header=prev_header,
+            block_db=block_db,
+            current_time=current_time,
+        )
+
+        # 2. Block weight
+        height = self.getHeight()
+        version = self.header.getVersion()
+        if version >= 5:
+            weight = Consensus.calculateWeightV5(
+                len(self.getInputs()),
+                len(self.getOutputs()),
+                len(self.getKernels()),
+            )
+        else:
+            weight = Consensus.calculateWeightV4(
+                len(self.getInputs()),
+                len(self.getOutputs()),
+                len(self.getKernels()),
+            )
+        if weight > Consensus.max_block_weight:
+            raise BlockValidationError(
+                f"Block weight {weight} exceeds max {Consensus.max_block_weight} "
+                f"(height={height})"
+            )
+
+        # 3. Coinbase consistency
+        self._verify_coinbase(height)
+
+        # 4. Kernel excess sum (Mimblewimble balance)
+        self._verify_kernel_sum()
+
+        # 5. Rangeproofs
+        self._verify_rangeproofs()
+
+        # 6. Kernel signatures
+        self._verify_kernel_signatures()
+
+        # 7. Lock heights
+        self._verify_lock_heights(height)
+
+        self.validated = True
+
+    def _verify_coinbase(self, height: int) -> None:
+        """Verify exactly one coinbase output and kernel, and that their
+        commitments balance against the block reward + total transaction fees."""
+        from mimblewimble.crypto.pedersen import Pedersen
+        from mimblewimble.models.transaction import EKernelFeatures
+
+        cb_outputs = [o for o in self.getOutputs() if o.isCoinbase()]
+        cb_kernels = [k for k in self.getKernels() if k.isCoinbase()]
+
+        if len(cb_outputs) != 1 or len(cb_kernels) != 1:
+            raise BlockValidationError(
+                f"Block must have exactly one coinbase output and kernel "
+                f"(outputs={len(cb_outputs)}, kernels={len(cb_kernels)}, "
+                f"height={height})"
+            )
+
+        cb_output = cb_outputs[0]
+        cb_kernel = cb_kernels[0]
+
+        # Total fees from non-coinbase kernels
+        tx_fees = sum(
+            k.getFee().getFee()
+            for k in self.getKernels()
+            if not k.isCoinbase() and k.getFee() is not None
+        )
+        reward_value = int(Consensus.reward) + tx_fees
+
+        pedersen = Pedersen()
+        from mimblewimble.models.transaction import BlindingFactor as _BF
+
+        reward_commit = pedersen.commit(reward_value, _BF.zero())
+        expected = pedersen.commitSum(
+            [cb_kernel.getExcessCommitment(), reward_commit], []
+        )
+
+        if cb_output.getCommitment().getBytes() != expected.getBytes():
+            raise BlockValidationError(
+                f"Coinbase output commitment does not match kernel excess + reward "
+                f"(height={height})"
+            )
+
+    def _verify_kernel_sum(self) -> None:
+        """Verify the Mimblewimble kernel-sum equation for this block:
+        sum(output_commits) - sum(input_commits) - fees*H
+        == sum(kernel_excesses) + kernel_offset*G
+        """
+        from mimblewimble.crypto.pedersen import Pedersen
+        from mimblewimble.models.transaction import BlindingFactor as _BF
+
+        pedersen = Pedersen()
+
+        output_commits = [o.getCommitment() for o in self.getOutputs()]
+        input_commits = [i.getCommitment() for i in self.getInputs()]
+        kernel_excess_commits = [k.getExcessCommitment() for k in self.getKernels()]
+
+        total_fees = sum(
+            k.getFee().getFee()
+            for k in self.getKernels()
+            if not k.isCoinbase() and k.getFee() is not None
+        )
+        fees_commit = pedersen.commit(total_fees, _BF.zero())
+
+        offset_bytes = self.getTotalKernelOffset().getBytes()
+        offset_commit = pedersen.commit(0, _BF(offset_bytes))
+
+        # utxo_sum = sum(outputs) - sum(inputs) - fees*H
+        utxo_sum = pedersen.commitSum(output_commits, input_commits + [fees_commit])
+        # kern_sum = sum(kernel_excesses) + offset*G
+        kern_sum = pedersen.commitSum(kernel_excess_commits + [offset_commit], [])
+
+        if utxo_sum.getBytes() != kern_sum.getBytes():
+            raise BlockValidationError(
+                f"Kernel sum mismatch at height={self.getHeight()}: "
+                f"utxo_sum={utxo_sum.getBytes().hex()[:12]}… "
+                f"kern_sum={kern_sum.getBytes().hex()[:12]}…"
+            )
+
+    def _verify_rangeproofs(self) -> None:
+        """Batch-verify all output bulletproof rangeproofs."""
+        from mimblewimble.crypto.bulletproof import Bulletproof
+
+        outputs = self.getOutputs()
+        if not outputs:
+            return
+        bp = Bulletproof()
+        pairs = [(o.getCommitment(), o.getRangeProof()) for o in outputs]
+        if not bp.verifyBulletproofs(pairs):
+            raise BlockValidationError(
+                f"Rangeproof verification failed at height={self.getHeight()}"
+            )
+
+    def _verify_kernel_signatures(self) -> None:
+        """Batch-verify all kernel Schnorr signatures."""
+        from mimblewimble.crypto.aggsig import AggSig
+
+        kernels = self.getKernels()
+        if not kernels:
+            return
+        agg = AggSig()
+        signatures = [k.getExcessSignature() for k in kernels]
+        commitments = [k.getExcessCommitment() for k in kernels]
+        messages = [_kernel_signing_msg(k) for k in kernels]
+        if not agg.verifyAggregateSignatures(signatures, commitments, messages):
+            raise BlockValidationError(
+                f"Kernel signature verification failed at height={self.getHeight()}"
+            )
+
+    def _verify_lock_heights(self, height: int) -> None:
+        """Verify kernel lock heights are not in the future."""
+        from mimblewimble.models.transaction import EKernelFeatures
+
+        for kernel in self.getKernels():
+            features = kernel.getFeatures()
+            if features == EKernelFeatures.HEIGHT_LOCKED:
+                if kernel.getLockHeight() > height:
+                    raise BlockValidationError(
+                        f"Kernel lock height {kernel.getLockHeight()} > "
+                        f"block height {height}"
+                    )
+
 
 class CompactBlock:
     def __init__(self, header, nonce, fullOutputs, fullKernels, shortIds):
@@ -455,6 +835,8 @@ class CompactBlock:
     # serialization / deserialization
 
     def serialize(self):
+        from io import BytesIO as _BytesIO
+
         # nonce is 8 bytes (uint64 big-endian)
         bytes_nonce = self.nonce.to_bytes(8, "big")
 
@@ -462,14 +844,23 @@ class CompactBlock:
         bytes_num_kernels = len(self.getKernels()).to_bytes(2, "big")
         bytes_num_short_ids = len(self.getShortIds()).to_bytes(2, "big")
 
-        outputs = self.getOutputs()
-        bytes_outputs = b"".join(_output.serialize() for _output in outputs)
+        # Outputs require a Serializer (not a raw BytesIO)
+        output_ser = Serializer()
+        for _output in self.getOutputs():
+            _output.serialize(output_ser)
+        bytes_outputs = output_ser.getvalue()
 
-        kernels = self.getKernels()
-        bytes_kernels = b"".join(_kernel.serialize() for _kernel in kernels)
+        # Kernels require a Serializer
+        kernel_ser = Serializer()
+        for _kernel in self.getKernels():
+            _kernel.serialize(kernel_ser)
+        bytes_kernels = kernel_ser.getvalue()
 
-        short_ids = self.getShortIds()
-        bytes_short_ids = b"".join(_short_id.serialize() for _short_id in short_ids)
+        # ShortId.serialize takes a BytesIO
+        short_id_buf = _BytesIO()
+        for _short_id in self.getShortIds():
+            _short_id.serialize(short_id_buf)
+        bytes_short_ids = short_id_buf.getvalue()
 
         return (
             bytes_nonce
