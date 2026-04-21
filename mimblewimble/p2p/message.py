@@ -745,3 +745,41 @@ class MsgKernelSegment:
     def deserialize(cls, body: bytes) -> "MsgKernelSegment":
         block_hash, segment = _parse_segment_response(body)
         return cls(block_hash=block_hash, segment=segment)
+
+
+# ---------------------------------------------------------------------------
+# Compact block
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class MsgCompactBlock:
+    """A compact block sent in response to ``GetCompactBlock``.
+
+    Wire body (all LE):
+        [BlockHeader bytes]
+        8  bytes  nonce            uint64
+        2  bytes  num_full_outputs uint16
+        2  bytes  num_full_kernels uint16
+        2  bytes  num_short_ids    uint16
+        [full output bytes] * num_full_outputs
+        [full kernel bytes] * num_full_kernels
+        [6-byte short-id]  * num_short_ids
+
+    Note: Full output/kernel parsing requires the serializer layer from
+    ``mimblewimble.blockchain`` and is therefore done lazily on access.
+    """
+
+    msg_type = MessageType.CompactBlock
+    # Raw body bytes — header + nonce + short-IDs; parsed on demand.
+    raw_body: bytes = field(default_factory=bytes)
+    block_hash: bytes = field(default_factory=lambda: b"\x00" * 32)
+
+    def serialize(self) -> bytes:
+        return pack_header(self.msg_type, self.raw_body)
+
+    @classmethod
+    def deserialize(cls, body: bytes) -> "MsgCompactBlock":
+        # The block hash is not transmitted separately; callers should compute
+        # it from the header inside raw_body if needed.
+        return cls(raw_body=body, block_hash=b"\x00" * 32)

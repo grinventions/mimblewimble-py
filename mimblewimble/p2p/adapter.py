@@ -102,6 +102,56 @@ class ChainAdapter(ABC):
     def receive_kernel_segment(self, block_hash: bytes, segment) -> None:
         """Process an inbound kernel MMR segment."""
 
+    # ------------------------------------------------------------------
+    # Block sync
+    # ------------------------------------------------------------------
+
+    @abstractmethod
+    def handle_block(self, block_hash: bytes, raw_block: bytes) -> bool:
+        """Deserialise, validate, and store a full block received from a peer.
+
+        Args:
+            block_hash: The 32-byte hash of the block (from the GetBlock request).
+            raw_block:  The raw serialised :class:`~mimblewimble.blockchain.FullBlock`
+                        bytes as received on the wire.
+
+        Returns:
+            True if the block was accepted; False if it was a duplicate.
+
+        Raises:
+            :class:`~mimblewimble.blockchain.BlockValidationError` on invalid block.
+        """
+
+    @abstractmethod
+    def handle_compact_block(self, raw_compact_block: bytes) -> bool:
+        """Process a compact block received from a peer.
+
+        Implementations should:
+          1. Deserialise the header and short-IDs.
+          2. Match short-IDs against the local mempool / known transactions.
+          3. If all transactions are known, reconstruct the full block and
+             call :meth:`handle_block`.
+          4. If any transaction is unknown, request it via ``GetTransaction``.
+
+        Returns True if the block was fully reconstructed and accepted.
+        """
+
+    # ------------------------------------------------------------------
+    # Transaction pool
+    # ------------------------------------------------------------------
+
+    @abstractmethod
+    def handle_transaction(self, raw_tx: bytes, from_stem: bool = False) -> bool:
+        """Validate and add an inbound transaction to the pool.
+
+        Args:
+            raw_tx:    Raw serialised transaction bytes.
+            from_stem: True if arrived via the Dandelion++ stem path
+                       (``StemTransaction`` message type).
+
+        Returns True if added; False if already known.
+        """
+
 
 class NoopChainAdapter(ChainAdapter):
     """Dummy adapter that does nothing — useful for unit-testing the P2P layer."""
@@ -138,3 +188,12 @@ class NoopChainAdapter(ChainAdapter):
 
     def receive_kernel_segment(self, block_hash: bytes, segment) -> None:
         pass
+
+    def handle_block(self, block_hash: bytes, raw_block: bytes) -> bool:
+        return False
+
+    def handle_compact_block(self, raw_compact_block: bytes) -> bool:
+        return False
+
+    def handle_transaction(self, raw_tx: bytes, from_stem: bool = False) -> bool:
+        return False

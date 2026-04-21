@@ -228,7 +228,9 @@ def _send_get_headers(sock: socket.socket, locator: list[bytes]) -> None:
     sock.sendall(_pack_grin_message(MSG_GET_HEADERS, body))
 
 
-def _send_txhashset_request(sock: socket.socket, block_hash: bytes, height: int) -> None:
+def _send_txhashset_request(
+    sock: socket.socket, block_hash: bytes, height: int
+) -> None:
     body = block_hash[:32].ljust(32, b"\x00") + struct.pack(">Q", height)
     sock.sendall(_pack_grin_message(MSG_TXHASHSET_REQUEST, body))
 
@@ -275,8 +277,8 @@ def run_live_header_sync_smoke(
         if msg_type != MSG_SHAKE:
             raise LiveSyncError(f"Expected Shake ({MSG_SHAKE}), got {msg_type}")
 
-        version, capabilities, total_difficulty, user_agent, peer_genesis = _parse_shake(
-            body
+        version, capabilities, total_difficulty, user_agent, peer_genesis = (
+            _parse_shake(body)
         )
         if peer_genesis != genesis_hash:
             raise LiveSyncError(
@@ -359,7 +361,9 @@ def run_live_header_sync_smoke(
                 return report
 
             if msg_type == MSG_BAN_REASON:
-                raise LiveSyncError("Peer responded with BanReason during state sync probe")
+                raise LiveSyncError(
+                    "Peer responded with BanReason during state sync probe"
+                )
 
         if require_state_sync:
             raise LiveSyncError("Timed out waiting for TxHashSetArchive response")
